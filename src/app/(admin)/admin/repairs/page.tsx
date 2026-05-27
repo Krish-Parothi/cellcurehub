@@ -18,7 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Search, Wrench, Truck, Send, Eye, CheckCircle, XCircle, Loader2, FileSearch, Store } from 'lucide-react';
+import { Search, Wrench, Truck, Send, Eye, CheckCircle, XCircle, Loader2, FileSearch, Store, Phone } from 'lucide-react';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const shortId = (id: string) => id.slice(0, 8);
@@ -54,6 +54,9 @@ export default function RepairsPage() {
   const [adminNotes, setAdminNotes] = useState('');
   const [rcaProcessing, setRcaProcessing] = useState(false);
 
+  // Delivery assignments map: repair_id -> { delivery_boy_name, delivery_boy_phone, status }
+  const [deliveryMap, setDeliveryMap] = useState<Record<string, { name: string; phone: string; status: string }>>({});
+
   const fetchRepairs = useCallback(async () => {
     try {
       setLoading(true);
@@ -66,6 +69,27 @@ export default function RepairsPage() {
         .select('*, repair:repairs(id, customer:users!repairs_customer_id_fkey(full_name), device:devices(brand, model_name), technician:users!repairs_technician_id_fkey(full_name))')
         .eq('admin_confirmed', false);
       setPendingRcas(rcas || []);
+
+      // Fetch delivery assignments to map delivery boys to repairs
+      const repairIds = (data || []).map((r: any) => r.id);
+      if (repairIds.length > 0) {
+        const { data: assignments } = await supabase.from('delivery_assignments')
+          .select('repair_id, status, delivery_boy:users!delivery_assignments_delivery_boy_id_fkey(full_name, phone)')
+          .in('repair_id', repairIds)
+          .order('created_at', { ascending: false });
+        const dMap: Record<string, { name: string; phone: string; status: string }> = {};
+        (assignments || []).forEach((a: any) => {
+          // Only keep the latest assignment per repair
+          if (!dMap[a.repair_id]) {
+            dMap[a.repair_id] = {
+              name: a.delivery_boy?.full_name || 'Unknown',
+              phone: a.delivery_boy?.phone || '',
+              status: a.status,
+            };
+          }
+        });
+        setDeliveryMap(dMap);
+      }
     } catch (e) {
       console.error('Failed to fetch repairs:', e);
       toast.error('Failed to load repairs');
@@ -259,6 +283,7 @@ export default function RepairsPage() {
                 <TableHead className="text-white/50">Shop</TableHead>
                 <TableHead className="text-white/50">Status</TableHead>
                 <TableHead className="text-white/50">Technician</TableHead>
+                <TableHead className="text-white/50">Delivery</TableHead>
                 <TableHead className="text-white/50">Date</TableHead>
                 <TableHead className="text-white/50">Action</TableHead>
               </TableRow></TableHeader>
@@ -271,6 +296,7 @@ export default function RepairsPage() {
                     <TableCell className="text-white/60">{r.shop?.name || <span className="text-amber-400 text-xs">Unassigned</span>}</TableCell>
                     <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
                     <TableCell className="text-white/60">{r.technician?.full_name || <span className="text-amber-400">Unassigned</span>}</TableCell>
+                    <TableCell className="text-white/60">{deliveryMap[r.id]?.name || <span className="text-white/20">—</span>}</TableCell>
                     <TableCell className="text-white/40 text-xs">{new Date(r.created_at).toLocaleDateString('en-IN')}</TableCell>
                     <TableCell><Button size="sm" variant="ghost" onClick={() => openRepairSheet(r)} className="text-[#00D084] hover:bg-[#00D084]/10"><Eye className="w-3.5 h-3.5 mr-1" />View</Button></TableCell>
                   </TableRow>
@@ -323,6 +349,16 @@ export default function RepairsPage() {
                   <div className="bg-white/5 p-3 rounded-lg"><span className="text-white/40 text-xs block">Status</span><Badge className={statusColor(selectedRepair.status)}>{REPAIR_STATUS_LABELS[selectedRepair.status as RepairStatus]}</Badge></div>
                   <div className="bg-white/5 p-3 rounded-lg"><span className="text-white/40 text-xs block">Shop</span><p className="text-white">{selectedRepair.shop?.name || <span className="text-amber-400">Unassigned</span>}</p></div>
                   <div className="bg-white/5 p-3 rounded-lg col-span-2"><span className="text-white/40 text-xs block">Technician</span><p className="text-white">{selectedRepair.technician?.full_name || 'Unassigned'}</p></div>
+                  {deliveryMap[selectedRepair.id] && (
+                    <div className="bg-white/5 p-3 rounded-lg col-span-2 border border-cyan-500/10">
+                      <span className="text-white/40 text-xs block">Delivery Boy</span>
+                      <p className="text-white">{deliveryMap[selectedRepair.id].name}</p>
+                      {deliveryMap[selectedRepair.id].phone && (
+                        <a href={`tel:${deliveryMap[selectedRepair.id].phone}`} className="text-[#00D084] text-xs flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{deliveryMap[selectedRepair.id].phone}</a>
+                      )}
+                      <Badge className="mt-1 text-[10px] bg-cyan-500/15 text-cyan-400 capitalize">{deliveryMap[selectedRepair.id].status.replace(/_/g, ' ')}</Badge>
+                    </div>
+                  )}
                 </div>
 
                 <Separator className="bg-white/10" />

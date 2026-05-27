@@ -15,6 +15,8 @@ import { useAuth } from '@/lib/auth-context';
 import { DIAGNOSTIC_CHECKLIST_ITEMS, QA_CHECKLIST_ITEMS, REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { Part, PartUsed, RcaReport, RepairStatus } from '@/lib/types';
 import { Camera, Mic, Plus, Search, Timer, Smartphone, CheckCircle, AlertTriangle, Package, Loader2, IndianRupee } from 'lucide-react';
+import { addPartToRepair, submitRcaReport, markRepairComplete } from '@/lib/actions/technician';
+import { updateRepairStatus } from '@/lib/actions/repairs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -106,17 +108,22 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
     if (!repair || !selectedPart) return;
     if (partQty > selectedPart.quantity_in_stock) { toast.error('Not enough stock'); return; }
     
-    const { error: insertError } = await supabase.from('parts_used').insert({
-      repair_id: repair.id,
-      part_id: selectedPart.id,
+    console.debug('[TECH:ADD_PART]', { repairId: repair.id, partId: selectedPart.id, qty: partQty });
+    const result = await addPartToRepair({
+      repairId: repair.id,
+      partId: selectedPart.id,
       quantity: partQty,
-      cost_at_time: selectedPart.cost_price, // Use cost_price
+      costAtTime: selectedPart.cost_price,
+      currentStock: selectedPart.quantity_in_stock,
     });
     
-    if (insertError) { toast.error('Failed to add part'); return; }
+    if (!result.success) {
+      console.error('[TECH:ADD_PART_ERROR]', result.error);
+      toast.error(result.error || 'Failed to add part');
+      return;
+    }
     
-    await supabase.from('parts').update({ quantity_in_stock: selectedPart.quantity_in_stock - partQty }).eq('id', selectedPart.id);
-    
+    console.debug('[TECH:ADD_PART_OK]');
     toast.success('Part added');
     setPartSearch(''); setSelectedPart(null); setPartQty(1); setPartResults([]);
     loadPartsUsed();
@@ -127,9 +134,21 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
     if (!repair || !approvalPhoto) { toast.error('Photo is required'); return; }
     setSubmittingApproval(true);
     try {
-      const path = `repair-photos/${repair.id}/approval/${Date.now()}_${approvalPhoto.name}`;
-      await supabase.storage.from('repair-photos').upload(path, approvalPhoto);
-      const { data: { publicUrl } } = supabase.storage.from('repair-photos').getPublicUrl(path);
+      const formData = new FormData();
+      formData.append('file', approvalPhoto);
+      formData.append('folder', `approval/${repair.id}`);
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Photo upload failed');
+      }
+
+      const uploadData = await uploadRes.json();
+      const publicUrl = uploadData.urls[0];
 
       const noteJson = JSON.stringify({ revised_estimate: data.revised_estimate, note: data.note });
       
@@ -186,36 +205,41 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
     setSubmittingRca(true);
     try {
       const uploadPhotos = async (files: File[], folder: string) => {
-        const urls = [];
-        for (const file of files) {
-          const path = `repair-photos/${repair.id}/${folder}/${Date.now()}_${file.name}`;
-          await supabase.storage.from('repair-photos').upload(path, file);
-          const { data: { publicUrl } } = supabase.storage.from('repair-photos').getPublicUrl(path);
-          urls.push(publicUrl);
-        }
-        return urls;
+        if (files.length === 0) return [];
+        const formData = new FormData();
+        formData.append('folder', `${folder}/${repair.id}`);
+        files.forEach(file => formData.append('file', file));
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadRes.ok) throw new Error('Failed to upload photos');
+        const uploadData = await uploadRes.json();
+        return uploadData.urls;
       };
 
       const preUrls = await uploadPhotos(prePhotos, 'pre');
       const postUrls = await uploadPhotos(postPhotos, 'post');
 
-      await supabase.from('rca_reports').insert({
-        repair_id: repair.id,
-        technician_id: user.id,
-        diagnostic_checklist: diagnosticChecks,
-        technician_notes: data.technician_notes,
-        before_photos: preUrls,
-        after_photos: postUrls,
-        admin_confirmed: false
+      const result = await submitRcaReport({
+        repairId: repair.id,
+        diagnosticChecklist: diagnosticChecks,
+        technicianNotes: data.technician_notes,
+        beforePhotos: preUrls,
+        afterPhotos: postUrls,
       });
 
-      await supabase.from('repair_timeline').insert({
-        repair_id: repair.id, status: repair.status, note: 'RCA submitted — pending admin review', updated_by: user.id
-      });
+      if (!result.success) {
+        throw new Error(result.error);
+      }
 
       toast.success('RCA Report submitted');
       loadRcaReport();
-    } catch (e) { toast.error('Failed to submit RCA'); }
+    } catch (e) { 
+      toast.error(e instanceof Error ? e.message : 'Failed to submit RCA'); 
+    }
     setSubmittingRca(false);
   };
 
@@ -228,11 +252,16 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
     
     if (!allChecked) { toast.error('All QA items must be checked'); return; }
     
-    await supabase.from('repairs').update({ status: 'done', updated_at: new Date().toISOString() }).eq('id', repair.id);
-    await supabase.from('repair_timeline').insert({
-      repair_id: repair.id, status: 'done', note: 'QA passed — job complete. Awaiting admin dispatch.', updated_by: user?.id
-    });
+    console.debug('[TECH:MARK_DONE]', { repairId: repair.id });
+    const result = await markRepairComplete(repair.id);
     
+    if (!result.success) {
+      console.error('[TECH:MARK_DONE_ERROR]', result.error);
+      toast.error(result.error || 'Failed to mark as done');
+      return;
+    }
+    
+    console.debug('[TECH:MARK_DONE_OK]');
     toast.success('Job marked as done. Awaiting admin to send for delivery.');
     fetchRepairs();
     onOpenChange(false);

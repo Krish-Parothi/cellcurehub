@@ -11,6 +11,17 @@ CREATE TABLE public.attendance (
   CONSTRAINT attendance_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.users(id),
   CONSTRAINT attendance_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
 );
+CREATE TABLE public.booking_otps (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  phone text NOT NULL,
+  otp_code text NOT NULL,
+  expires_at timestamp with time zone NOT NULL,
+  verified boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT booking_otps_pkey PRIMARY KEY (id),
+  CONSTRAINT booking_otps_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
 CREATE TABLE public.delivery_assignments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   repair_id uuid NOT NULL,
@@ -38,6 +49,15 @@ CREATE TABLE public.devices (
   category text NOT NULL CHECK (category = ANY (ARRAY['smartphone'::text, 'laptop'::text, 'tablet'::text])),
   is_active boolean DEFAULT true,
   CONSTRAINT devices_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.early_bird_users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  name text NOT NULL,
+  mobile text NOT NULL,
+  address text NOT NULL,
+  email text NOT NULL DEFAULT ''::text,
+  CONSTRAINT early_bird_users_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.ewaste (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

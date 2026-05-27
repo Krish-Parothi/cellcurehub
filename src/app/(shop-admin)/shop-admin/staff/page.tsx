@@ -10,6 +10,7 @@ import type { User, Attendance, AttendanceStatus, SalaryConfig, Holiday } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { deleteStaff } from '@/lib/actions/shop-admin';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,19 +19,23 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Users, Calendar, DollarSign, Plus, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Users, Calendar, DollarSign, Plus, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
-const addTechSchema = z.object({
+const addStaffSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email'),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Valid 10-digit Indian mobile required'),
-  aadhar: z.string().regex(/^\d{12}$/, 'Aadhar must be exactly 12 digits'),
+  aadhar: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // aadhar is only required when adding a technician — validated dynamically
 });
-type AddTechForm = z.infer<typeof addTechSchema>;
+type AddStaffForm = z.infer<typeof addStaffSchema>;
 
 export default function ShopStaffPage() {
   const { user } = useAuth();
@@ -42,9 +47,12 @@ export default function ShopStaffPage() {
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [addDialog, setAddDialog] = useState(false);
-  const [addingTech, setAddingTech] = useState(false);
+  const [addingStaff, setAddingStaff] = useState(false);
+  const [staffRole, setStaffRole] = useState<'technician' | 'delivery'>('technician');
+  const [deleteConfirm, setDeleteConfirm] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<AddTechForm>({ resolver: zodResolver(addTechSchema) });
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<AddStaffForm>({ resolver: zodResolver(addStaffSchema) });
 
   const fetchData = useCallback(async () => {
     if (!shopId) return;
@@ -73,12 +81,29 @@ export default function ShopStaffPage() {
     toast.success(s.is_active ? 'Deactivated' : 'Activated'); fetchData();
   };
 
-  const onAddTechnician = async (data: AddTechForm) => {
-    setAddingTech(true);
+  const handleDelete = async (s: User) => {
+    setDeleting(true);
+    const result = await deleteStaff(s.id);
+    if (!result.success) {
+      toast.error(result.error || 'Failed to remove staff');
+    } else {
+      toast.success(`${s.full_name} removed permanently`);
+    }
+    setDeleting(false);
+    setDeleteConfirm(null);
+    fetchData();
+  };
+
+  const onAddStaff = async (data: AddStaffForm) => {
+    if (staffRole === 'technician' && (!data.aadhar || !/^\d{12}$/.test(data.aadhar))) {
+      toast.error('Aadhar must be exactly 12 digits for technicians');
+      return;
+    }
+    setAddingStaff(true);
     try {
       // Try Edge Function first with a 4-second timeout to prevent infinite spinning
       const invokePromise = supabase.functions.invoke('add-technician', {
-        body: { ...data, shop_id: shopId },
+        body: { ...data, role: staffRole, shop_id: shopId },
       });
 
       const timeoutPromise = new Promise<{ data: null; error: any }>((resolve) =>
@@ -98,20 +123,22 @@ export default function ShopStaffPage() {
         if (signUpData.user) {
           await supabase.from('users').upsert({
             id: signUpData.user.id, email: data.email, full_name: data.full_name,
-            phone: data.phone, role: 'technician', shop_id: shopId, is_active: true,
+            phone: data.phone, role: staffRole, shop_id: shopId, is_active: true,
           });
-          // Store aadhar number (in production, Edge Function hashes this server-side)
-          await supabase.from('technician_details').insert({
-            user_id: signUpData.user.id, aadhar_number: data.aadhar, verified: false,
-          });
+          // Store aadhar number for technicians
+          if (staffRole === 'technician' && data.aadhar) {
+            await supabase.from('technician_details').insert({
+              user_id: signUpData.user.id, aadhar_number: data.aadhar, verified: false,
+            });
+          }
         }
       }
-      toast.success(`Technician added. Invite sent to ${data.email}.`);
-      setAddDialog(false); reset(); fetchData();
+      toast.success(`${staffRole === 'technician' ? 'Technician' : 'Delivery staff'} added. Invite sent to ${data.email}.`);
+      setAddDialog(false); reset(); setStaffRole('technician'); fetchData();
     } catch (e: any) {
-      toast.error(e.message || 'Failed to add technician');
+      toast.error(e.message || 'Failed to add staff');
     }
-    setAddingTech(false);
+    setAddingStaff(false);
   };
 
   // Mask aadhar display
@@ -168,7 +195,7 @@ export default function ShopStaffPage() {
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-white">Staff</h1><p className="text-white/50 text-sm mt-1">Your shop&apos;s team</p></div>
-        <Button onClick={() => { reset(); setAddDialog(true); }} className="bg-[#00D084] text-black hover:bg-[#00D084]/90"><Plus className="w-4 h-4 mr-1" />Add Technician</Button>
+        <Button onClick={() => { reset(); setStaffRole('technician'); setAddDialog(true); }} className="bg-[#00D084] text-black hover:bg-[#00D084]/90"><Plus className="w-4 h-4 mr-1" />Add Staff</Button>
       </motion.div>
 
       <Tabs defaultValue="roster" className="w-full">
@@ -184,13 +211,19 @@ export default function ShopStaffPage() {
               <Table><TableHeader><TableRow className="border-white/5 hover:bg-transparent">
                 <TableHead className="text-white/50">Name</TableHead><TableHead className="text-white/50">Role</TableHead>
                 <TableHead className="text-white/50">Phone</TableHead><TableHead className="text-white/50">Active</TableHead>
+                <TableHead className="text-white/50">Actions</TableHead>
               </TableRow></TableHeader>
-              <TableBody>{staff.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center text-white/30 py-8">No staff members</TableCell></TableRow> : staff.map(s => (
+              <TableBody>{staff.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center text-white/30 py-8">No staff members</TableCell></TableRow> : staff.map(s => (
                 <TableRow key={s.id} className="border-white/5 hover:bg-white/5">
                   <TableCell className="text-white font-medium">{s.full_name}</TableCell>
                   <TableCell><Badge className="bg-white/10 text-white/60 capitalize">{s.role}</Badge></TableCell>
                   <TableCell className="text-white/60">{s.phone || '—'}</TableCell>
                   <TableCell><Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} /></TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(s)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 text-xs">
+                      <Trash2 className="w-3 h-3 mr-1" />Remove
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}</TableBody></Table>
             )}
@@ -272,19 +305,49 @@ export default function ShopStaffPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Add Technician Dialog */}
+      {/* Add Staff Dialog */}
       <Dialog open={addDialog} onOpenChange={setAddDialog}>
         <DialogContent className="bg-[#1A1A1A] border-white/10 max-w-sm">
-          <DialogHeader><DialogTitle className="text-white">Add New Technician</DialogTitle><DialogDescription className="text-white/50">Create and invite a technician to your shop</DialogDescription></DialogHeader>
-          <form onSubmit={handleSubmit(onAddTechnician)} className="space-y-3">
+          <DialogHeader><DialogTitle className="text-white">Add New Staff</DialogTitle><DialogDescription className="text-white/50">Create and invite a staff member to your shop</DialogDescription></DialogHeader>
+          <form onSubmit={handleSubmit(onAddStaff)} className="space-y-3">
+            <div>
+              <Label className="text-white/60">Role *</Label>
+              <Select value={staffRole} onValueChange={(v) => setStaffRole(v as 'technician' | 'delivery')}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#1A1A1A] border-white/10">
+                  <SelectItem value="technician">Technician</SelectItem>
+                  <SelectItem value="delivery">Delivery Staff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label className="text-white/60">Full Name *</Label><Input {...register('full_name')} className="bg-white/5 border-white/10 text-white mt-1" />{errors.full_name && <p className="text-red-400 text-xs mt-0.5">{errors.full_name.message}</p>}</div>
             <div><Label className="text-white/60">Email *</Label><Input {...register('email')} type="email" className="bg-white/5 border-white/10 text-white mt-1" />{errors.email && <p className="text-red-400 text-xs mt-0.5">{errors.email.message}</p>}</div>
             <div><Label className="text-white/60">Phone *</Label><Input {...register('phone')} className="bg-white/5 border-white/10 text-white mt-1" placeholder="10-digit mobile" />{errors.phone && <p className="text-red-400 text-xs mt-0.5">{errors.phone.message}</p>}</div>
-            <div><Label className="text-white/60">Aadhar Number *</Label><Input {...register('aadhar')} className="bg-white/5 border-white/10 text-white mt-1" placeholder="12-digit Aadhar" maxLength={12} />{errors.aadhar && <p className="text-red-400 text-xs mt-0.5">{errors.aadhar.message}</p>}<p className="text-white/30 text-[10px] mt-0.5">Stored hashed via server-side function. Displayed masked.</p></div>
-            <DialogFooter><Button type="submit" disabled={addingTech} className="bg-[#00D084] text-black hover:bg-[#00D084]/90">{addingTech ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}Add Technician</Button></DialogFooter>
+            {staffRole === 'technician' && (
+              <div><Label className="text-white/60">Aadhar Number *</Label><Input {...register('aadhar')} className="bg-white/5 border-white/10 text-white mt-1" placeholder="12-digit Aadhar" maxLength={12} />{errors.aadhar && <p className="text-red-400 text-xs mt-0.5">{errors.aadhar.message}</p>}<p className="text-white/30 text-[10px] mt-0.5">Stored hashed via server-side function. Displayed masked.</p></div>
+            )}
+            <DialogFooter><Button type="submit" disabled={addingStaff} className="bg-[#00D084] text-black hover:bg-[#00D084]/90">{addingStaff ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}Add {staffRole === 'technician' ? 'Technician' : 'Delivery Staff'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent className="bg-[#1A1A1A] border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Permanently Remove Staff?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              This will permanently remove <span className="text-white font-semibold">{deleteConfirm?.full_name}</span> and all their attendance/salary records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/10 text-white/60 hover:bg-white/5">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteConfirm && handleDelete(deleteConfirm)} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}Remove Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

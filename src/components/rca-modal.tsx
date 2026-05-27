@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, ClipboardCheck, FileText, Camera } from 'lucide-react';
 import type { RcaReport } from '@/lib/types';
@@ -13,7 +15,10 @@ interface RcaModalProps {
 }
 
 export default function RcaModal({ report, open, onClose }: RcaModalProps) {
-  if (!report) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!report || !mounted) return null;
 
   const checklist = report.diagnostic_checklist || {};
   const checklistEntries = Object.entries(checklist);
@@ -22,7 +27,7 @@ export default function RcaModal({ report, open, onClose }: RcaModalProps) {
     window.print();
   };
 
-  return (
+  const content = (
     <AnimatePresence>
       {open && (
         <>
@@ -119,4 +124,6 @@ export default function RcaModal({ report, open, onClose }: RcaModalProps) {
       )}
     </AnimatePresence>
   );
+
+  return createPortal(content, document.body);
 }
