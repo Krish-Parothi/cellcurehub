@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { Repair, User } from '@/lib/types';
+import { updateRepairStatus } from '@/lib/actions/repairs';
 import RoleGuard from '@/components/role-guard';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -90,18 +91,21 @@ export default function TechnicianDashboard() {
     }
   }, [user, fetchRepairs]);
 
-  const updateStatus = async (repairId: string, newStatus: string) => {
-    console.debug('[TECH_UPDATE_STATUS]', { repairId, newStatus, userId: user?.id });
-    const { error } = await supabase.from('repairs').update({ status: newStatus }).eq('id', repairId);
-    if (error) { console.debug('[TECH_UPDATE_STATUS_ERROR]', error); toast.error('Failed to update status: ' + error.message); return; }
+  const handleStatusUpdate = async (repairId: string, newStatus: string) => {
+    console.debug('[TECH:STATUS_UPDATE] Starting...', { repairId, newStatus, userId: user?.id });
+    const result = await updateRepairStatus(
+      repairId,
+      newStatus,
+      `Status updated to ${REPAIR_STATUS_LABELS[newStatus as keyof typeof REPAIR_STATUS_LABELS]}`
+    );
+
+    if (!result.success) {
+      console.error('[TECH:STATUS_UPDATE_ERROR]', result.error);
+      toast.error(result.error || 'Failed to update status');
+      return;
+    }
     
-    await supabase.from('repair_timeline').insert({
-      repair_id: repairId,
-      status: newStatus,
-      note: `Status updated to ${REPAIR_STATUS_LABELS[newStatus as keyof typeof REPAIR_STATUS_LABELS]}`,
-      updated_by: user!.id,
-    });
-    
+    console.debug('[TECH:STATUS_UPDATE_OK]', { repairId, newStatus });
     toast.success('Status updated');
     setSheetOpen(false);
     fetchRepairs();
@@ -193,7 +197,7 @@ export default function TechnicianDashboard() {
             repair={selectedRepair} 
             open={sheetOpen} 
             onOpenChange={setSheetOpen} 
-            onStatusUpdate={updateStatus}
+            onStatusUpdate={handleStatusUpdate}
             fetchRepairs={fetchRepairs}
           />
         </main>

@@ -9,6 +9,8 @@ import { z } from 'zod';
 import { ChevronLeft, ChevronRight, Check, MapPin, Clock, Store, Truck, Wrench, Battery, Monitor, Droplets, HardDrive, Settings, CalendarDays, Navigation } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
+import { bookRepair } from '@/lib/actions/repairs';
+import { sendBookingOtp, verifyBookingOtp } from '@/lib/actions/otp';
 import { NAGPUR_AREAS, REPAIR_TYPE_OPTIONS } from '@/lib/types';
 import type { Device, Pricing } from '@/lib/types';
 import { Navbar } from '@/components/navbar';
@@ -50,6 +52,7 @@ export default function BookPage() {
   const [customDescription, setCustomDescription] = useState('');
   const [issueNotes, setIssueNotes] = useState('');
   const [imei, setImei] = useState('');
+  const [phone, setPhone] = useState('');
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
 
@@ -69,11 +72,26 @@ export default function BookPage() {
     if (!authLoading && !user) router.replace('/login');
   }, [authLoading, user, router]);
 
-  // Pre-fill address from localStorage
+  // Pre-fill address and phone from user profile
   useEffect(() => {
     const saved = localStorage.getItem('cellcurehub_default_address');
     if (saved) setAddress(saved);
-  }, []);
+    if (user?.phone) setPhone(user.phone.replace('+91', ''));
+  }, [user]);
+
+  // OTP State
+  const [showOtp, setShowOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const t = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [resendTimer]);
 
   // Fetch pricing when device + repair type selected
   useEffect(() => {
@@ -101,7 +119,7 @@ export default function BookPage() {
 
   // Validations
   const step1Valid = selectedDevice !== null || manualModel.trim().length > 0;
-  const step2Valid = repairType && imei.match(/^\d{15}$/) && (repairType !== 'custom' || customDescription.trim().length > 0);
+  const step2Valid = repairType && phone.match(/^[6-9]\d{9}$/) && (!imei || imei.length === 15) && (repairType !== 'custom' || customDescription.trim().length > 0);
   const step3Valid = pickupType === 'store' || (address.trim().length > 0 && area && timeSlot && preferredDate);
 
   const handleGeolocation = () => {
@@ -124,49 +142,65 @@ export default function BookPage() {
     );
   };
 
-  const handleSubmit = async () => {
+  const handleSendOtp = async () => {
     if (!user) return;
+    setSendingOtp(true);
+    const result = await sendBookingOtp(phone);
+    if (!result.success) {
+      toast.error(result.error);
+    } else {
+      setShowOtp(true);
+      setResendTimer(60);
+      toast.success('Verification code sent');
+    }
+    setSendingOtp(false);
+  };
+
+  const handleVerifyOtpAndSubmit = async () => {
+    if (!user) return;
+    setVerifyingOtp(true);
+    
+    const verifyResult = await verifyBookingOtp(phone, otpCode);
+    if (!verifyResult.success) {
+      toast.error(verifyResult.error);
+      setVerifyingOtp(false);
+      return;
+    }
+
     setSubmitting(true);
+    console.debug('[BOOK:SUBMIT] Starting booking...', { userId: user.id, repairType, pickupType });
     try {
-      const repairData: Record<string, unknown> = {
-        customer_id: user.id,
+      const result = await bookRepair({
         device_id: selectedDevice?.id || null,
         manual_model: manualModel || null,
-        imei_number: imei,
+        imei_number: imei || null,
+        phone,
         repair_type: repairType,
         custom_repair_description: repairType === 'custom' ? customDescription : null,
         issue_description: issueNotes || `${REPAIR_TYPE_OPTIONS.find(r => r.value === repairType)?.label || repairType} repair`,
-        status: 'booked',
         pickup_type: pickupType,
         address: pickupType === 'home' ? `${address}, ${area}, Nagpur` : 'CellCureHub Service Center, Dharampeth, Nagpur 440010',
         coordinates: coordinates ? `(${coordinates.lng},${coordinates.lat})` : null,
         preferred_date: preferredDate ? preferredDate.toISOString().split('T')[0] : null,
         time_slot: pickupType === 'home' ? timeSlot : null,
         estimated_cost: pricing?.min_price || null,
-      };
-
-      const { data: repair, error: repairError } = await supabase
-        .from('repairs')
-        .insert(repairData)
-        .select('id')
-        .single();
-
-      if (repairError) throw repairError;
-
-      await supabase.from('repair_timeline').insert({
-        repair_id: repair.id,
-        status: 'booked',
-        note: 'Repair request confirmed',
-        updated_by: user.id,
       });
 
+      if (!result.success) {
+        console.error('[BOOK:SUBMIT_ERROR]', result.error);
+        toast.error(result.error || 'Failed to create booking.');
+        return;
+      }
+
+      console.debug('[BOOK:SUBMIT_OK]', result.data);
       toast.success('Booking confirmed! Redirecting to dashboard...');
       router.push('/dashboard');
     } catch (err) {
-      console.error(err);
+      console.error('[BOOK:SUBMIT_EXCEPTION]', err);
       toast.error('Failed to create booking. Please try again.');
     } finally {
       setSubmitting(false);
+      setVerifyingOtp(false);
     }
   };
 
@@ -274,12 +308,19 @@ export default function BookPage() {
                       </div>
                     )}
 
-                    {/* IMEI */}
-                    <div className="space-y-2">
-                      <Label className="text-white/80 text-sm">IMEI Number *</Label>
-                      <Input type="text" maxLength={15} value={imei} onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI number" className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084] font-mono" />
-                      <p className="text-xs text-white/30">Dial *#06# on your phone to find IMEI</p>
-                      {imei.length > 0 && imei.length !== 15 && <p className="text-xs text-red-400">IMEI must be exactly 15 digits</p>}
+                    {/* Phone Number & IMEI */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-white/80 text-sm">Phone Number *</Label>
+                        <Input type="tel" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile number" className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084]" />
+                        {phone.length > 0 && !/^[6-9]\d{9}$/.test(phone) && <p className="text-xs text-red-400">Invalid phone number</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-white/80 text-sm">IMEI Number (Optional)</Label>
+                        <Input type="text" maxLength={15} value={imei} onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI number" className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084] font-mono" />
+                        <p className="text-xs text-white/30">Dial *#06# on your phone to find IMEI</p>
+                        {imei.length > 0 && imei.length !== 15 && <p className="text-xs text-red-400">IMEI must be exactly 15 digits</p>}
+                      </div>
                     </div>
 
                     <div className="flex justify-between">
@@ -377,8 +418,8 @@ export default function BookPage() {
 
                     <div className="flex justify-between pt-2">
                       <Button variant="outline" onClick={() => setStep(1)} className="border-white/10 bg-white/5 hover:bg-white/10 text-white"><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>
-                      <Button disabled={!step3Valid || submitting} onClick={handleSubmit} className="gradient-green text-[#0A0A0A] font-semibold px-6">
-                        {submitting ? (<span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />Confirming...</span>) : (<span className="flex items-center gap-2"><Check className="w-4 h-4" /> Confirm Booking</span>)}
+                      <Button disabled={!step3Valid || sendingOtp || submitting} onClick={handleSendOtp} className="gradient-green text-[#0A0A0A] font-semibold px-6">
+                        {sendingOtp ? (<span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />Sending OTP...</span>) : (<span className="flex items-center gap-2"><Check className="w-4 h-4" /> Confirm Booking</span>)}
                       </Button>
                     </div>
                   </CardContent>
@@ -387,6 +428,32 @@ export default function BookPage() {
             )}
           </AnimatePresence>
         </div>
+
+        <AnimatePresence>
+          {showOtp && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0A0A0A] border border-white/10 p-6 rounded-2xl w-full max-w-sm">
+                <h3 className="text-xl font-bold text-white mb-2">Verify Phone Number</h3>
+                <p className="text-sm text-white/60 mb-6">Enter the 6-digit code sent to +91 {phone}</p>
+                
+                <div className="space-y-4">
+                  <Input type="text" maxLength={6} value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} placeholder="000000" className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-white/5 border-white/10 text-white focus-visible:ring-[#00D084]" />
+                  
+                  <Button disabled={otpCode.length !== 6 || verifyingOtp || submitting} onClick={handleVerifyOtpAndSubmit} className="w-full h-12 bg-[#00D084] hover:bg-[#00D084]/90 text-black font-semibold text-lg">
+                    {verifyingOtp || submitting ? 'Verifying & Booking...' : 'Verify & Book'}
+                  </Button>
+                  
+                  <div className="flex justify-between items-center text-sm">
+                    <button onClick={() => setShowOtp(false)} className="text-white/40 hover:text-white">Cancel</button>
+                    <button disabled={resendTimer > 0 || sendingOtp} onClick={handleSendOtp} className={`${resendTimer > 0 ? 'text-white/30' : 'text-[#00D084] hover:text-[#00D084]/80'}`}>
+                      {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
       <Footer />
     </div>
