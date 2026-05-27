@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, UserRole } from '@/lib/types';
 import type { Session } from '@supabase/supabase-js';
@@ -23,160 +23,104 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-    return data as User | null;
+  const fetchProfile = useCallback(async (userId: string): Promise<User | null> => {
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      return data as User | null;
+    } catch {
+      return null;
+    }
   }, []);
 
+  /** Ensure a users row exists for the given auth user */
+  const ensureProfile = useCallback(async (authUser: { id: string; email?: string; user_metadata?: Record<string, any> }): Promise<User | null> => {
+    let profile = await fetchProfile(authUser.id);
+    if (!profile) {
+      await supabase.from('users').upsert({
+        id: authUser.id,
+        full_name: authUser.user_metadata?.full_name || authUser.email || 'User',
+        email: authUser.email || null,
+        avatar_url: authUser.user_metadata?.avatar_url || null,
+        role: authUser.user_metadata?.role || 'customer',
+      }, { onConflict: 'id', ignoreDuplicates: true });
+      profile = await fetchProfile(authUser.id);
+    }
+    return profile;
+  }, [fetchProfile]);
 
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
-// useEffect(() => {
-//     supabase.auth.getSession().then(({ data: { session: s } }) => {
-//       setSession(s);
-//       if (s?.user) {
-//         fetchProfile(s.user.id).then(async (profile) => {
-//           if (!profile) {
-//             await supabase.from('users').insert({
-//               id: s.user.id,
-//               full_name: s.user.user_metadata?.full_name || s.user.email,
-//               email: s.user.email,
-//               avatar_url: s.user.user_metadata?.avatar_url || null,
-//               role: 'customer',
-//             });
-//             const newProfile = await fetchProfile(s.user.id);
-//             setUser(newProfile);
-//           } else {
-//             setUser(profile);
-//           }
-//           setLoading(false);
-//         });
-//       } else {
-//         setLoading(false);
-//       }
-//     });
-useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    // 1. Bootstrap from existing session (fast, synchronous-ish)
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       setSession(s);
       if (s?.user) {
-        fetchProfile(s.user.id).then(async (profile) => {
-          if (!profile) {
-            await supabase.from('users').upsert({  // ✅ insert → upsert
-              id: s.user.id,
-              full_name: s.user.user_metadata?.full_name || s.user.email,
-              email: s.user.email,
-              avatar_url: s.user.user_metadata?.avatar_url || null,
-              role: s.user.user_metadata?.role || 'customer',  // ✅ hardcoded fix
-            }, { onConflict: 'id', ignoreDuplicates: true });  // ✅ race condition fix
-            const newProfile = await fetchProfile(s.user.id);
-            setUser(newProfile);
-          } else {
-            setUser(profile);
-          }
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
+        const profile = await ensureProfile(s.user);
+        setUser(profile);
       }
+      setLoading(false);
+    }).catch(() => {
+      setLoading(false);
     });
-    // const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    //   async (_event, s) => {
-    //     setSession(s);
-    //     if (s?.user) {
-    //       let profile = await fetchProfile(s.user.id);
-    //       if (!profile) {
-    //         await supabase.from('users').insert({
-    //           id: s.user.id,
-    //           full_name: s.user.user_metadata?.full_name || s.user.email,
-    //           email: s.user.email,
-    //           avatar_url: s.user.user_metadata?.avatar_url || null,
-    //           role: 'customer',
-    //         });
-    //         profile = await fetchProfile(s.user.id);
-    //       }
-    //       setUser(profile);
-    //     } else {
-    //       setUser(null);
-    //     }
-    //   }
-    // );
+
+    // 2. Listen for future auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-  async (_event, s) => {
-    setSession(s);
-    if (s?.user) {
-      let profile = await fetchProfile(s.user.id);
-      if (!profile) {
-        await supabase.from('users').upsert({  // insert → upsert
-          id: s.user.id,
-          full_name: s.user.user_metadata?.full_name || s.user.email,
-          email: s.user.email,
-          avatar_url: s.user.user_metadata?.avatar_url || null,
-          role: s.user.user_metadata?.role || 'customer',  // ✅ yahi tha bug
-        }, { onConflict: 'id', ignoreDuplicates: true });  // ✅ race condition fix
-        profile = await fetchProfile(s.user.id);
+      async (event, s) => {
+        setSession(s);
+        if (s?.user) {
+          // If a user just signed in or their metadata updated, fetch the profile.
+          // (We don't do this on TOKEN_REFRESHED to avoid unnecessary DB calls)
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            const profile = await ensureProfile(s.user);
+            setUser(profile);
+            setLoading(false);
+          }
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
       }
-      setUser(profile);
-    } else {
-      setUser(null);
-    }
-  }
-);
+    );
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+  }, [ensureProfile]);
 
   const signInWithPassword = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
   };
 
-  // const signUpWithPassword = async (
-  //   email: string,
-  //   password: string,
-  //   fullName: string,
-  //   role: UserRole
-  // ) => {
-  //   const { data, error } = await supabase.auth.signUp({ email, password });
-  //   if (error) return { error: error.message };
-  //   if (data.user) {
-  //     await supabase.from('users').insert({
-  //       id: data.user.id,
-  //       full_name: fullName,
-  //       email,
-  //       role,
-  //     });
-  //   }
-  //   return { error: null };
-  // };
-
   const signUpWithPassword = async (
-  email: string,
-  password: string,
-  fullName: string,
-  role: UserRole
-) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: fullName, role } // ✅ metadata mein save karo
-    }
-  });
-  if (error) return { error: error.message };
-  if (data.user) {
-    await supabase.from('users').insert({
-      id: data.user.id,
-      full_name: fullName,
+    email: string,
+    password: string,
+    fullName: string,
+    role: UserRole
+  ) => {
+    const { data, error } = await supabase.auth.signUp({
       email,
-      role, // ✅ yeh sahi hai
+      password,
+      options: {
+        data: { full_name: fullName, role },
+      },
     });
-  }
-  return { error: null };
-};
+    if (error) return { error: error.message };
+    if (data.user) {
+      await supabase.from('users').insert({
+        id: data.user.id,
+        full_name: fullName,
+        email,
+        role,
+      });
+    }
+    return { error: null };
+  };
 
   const signInWithPhone = async (phone: string) => {
     const { error } = await supabase.auth.signInWithOtp({ phone });
@@ -205,10 +149,16 @@ useEffect(() => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    window.location.href = '/';
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) { /* sign out error — handled by finally block */ }
+    } catch (e) {
+      // sign out exception — handled by finally block
+    } finally {
+      setUser(null);
+      setSession(null);
+      window.location.href = '/';
+    }
   };
 
   return (
@@ -235,35 +185,3 @@ export function useAuth() {
   if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 }
-
-
-
-
-  // useEffect(() => {
-  //   supabase.auth.getSession().then(({ data: { session: s } }) => {
-  //     setSession(s);
-  //     if (s?.user) {
-  //       fetchProfile(s.user.id).then((profile) => {
-  //         setUser(profile);
-  //         setLoading(false);
-  //       });
-  //     } else {
-  //       setLoading(false);
-  //     }
-  //   });
-
-  //   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-  //     (_event, s) => {
-  //       setSession(s);
-  //       if (s?.user) {
-  //         fetchProfile(s.user.id).then((profile) => {
-  //           setUser(profile);
-  //         });
-  //       } else {
-  //         setUser(null);
-  //       }
-  //     }
-  //   );
-
-  //   return () => subscription.unsubscribe();
-  // }, [fetchProfile]);
