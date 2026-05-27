@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth-context';
 import type { DeliveryAssignment, Invoice } from '@/lib/types';
 import { Package, CheckCircle, Loader2, Hash, Phone, MapPin, Smartphone, CreditCard, Banknote, IndianRupee, Truck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { sendDeliveryTwilioOtp, verifyDeliveryTwilioOtp } from '@/lib/actions/delivery';
 
 interface DropoffFlowProps {
   assignment: (DeliveryAssignment & { repair: any; invoice: any }) | null;
@@ -32,6 +33,7 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [attempts, setAttempts] = useState(0);
+  const [resendTimer, setResendTimer] = useState(0);
 
   // Payment
   const [cashAmount, setCashAmount] = useState('');
@@ -41,9 +43,16 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
   useEffect(() => {
     if (open) {
       setOtpSent(false); setOtpInput(''); setOtpVerified(false);
-      setAttempts(0); setCashAmount(''); setPaymentDone(false);
+      setAttempts(0); setCashAmount(''); setPaymentDone(false); setResendTimer(0);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const t = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [resendTimer]);
 
   if (!assignment) return null;
   const repair = assignment.repair;
@@ -53,27 +62,13 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
 
   const sendOtp = async () => {
     setOtpSending(true);
-    try {
-      const invokePromise = supabase.functions.invoke('send-delivery-otp', {
-        body: { assignment_id: assignment.id, phone: repair.customer?.phone },
-      });
-      const timeoutPromise = new Promise<{ data: null; error: any }>((resolve) =>
-        setTimeout(() => resolve({ data: null, error: new Error('Edge Function timed out') }), 4000)
-      );
-      const { error } = await Promise.race([invokePromise, timeoutPromise]);
-      if (error) {
-        const otp = String(Math.floor(1000 + Math.random() * 9000));
-        await supabase.from('delivery_assignments').update({ delivery_otp: otp }).eq('id', assignment.id);
-        toast.success(`OTP generated: ${otp} (dev mode — SMS not configured)`);
-      } else {
-        toast.success('OTP sent to customer');
-      }
+    const result = await sendDeliveryTwilioOtp(assignment.id, 'delivery');
+    if (!result.success) {
+      toast.error(result.error || 'Failed to send OTP');
+    } else {
+      toast.success('OTP sent to customer');
       setOtpSent(true);
-    } catch {
-      const otp = String(Math.floor(1000 + Math.random() * 9000));
-      await supabase.from('delivery_assignments').update({ delivery_otp: otp }).eq('id', assignment.id);
-      toast.success(`OTP generated: ${otp} (dev mode)`);
-      setOtpSent(true);
+      setResendTimer(60);
     }
     setOtpSending(false);
   };
@@ -81,8 +76,8 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
   const verifyOtp = async () => {
     if (attempts >= 3) return;
     setOtpVerifying(true);
-    const { data } = await supabase.from('delivery_assignments').select('delivery_otp').eq('id', assignment.id).single();
-    if (data?.delivery_otp === otpInput) {
+    const result = await verifyDeliveryTwilioOtp(assignment.id, 'delivery', otpInput);
+    if (result.success) {
       await supabase.from('repairs').update({
         status: 'delivered', delivered_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }).eq('id', repair.id);
@@ -106,7 +101,7 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
     } else {
       setAttempts(prev => prev + 1);
       if (attempts + 1 >= 3) toast.error('Max attempts reached — contact support');
-      else toast.error('Incorrect OTP');
+      else toast.error(result.error || 'Incorrect OTP');
     }
     setOtpVerifying(false);
   };
@@ -201,15 +196,20 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
 
               {otpSent && attempts < 3 && (
                 <div className="space-y-3">
-                  <Input value={otpInput} onChange={e => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    placeholder="Enter 4-digit OTP" maxLength={4}
+                  <Input value={otpInput} onChange={e => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit OTP" maxLength={6}
                     className="bg-white/5 border-white/10 text-white text-center text-2xl font-mono tracking-[0.5em] h-14" />
-                  <Button onClick={verifyOtp} disabled={otpInput.length !== 4 || otpVerifying}
+                  <Button onClick={verifyOtp} disabled={otpInput.length !== 6 || otpVerifying}
                     className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold">
                     {otpVerifying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Confirm Handover
                   </Button>
-                  {attempts > 0 && <p className="text-xs text-red-400 text-center">{3 - attempts} attempt(s) remaining</p>}
+                  <div className="flex justify-between items-center text-xs">
+                    {attempts > 0 && <p className="text-red-400">{3 - attempts} attempt(s) remaining</p>}
+                    <button disabled={resendTimer > 0 || otpSending} onClick={sendOtp} className={`ml-auto ${resendTimer > 0 ? 'text-white/30' : 'text-blue-400 hover:text-blue-300'}`}>
+                      {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                    </button>
+                  </div>
                 </div>
               )}
 

@@ -6,15 +6,31 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import type { User, Attendance, AttendanceStatus, SalaryConfig, Holiday } from '@/lib/types';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { deleteStaff } from '@/lib/actions/shop-admin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Users, Calendar, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Calendar, DollarSign, ChevronLeft, ChevronRight, Plus, Loader2, Trash2 } from 'lucide-react';
+
+const addStaffSchema = z.object({
+  full_name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email'),
+  phone: z.string().regex(/^[6-9]\d{9}$/, 'Valid 10-digit Indian mobile required'),
+  aadhar: z.string().optional(),
+});
+type AddStaffForm = z.infer<typeof addStaffSchema>;
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
@@ -26,23 +42,37 @@ export default function StaffPage() {
   const [salaryConfigs, setSalaryConfigs] = useState<SalaryConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const [shops, setShops] = useState<any[]>([]);
+
+  // Add Staff
+  const [addDialog, setAddDialog] = useState(false);
+  const [addingStaff, setAddingStaff] = useState(false);
+  const [staffRole, setStaffRole] = useState<'technician' | 'delivery'>('technician');
+  const [selectedShop, setSelectedShop] = useState('');
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<AddStaffForm>({ resolver: zodResolver(addStaffSchema) });
+
+  // Delete Staff
+  const [deleteConfirm, setDeleteConfirm] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     const monthStr = currentMonth.toISOString().split('T')[0];
     const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0];
 
-    const [staffRes, attRes, holRes, salRes] = await Promise.all([
+    const [staffRes, attRes, holRes, salRes, shopRes] = await Promise.all([
       supabase.from('users').select('*').in('role', ['technician', 'delivery', 'shop_admin']).order('full_name'),
       supabase.from('attendance').select('*').gte('date', monthStr).lte('date', endOfMonth),
       supabase.from('holidays').select('*').gte('date', monthStr).lte('date', endOfMonth),
       supabase.from('salary_config').select('*').eq('month', monthStr),
+      supabase.from('shops').select('id, name').eq('is_active', true),
     ]);
 
     setStaff(staffRes.data || []);
     setAttendance(attRes.data || []);
     setHolidays(holRes.data || []);
     setSalaryConfigs(salRes.data || []);
+    setShops(shopRes.data || []);
     setLoading(false);
   }, [currentMonth]);
 
@@ -52,6 +82,54 @@ export default function StaffPage() {
     await supabase.from('users').update({ is_active: !staffMember.is_active }).eq('id', staffMember.id);
     toast.success(staffMember.is_active ? 'Deactivated' : 'Activated');
     fetchData();
+  };
+
+  const handleDelete = async (s: User) => {
+    setDeleting(true);
+    const result = await deleteStaff(s.id);
+    if (!result.success) {
+      toast.error(result.error || 'Failed to remove staff');
+    } else {
+      toast.success(`${s.full_name} removed permanently`);
+    }
+    setDeleting(false);
+    setDeleteConfirm(null);
+    fetchData();
+  };
+
+  const onAddStaff = async (data: AddStaffForm) => {
+    if (!selectedShop) {
+      toast.error('Please select a shop');
+      return;
+    }
+    if (staffRole === 'technician' && (!data.aadhar || !/^\d{12}$/.test(data.aadhar))) {
+      toast.error('Aadhar must be exactly 12 digits for technicians');
+      return;
+    }
+    setAddingStaff(true);
+    try {
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+        email: data.email,
+        password: Math.random().toString(36).slice(2) + 'Aa1!',
+      });
+      if (signUpErr) throw signUpErr;
+      if (signUpData.user) {
+        await supabase.from('users').upsert({
+          id: signUpData.user.id, email: data.email, full_name: data.full_name,
+          phone: data.phone, role: staffRole, shop_id: selectedShop, is_active: true,
+        });
+        if (staffRole === 'technician' && data.aadhar) {
+          await supabase.from('technician_details').insert({
+            user_id: signUpData.user.id, aadhar_number: data.aadhar, verified: false,
+          });
+        }
+      }
+      toast.success(`${staffRole === 'technician' ? 'Technician' : 'Delivery staff'} added. Invite sent to ${data.email}.`);
+      setAddDialog(false); reset(); setStaffRole('technician'); setSelectedShop(''); fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to add staff');
+    }
+    setAddingStaff(false);
   };
 
   // Attendance helpers
@@ -138,9 +216,12 @@ export default function StaffPage() {
 
   return (
     <div className="space-y-8">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-white">Staff Management</h1>
-        <p className="text-white/50 text-sm mt-1">Manage employees, attendance, and salaries</p>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Staff Management</h1>
+          <p className="text-white/50 text-sm mt-1">Manage employees, attendance, and salaries</p>
+        </div>
+        <Button onClick={() => { reset(); setStaffRole('technician'); setSelectedShop(''); setAddDialog(true); }} className="bg-[#00D084] text-black hover:bg-[#00D084]/90"><Plus className="w-4 h-4 mr-1" />Add Staff</Button>
       </motion.div>
 
       <Tabs defaultValue="roster" className="w-full">
@@ -157,14 +238,21 @@ export default function StaffPage() {
             {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-white/5" /></div> : (
               <Table><TableHeader><TableRow className="border-white/5 hover:bg-transparent">
                 <TableHead className="text-white/50">Name</TableHead><TableHead className="text-white/50">Role</TableHead>
-                <TableHead className="text-white/50">Phone</TableHead><TableHead className="text-white/50">Active</TableHead>
+                <TableHead className="text-white/50">Phone</TableHead><TableHead className="text-white/50">Shop</TableHead>
+                <TableHead className="text-white/50">Active</TableHead><TableHead className="text-white/50">Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>{staff.map(s => (
                 <TableRow key={s.id} className="border-white/5 hover:bg-white/5">
                   <TableCell className="text-white font-medium">{s.full_name}</TableCell>
                   <TableCell><Badge className="bg-white/10 text-white/60 capitalize">{s.role}</Badge></TableCell>
                   <TableCell className="text-white/60">{s.phone || '—'}</TableCell>
+                  <TableCell className="text-white/60 text-xs">{shops.find(sh => sh.id === s.shop_id)?.name || '—'}</TableCell>
                   <TableCell><Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} /></TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(s)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 text-xs">
+                      <Trash2 className="w-3 h-3 mr-1" />Remove
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}</TableBody></Table>
             )}
@@ -277,6 +365,59 @@ export default function StaffPage() {
           </CardContent></Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Staff Dialog */}
+      <Dialog open={addDialog} onOpenChange={setAddDialog}>
+        <DialogContent className="bg-[#1A1A1A] border-white/10 max-w-sm">
+          <DialogHeader><DialogTitle className="text-white">Add New Staff</DialogTitle><DialogDescription className="text-white/50">Add a staff member to any shop</DialogDescription></DialogHeader>
+          <form onSubmit={handleSubmit(onAddStaff)} className="space-y-3">
+            <div>
+              <Label className="text-white/60">Role *</Label>
+              <Select value={staffRole} onValueChange={(v) => setStaffRole(v as 'technician' | 'delivery')}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-[#1A1A1A] border-white/10">
+                  <SelectItem value="technician">Technician</SelectItem>
+                  <SelectItem value="delivery">Delivery Staff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-white/60">Shop *</Label>
+              <Select value={selectedShop} onValueChange={setSelectedShop}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1"><SelectValue placeholder="Select shop..." /></SelectTrigger>
+                <SelectContent className="bg-[#1A1A1A] border-white/10">
+                  {shops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label className="text-white/60">Full Name *</Label><Input {...register('full_name')} className="bg-white/5 border-white/10 text-white mt-1" />{errors.full_name && <p className="text-red-400 text-xs mt-0.5">{errors.full_name.message}</p>}</div>
+            <div><Label className="text-white/60">Email *</Label><Input {...register('email')} type="email" className="bg-white/5 border-white/10 text-white mt-1" />{errors.email && <p className="text-red-400 text-xs mt-0.5">{errors.email.message}</p>}</div>
+            <div><Label className="text-white/60">Phone *</Label><Input {...register('phone')} className="bg-white/5 border-white/10 text-white mt-1" placeholder="10-digit mobile" />{errors.phone && <p className="text-red-400 text-xs mt-0.5">{errors.phone.message}</p>}</div>
+            {staffRole === 'technician' && (
+              <div><Label className="text-white/60">Aadhar Number *</Label><Input {...register('aadhar')} className="bg-white/5 border-white/10 text-white mt-1" placeholder="12-digit Aadhar" maxLength={12} />{errors.aadhar && <p className="text-red-400 text-xs mt-0.5">{errors.aadhar.message}</p>}</div>
+            )}
+            <DialogFooter><Button type="submit" disabled={addingStaff} className="bg-[#00D084] text-black hover:bg-[#00D084]/90">{addingStaff ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}Add {staffRole === 'technician' ? 'Technician' : 'Delivery Staff'}</Button></DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent className="bg-[#1A1A1A] border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Permanently Remove Staff?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/60">
+              This will permanently remove <span className="text-white font-semibold">{deleteConfirm?.full_name}</span> and all their attendance/salary records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/10 text-white/60 hover:bg-white/5">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteConfirm && handleDelete(deleteConfirm)} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}Remove Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -115,6 +115,87 @@ export async function upsertStaff(input: UpsertStaffInput): Promise<ActionResult
 }
 
 /**
+ * Permanently delete a staff member and all related records.
+ * Only shop_admins (for their shop) and admins can do this.
+ */
+export async function deleteStaff(staffId: string): Promise<ActionResult> {
+  try {
+    const { profile } = await getAuthenticatedUser(['shop_admin', 'admin']);
+    logger.info('SHOP_ADMIN', 'deleteStaff', { userId: profile.id, staffId });
+
+    const supabase = await createServerSupabaseClient();
+
+    // Fetch the staff member
+    const { data: staff, error: staffError } = await supabase
+      .from('users')
+      .select('id, full_name, role, shop_id')
+      .eq('id', staffId)
+      .single();
+
+    if (staffError || !staff) {
+      return { success: false, error: 'Staff member not found.' };
+    }
+
+    // Shop admins can only delete staff in their own shop
+    if (profile.role === 'shop_admin' && staff.shop_id !== profile.shop_id) {
+      return { success: false, error: 'You can only remove staff in your own shop.' };
+    }
+
+    // Only allow deleting technicians and delivery staff
+    if (!['technician', 'delivery'].includes(staff.role)) {
+      return { success: false, error: 'Cannot remove users with this role.' };
+    }
+
+    // Check for active repair assignments (technician)
+    if (staff.role === 'technician') {
+      const { count } = await supabase
+        .from('repairs')
+        .select('id', { count: 'exact', head: true })
+        .eq('technician_id', staffId)
+        .not('status', 'in', '("delivered","cancelled","done")');
+
+      if (count && count > 0) {
+        return { success: false, error: `Cannot remove — ${count} active repair(s) assigned. Reassign them first.` };
+      }
+    }
+
+    // Check for active delivery assignments
+    if (staff.role === 'delivery') {
+      const { count } = await supabase
+        .from('delivery_assignments')
+        .select('id', { count: 'exact', head: true })
+        .eq('delivery_boy_id', staffId)
+        .not('status', 'in', '("delivered","returned")');
+
+      if (count && count > 0) {
+        return { success: false, error: `Cannot remove — ${count} active delivery assignment(s). Complete or reassign them first.` };
+      }
+    }
+
+    // Delete related records in order
+    await supabase.from('attendance').delete().eq('employee_id', staffId);
+    await supabase.from('salary_config').delete().eq('employee_id', staffId);
+    await supabase.from('technician_details').delete().eq('user_id', staffId);
+    await supabase.from('notifications').delete().eq('recipient_id', staffId);
+
+    // Finally delete the user record
+    const { error: deleteError } = await supabase.from('users').delete().eq('id', staffId);
+
+    if (deleteError) {
+      logger.error('SHOP_ADMIN', 'Staff delete failed', { error: deleteError.message });
+      return { success: false, error: `Failed to remove: ${deleteError.message}` };
+    }
+
+    logger.info('SHOP_ADMIN', 'Staff deleted permanently', { staffId, name: staff.full_name });
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('SHOP_ADMIN', 'deleteStaff exception', { error: message });
+    return { success: false, error: message };
+  }
+}
+
+/**
  * Toggle a staff member's active status.
  */
 export async function toggleStaffActive(staffId: string, currentActive: boolean): Promise<ActionResult> {

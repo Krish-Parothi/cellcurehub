@@ -45,6 +45,12 @@ export async function sendBookingOtp(phone: string): Promise<ActionResult> {
     if (!response.ok) {
       const respText = await response.text();
       logger.error('OTP', 'Twilio Verify API error', { response: respText });
+      try {
+        const errJson = JSON.parse(respText);
+        if (errJson.message) {
+          return { success: false, error: errJson.message };
+        }
+      } catch {}
       return { success: false, error: 'Failed to send SMS via Twilio Verify.' };
     }
 
@@ -88,6 +94,12 @@ export async function verifyBookingOtp(phone: string, code: string): Promise<Act
     if (!response.ok) {
       const respText = await response.text();
       logger.error('OTP', 'Twilio Verify Check API error', { response: respText });
+      try {
+        const errJson = JSON.parse(respText);
+        if (errJson.message) {
+          return { success: false, error: errJson.message };
+        }
+      } catch {}
       return { success: false, error: 'Failed to verify OTP with Twilio.' };
     }
 
