@@ -105,48 +105,48 @@ export default function TrackPage() {
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white">
+    <main className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-[#00D084]/5 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-[#00D084]/5 blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-[#FF5C00]/5 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-[#FF5C00]/5 blur-3xl" />
       </div>
 
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 pb-20">
         {/* Search */}
         <div className="flex flex-col items-center">
           <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-white">Track Your <span className="text-[#00D084]">Repair</span></h1>
-            <p className="mt-2 text-white/50 text-sm sm:text-base">Enter your Repair ID or phone number to get real-time status updates</p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Track Your <span className="text-[#FF5C00]">Repair</span></h1>
+            <p className="mt-2 text-gray-600 text-sm sm:text-base">Enter your Repair ID or phone number to get real-time status updates</p>
           </div>
 
-          <div className="w-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
-            <div className="flex rounded-lg bg-white/5 p-1 mb-6">
-              <button type="button" onClick={() => setSearchMode('id')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${searchMode === 'id' ? 'bg-[#00D084] text-black' : 'text-white/60 hover:text-white'}`}><Hash className="w-4 h-4" /> Repair ID</button>
-              <button type="button" onClick={() => setSearchMode('phone')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${searchMode === 'phone' ? 'bg-[#00D084] text-black' : 'text-white/60 hover:text-white'}`}><Phone className="w-4 h-4" /> Phone</button>
+          <div className="w-full bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-lg">
+            <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
+              <button type="button" onClick={() => setSearchMode('id')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${searchMode === 'id' ? 'bg-[#FF5C00] text-white' : 'text-gray-600 hover:text-gray-900'}`}><Hash className="w-4 h-4" /> Repair ID</button>
+              <button type="button" onClick={() => setSearchMode('phone')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${searchMode === 'phone' ? 'bg-[#FF5C00] text-white' : 'text-gray-600 hover:text-gray-900'}`}><Phone className="w-4 h-4" /> Phone</button>
             </div>
 
             <AnimatePresence mode="wait">
               {searchMode === 'id' ? (
                 <motion.div key="id" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-2">
-                  <Label htmlFor="rid" className="text-white/80 text-sm">Repair ID</Label>
+                  <Label htmlFor="rid" className="text-gray-700 text-sm">Repair ID</Label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                    <Input id="rid" placeholder="e.g. 550e8400-e29b-41d4..." value={repairId} onChange={(e) => setRepairId(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084] pl-10 font-mono text-sm" />
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input id="rid" placeholder="e.g. 550e8400-e29b-41d4..." value={repairId} onChange={(e) => setRepairId(e.target.value)} className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00] pl-10 font-mono text-sm" />
                   </div>
                 </motion.div>
               ) : (
                 <motion.div key="ph" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
-                  <Label htmlFor="phn" className="text-white/80 text-sm">Phone Number</Label>
+                  <Label htmlFor="phn" className="text-gray-700 text-sm">Phone Number</Label>
                   <div className="flex gap-2">
-                    <div className="flex items-center rounded-md border border-white/10 bg-white/5 px-3 text-white/60 text-sm shrink-0">+91</div>
-                    <Input id="phn" type="tel" placeholder="Enter phone number" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084]" />
+                    <div className="flex items-center rounded-md border border-gray-200 bg-gray-50 px-3 text-gray-600 text-sm shrink-0">+91</div>
+                    <Input id="phn" type="tel" placeholder="Enter phone number" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00]" />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <Button type="button" onClick={handleSearch} disabled={loading} className="mt-5 w-full bg-[#00D084] hover:bg-[#00D084]/90 text-black font-semibold h-11">
+            <Button type="button" onClick={handleSearch} disabled={loading} className="mt-5 w-full bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold h-11">
               {loading ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Searching...</span> : <span className="flex items-center gap-2"><Search className="w-4 h-4" /> Track</span>}
             </Button>
           </div>
@@ -155,10 +155,10 @@ export default function TrackPage() {
         {/* Not Found */}
         <AnimatePresence>
           {notFound && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-8 text-center backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8">
-              <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4"><AlertTriangle className="w-7 h-7 text-red-400" /></div>
-              <h3 className="text-lg font-semibold text-white mb-2">No repair found</h3>
-              <p className="text-sm text-white/50 max-w-sm mx-auto">Please double-check the Repair ID or phone number and try again.</p>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-8 text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-lg">
+              <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4"><AlertTriangle className="w-7 h-7 text-red-500" /></div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No repair found</h3>
+              <p className="text-sm text-gray-600 max-w-sm mx-auto">Please double-check the Repair ID or phone number and try again.</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -168,24 +168,24 @@ export default function TrackPage() {
           {repair && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-6">
               {/* Repair Info */}
-              <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl">
+              <Card className="bg-white border-gray-200 shadow-lg">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg text-white">Repair Details</CardTitle>
-                      <CardDescription className="text-white/40 text-xs mt-1 font-mono">ID: {repair.id}</CardDescription>
+                      <CardTitle className="text-lg text-gray-900">Repair Details</CardTitle>
+                      <CardDescription className="text-gray-600 text-xs mt-1 font-mono">ID: {repair.id}</CardDescription>
                     </div>
-                    <Badge className={repair.status === 'delivered' ? 'bg-[#00D084] text-black' : 'bg-[#00D084]/10 text-[#00D084] border-[#00D084]/20'}>{REPAIR_STATUS_LABELS[repair.status]}</Badge>
+                    <Badge className={repair.status === 'delivered' ? 'bg-[#FF5C00] text-white' : 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20'}>{REPAIR_STATUS_LABELS[repair.status]}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><p className="text-xs text-white/40">Device</p><p className="text-white font-medium">{repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model || 'N/A'}</p></div>
-                    <div><p className="text-xs text-white/40">Repair Type</p><p className="text-white/80 capitalize">{repair.repair_type?.replace(/_/g, ' ') || 'N/A'}</p></div>
-                    <div><p className="text-xs text-white/40">Estimated Cost</p><p className="text-[#00D084] font-semibold">{repair.estimated_cost ? `₹${repair.estimated_cost.toLocaleString('en-IN')}` : 'Pending'}</p></div>
-                    <div><p className="text-xs text-white/40">Booked On</p><p className="text-white/80">{formatDate(repair.created_at)}</p></div>
-                    <div><p className="text-xs text-white/40">Pickup Type</p><p className="text-white/80 capitalize">{repair.pickup_type === 'home' ? 'Home Pickup' : 'Store Drop-off'}</p></div>
-                    {repair.imei_number && <div><p className="text-xs text-white/40">IMEI</p><p className="text-white/80 font-mono text-xs">{repair.imei_number}</p></div>}
+                    <div><p className="text-xs text-gray-600">Device</p><p className="text-gray-900 font-medium">{repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model || 'N/A'}</p></div>
+                    <div><p className="text-xs text-gray-600">Repair Type</p><p className="text-gray-700 capitalize">{repair.repair_type?.replace(/_/g, ' ') || 'N/A'}</p></div>
+                    <div><p className="text-xs text-gray-600">Estimated Cost</p><p className="text-[#FF5C00] font-semibold">{repair.estimated_cost ? `₹${repair.estimated_cost.toLocaleString('en-IN')}` : 'Pending'}</p></div>
+                    <div><p className="text-xs text-gray-600">Booked On</p><p className="text-gray-700">{formatDate(repair.created_at)}</p></div>
+                    <div><p className="text-xs text-gray-600">Pickup Type</p><p className="text-gray-700 capitalize">{repair.pickup_type === 'home' ? 'Home Pickup' : 'Store Drop-off'}</p></div>
+                    {repair.imei_number && <div><p className="text-xs text-gray-600">IMEI</p><p className="text-gray-700 font-mono text-xs">{repair.imei_number}</p></div>}
                   </div>
                 </CardContent>
               </Card>
@@ -206,10 +206,10 @@ export default function TrackPage() {
                     <CardContent className="space-y-4">
                       {repair.approval_note && <div className="bg-white/5 rounded-xl p-4 border border-white/5"><p className="text-xs text-white/40 mb-1">Technician&apos;s Note</p><p className="text-sm text-white/80">{repair.approval_note}</p></div>}
                       {repair.approval_photo_url && (
-                        <a href={repair.approval_photo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-[#00D084] hover:underline"><ImageIcon className="w-4 h-4" /> View diagnostic photo</a>
+                        <a href={repair.approval_photo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-[#FF5C00] hover:underline"><ImageIcon className="w-4 h-4" /> View diagnostic photo</a>
                       )}
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <Button onClick={handleApprove} disabled={approvalLoading} className="flex-1 bg-[#00D084] hover:bg-[#00D084]/90 text-black font-semibold h-11">
+                        <Button onClick={handleApprove} disabled={approvalLoading} className="flex-1 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold h-11">
                           {approvalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4" /> ✓ Approve & Continue</span>}
                         </Button>
                         <Button onClick={handleReject} disabled={approvalLoading} variant="outline" className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10 font-semibold h-11">✗ Reject Repair</Button>
@@ -220,14 +220,14 @@ export default function TrackPage() {
               )}
 
               {/* Timeline */}
-              <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl">
+              <Card className="bg-white border-gray-200 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-lg text-white">Repair Progress</CardTitle>
-                  <CardDescription className="text-white/40">Current: <span className="text-[#00D084] font-medium">{REPAIR_STATUS_LABELS[repair.status]}</span></CardDescription>
+                  <CardTitle className="text-lg text-gray-900">Repair Progress</CardTitle>
+                  <CardDescription className="text-gray-600">Current: <span className="text-[#FF5C00] font-medium">{REPAIR_STATUS_LABELS[repair.status]}</span></CardDescription>
                 </CardHeader>
                 <CardContent>
                   {timelineLoading ? (
-                    <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="flex gap-4"><Skeleton className="w-8 h-8 rounded-full bg-white/5" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-32 bg-white/5" /><Skeleton className="h-3 w-48 bg-white/5" /></div></div>)}</div>
+                    <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="flex gap-4"><Skeleton className="w-8 h-8 rounded-full bg-gray-200" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-32 bg-gray-200" /><Skeleton className="h-3 w-48 bg-gray-200" /></div></div>)}</div>
                   ) : (
                     <VerticalTimeline entries={timelines} currentStatus={repair.status} />
                   )}

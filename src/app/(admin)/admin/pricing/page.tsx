@@ -85,39 +85,39 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-[#1A1A1A]">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-white">Pricing Management</h1>
-        <p className="text-white/50 text-sm mt-1">Set repair prices and e-waste payout rates</p>
+        <h1 className="text-2xl font-bold text-[#1A1A1A]">Pricing Management</h1>
+        <p className="text-[#1A1A1A]/60 text-sm mt-1">Set repair prices and e-waste payout rates</p>
       </motion.div>
 
       <Tabs defaultValue="repair" className="w-full">
-        <TabsList className="bg-white/5 border border-white/10 mb-6">
-          <TabsTrigger value="repair" className="data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]"><DollarSign className="w-3.5 h-3.5 mr-1.5" />Repair Pricing</TabsTrigger>
-          <TabsTrigger value="ewaste" className="data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]"><Recycle className="w-3.5 h-3.5 mr-1.5" />E-Waste Payouts</TabsTrigger>
+        <TabsList className="bg-white border border-[#E8E4DF] shadow-sm mb-6 p-1">
+          <TabsTrigger value="repair" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] font-semibold"><DollarSign className="w-3.5 h-3.5 mr-1.5" />Repair Pricing</TabsTrigger>
+          <TabsTrigger value="ewaste" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] font-semibold"><Recycle className="w-3.5 h-3.5 mr-1.5" />E-Waste Payouts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="repair">
           <div className="flex justify-end mb-4">
-            <Button onClick={savePricing} disabled={saving || Object.keys(editedPrices).length === 0} className="bg-[#00D084] text-black hover:bg-[#00D084]/90"><Save className="w-4 h-4 mr-1" />Save Changes</Button>
+            <Button onClick={savePricing} disabled={saving || Object.keys(editedPrices).length === 0} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-bold"><Save className="w-4 h-4 mr-1" />Save Changes</Button>
           </div>
-          <Card className="bg-white/5 border-white/10 overflow-x-auto"><CardContent className="p-0">
-            {loading ? <div className="p-6"><Skeleton className="h-64 w-full bg-white/5" /></div> : (
+          <Card className="bg-white border-[#E8E4DF] shadow-sm overflow-x-auto"><CardContent className="p-0">
+            {loading ? <div className="p-6"><Skeleton className="h-64 w-full bg-[#1A1A1A]/5" /></div> : (
               <table className="w-full text-xs">
-                <thead><tr className="border-b border-white/5">
-                  <th className="text-left text-white/50 p-3 sticky left-0 bg-[#0A0A0A] z-10 min-w-[180px]">Device</th>
-                  {repairTypes.map(rt => <th key={rt} className="text-center text-white/50 p-2 min-w-[120px]">{REPAIR_TYPE_OPTIONS.find(r => r.value === rt)?.label}</th>)}
+                <thead><tr className="border-b border-[#E8E4DF]/60 bg-[#F7F7F5]">
+                  <th className="text-left text-[#1A1A1A]/50 p-3 sticky left-0 bg-[#F7F7F5] z-10 min-w-[180px] border-r border-[#E8E4DF]/60 font-semibold">Device</th>
+                  {repairTypes.map(rt => <th key={rt} className="text-center text-[#1A1A1A]/50 p-2 min-w-[120px] font-semibold">{REPAIR_TYPE_OPTIONS.find(r => r.value === rt)?.label}</th>)}
                 </tr></thead>
                 <tbody>{devices.map(d => (
-                  <tr key={d.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                    <td className="text-white/80 p-3 sticky left-0 bg-[#0A0A0A] z-10 font-medium">{d.brand} {d.model_name}</td>
+                  <tr key={d.id} className="border-b border-[#E8E4DF]/40 hover:bg-[#F7F7F5]/50 transition-colors">
+                    <td className="text-[#1A1A1A] p-3 sticky left-0 bg-white z-10 font-bold border-r border-[#E8E4DF]/60 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{d.brand} {d.model_name}</td>
                     {repairTypes.map(rt => {
                       const p = getPrice(d.id, rt);
                       return (
-                        <td key={rt} className="p-1.5">
-                          <div className="flex gap-1">
-                            <Input type="number" value={p.min} onChange={e => setPrice(d.id, rt, 'min', +e.target.value)} className="w-14 h-6 text-[10px] bg-white/5 border-white/10 text-white text-center p-1" placeholder="Min" />
-                            <Input type="number" value={p.max} onChange={e => setPrice(d.id, rt, 'max', +e.target.value)} className="w-14 h-6 text-[10px] bg-white/5 border-white/10 text-white text-center p-1" placeholder="Max" />
+                        <td key={rt} className="p-1.5 text-center">
+                          <div className="flex gap-1 justify-center">
+                            <Input type="number" value={p.min} onChange={e => setPrice(d.id, rt, 'min', +e.target.value)} className="w-14 h-6 text-[10px] bg-white border-[#E8E4DF] text-[#1A1A1A] text-center p-1 focus-visible:ring-[#FF5C00]" placeholder="Min" />
+                            <Input type="number" value={p.max} onChange={e => setPrice(d.id, rt, 'max', +e.target.value)} className="w-14 h-6 text-[10px] bg-white border-[#E8E4DF] text-[#1A1A1A] text-center p-1 focus-visible:ring-[#FF5C00]" placeholder="Max" />
                           </div>
                         </td>
                       );
@@ -131,24 +131,24 @@ export default function PricingPage() {
 
         <TabsContent value="ewaste">
           <div className="flex justify-end mb-4">
-            <Button onClick={savePayouts} disabled={saving || Object.keys(editedPayouts).length === 0} className="bg-[#00D084] text-black hover:bg-[#00D084]/90"><Save className="w-4 h-4 mr-1" />Save Changes</Button>
+            <Button onClick={savePayouts} disabled={saving || Object.keys(editedPayouts).length === 0} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-bold"><Save className="w-4 h-4 mr-1" />Save Changes</Button>
           </div>
-          <Card className="bg-white/5 border-white/10"><CardContent className="p-0">
-            {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-white/5" /></div> : (
-              <Table><TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-white/50">Brand</TableHead>
-                <TableHead className="text-white/50">Cash Min</TableHead><TableHead className="text-white/50">Cash Max</TableHead>
-                <TableHead className="text-white/50">Credit Min</TableHead><TableHead className="text-white/50">Credit Max</TableHead>
+          <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-0">
+            {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-[#1A1A1A]/5" /></div> : (
+              <Table><TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent">
+                <TableHead className="text-[#1A1A1A]/50">Brand</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Cash Min</TableHead><TableHead className="text-[#1A1A1A]/50">Cash Max</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Credit Min</TableHead><TableHead className="text-[#1A1A1A]/50">Credit Max</TableHead>
               </TableRow></TableHeader>
               <TableBody>{payoutRates.map(pr => {
                 const edited = editedPayouts[pr.id] || pr;
                 return (
-                  <TableRow key={pr.id} className="border-white/5 hover:bg-white/5">
-                    <TableCell className="text-white font-medium">{pr.brand}</TableCell>
-                    <TableCell><Input type="number" value={edited.cash_min} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), cash_min: +e.target.value } }))} className="w-20 h-7 text-xs bg-white/5 border-white/10 text-white" /></TableCell>
-                    <TableCell><Input type="number" value={edited.cash_max} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), cash_max: +e.target.value } }))} className="w-20 h-7 text-xs bg-white/5 border-white/10 text-white" /></TableCell>
-                    <TableCell><Input type="number" value={edited.credit_min} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), credit_min: +e.target.value } }))} className="w-20 h-7 text-xs bg-white/5 border-white/10 text-white" /></TableCell>
-                    <TableCell><Input type="number" value={edited.credit_max} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), credit_max: +e.target.value } }))} className="w-20 h-7 text-xs bg-white/5 border-white/10 text-white" /></TableCell>
+                  <TableRow key={pr.id} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5] transition-colors">
+                    <TableCell className="text-[#1A1A1A] font-semibold">{pr.brand}</TableCell>
+                    <TableCell><Input type="number" value={edited.cash_min} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), cash_min: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
+                    <TableCell><Input type="number" value={edited.cash_max} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), cash_max: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
+                    <TableCell><Input type="number" value={edited.credit_min} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), credit_min: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
+                    <TableCell><Input type="number" value={edited.credit_max} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), credit_max: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
                   </TableRow>
                 );
               })}</TableBody></Table>

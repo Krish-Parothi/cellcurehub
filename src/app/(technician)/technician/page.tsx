@@ -34,10 +34,10 @@ function getSlaTime(createdAt: string) {
   const deadline = new Date(createdAt).getTime() + 48 * 60 * 60 * 1000;
   const now = Date.now();
   const remaining = deadline - now;
-  if (remaining <= 0) return { text: 'SLA EXPIRED', color: 'text-red-500 font-bold animate-pulse', expired: true };
+  if (remaining <= 0) return { text: 'SLA EXPIRED', color: 'text-red-600 font-bold animate-pulse', expired: true };
   const hours = Math.floor(remaining / (1000 * 60 * 60));
   const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-  const color = hours > 24 ? 'text-[#00D084]' : hours >= 12 ? 'text-amber-500' : 'text-red-500 animate-pulse font-bold';
+  const color = hours > 24 ? 'text-emerald-600' : hours >= 12 ? 'text-amber-600' : 'text-red-600 animate-pulse font-bold';
   return { text: `${hours}h ${minutes}m left`, color, expired: false };
 }
 
@@ -115,95 +115,87 @@ export default function TechnicianDashboard() {
   const completedToday = repairs.filter(r => r.status === 'done' && new Date(r.updated_at).toDateString() === new Date().toDateString()).length;
 
   return (
-    <RoleGuard allowedRoles={['technician', 'admin', 'shop_admin']}>
-      <div className="min-h-screen bg-[#0A0A0A] flex flex-col">
-        <Navbar />
-        
-        <main className="flex-1 pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto w-full">
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+    <div className="space-y-8">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Technician Dashboard</h1>
+          <p className="text-[#1A1A1A]/60 text-sm mt-1">Welcome back, {user?.full_name}</p>
+        </div>
+        <div className="flex gap-4">
+          <Card className="bg-white border-[#E8E4DF] px-4 py-3 flex items-center gap-3 shadow-sm">
+            <Wrench className="w-5 h-5 text-[#FF5C00]" />
             <div>
-              <h1 className="text-2xl font-bold text-white">Technician Dashboard</h1>
-              <p className="text-white/50 text-sm mt-1">Welcome back, {user?.full_name}</p>
+              <p className="text-xs text-[#1A1A1A]/50 font-medium">Active Jobs</p>
+              <p className="text-lg font-bold text-[#1A1A1A]">{activeCount}</p>
             </div>
-            <div className="flex gap-4">
-              <Card className="bg-white/5 border-white/10 px-4 py-3 flex items-center gap-3">
-                <Wrench className="w-5 h-5 text-[#00D084]" />
-                <div>
-                  <p className="text-xs text-white/50">Active Jobs</p>
-                  <p className="text-lg font-bold text-white">{activeCount}</p>
-                </div>
-              </Card>
-              <Card className="bg-white/5 border-white/10 px-4 py-3 flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-[#00D084]" />
-                <div>
-                  <p className="text-xs text-white/50">Done Today</p>
-                  <p className="text-lg font-bold text-white">{completedToday}</p>
-                </div>
-              </Card>
+          </Card>
+          <Card className="bg-white border-[#E8E4DF] px-4 py-3 flex items-center gap-3 shadow-sm">
+            <CheckCircle className="w-5 h-5 text-[#FF5C00]" />
+            <div>
+              <p className="text-xs text-[#1A1A1A]/50 font-medium">Done Today</p>
+              <p className="text-lg font-bold text-[#1A1A1A]">{completedToday}</p>
             </div>
-          </motion.div>
+          </Card>
+        </div>
+      </motion.div>
 
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {[0, 1, 2, 3].map(i => (
-                <div key={i} className="space-y-3"><Skeleton className="h-8 w-32 bg-white/5" />{[0, 1].map(j => <Skeleton key={j} className="h-40 w-full rounded-xl bg-white/5" />)}</div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex md:grid md:grid-cols-4 gap-6 overflow-x-auto md:overflow-visible pb-4 md:pb-0 snap-x snap-mandatory">
-              {KANBAN_COLUMNS.map((col, ci) => {
-                const colRepairs = repairs.filter(r => col.statuses.includes(r.status));
-                return (
-                  <motion.div key={col.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ci * 0.1 }} className="min-w-[280px] md:min-w-0 snap-start bg-white/[0.02] rounded-2xl p-4 border border-white/5">
-                    <div className="flex items-center gap-2 mb-4 px-1">
-                      <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
-                      <h2 className="text-sm font-semibold text-white/80">{col.label}</h2>
-                      <Badge variant="secondary" className="ml-auto text-xs bg-white/10 text-white hover:bg-white/20">{colRepairs.length}</Badge>
-                    </div>
-                    <div className="space-y-3 min-h-[200px]">
-                      {colRepairs.map((repair, ri) => {
-                        const sla = getSlaTime(repair.created_at);
-                        return (
-                          <motion.div key={repair.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: ri * 0.05 }}
-                            onClick={() => { setSelectedRepair(repair); setSheetOpen(true); }}
-                            className="bg-[#1A1A1A] border border-white/10 rounded-xl p-4 cursor-pointer hover:border-[#00D084]/50 transition-colors shadow-lg group relative overflow-hidden"
-                          >
-                            <div className="absolute top-0 left-0 w-1 h-full" style={{ background: col.color }} />
-                            <div className="flex items-start justify-between mb-2">
-                              <span className="text-sm font-semibold text-white truncate pr-2">
-                                {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
-                              </span>
-                              {repair.approval_status === 'pending' && <Badge className="bg-amber-500/20 text-amber-500 text-[10px] absolute right-2 top-2">Waiting Approval</Badge>}
-                            </div>
-                            <div className="flex flex-col gap-1 mb-3">
-                              <span className="text-xs text-white/60 truncate">{repair.customer?.full_name}</span>
-                              <span className="text-xs text-white/40 truncate">{repair.repair_type === 'custom' ? repair.custom_repair_description : repair.repair_type?.replace(/_/g, ' ')}</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 text-[11px] bg-black/40 px-2 py-1 rounded w-fit ${sla.color}`}>
-                              <Timer className="w-3 h-3" /> {sla.text}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                      {colRepairs.length === 0 && <div className="h-24 border border-dashed border-white/10 rounded-xl flex items-center justify-center text-white/20 text-xs">Drop jobs here</div>}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="space-y-3"><Skeleton className="h-8 w-32 bg-[#1A1A1A]/5" />{[0, 1].map(j => <Skeleton key={j} className="h-40 w-full rounded-xl bg-[#1A1A1A]/5" />)}</div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex md:grid md:grid-cols-4 gap-6 overflow-x-auto md:overflow-visible pb-4 md:pb-0 snap-x snap-mandatory">
+          {KANBAN_COLUMNS.map((col, ci) => {
+            const colRepairs = repairs.filter(r => col.statuses.includes(r.status));
+            return (
+              <motion.div key={col.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ci * 0.1 }} className="min-w-[280px] md:min-w-0 snap-start bg-[#E8E4DF]/20 rounded-2xl p-4 border border-[#E8E4DF]/40">
+                <div className="flex items-center gap-2 mb-4 px-1">
+                  <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
+                  <h2 className="text-sm font-semibold text-[#1A1A1A]/80">{col.label}</h2>
+                  <Badge variant="secondary" className="ml-auto text-xs bg-[#FF5C00]/10 text-[#FF5C00] hover:bg-[#FF5C00]/20 border border-[#FF5C00]/20 font-semibold">{colRepairs.length}</Badge>
+                </div>
+                <div className="space-y-3 min-h-[200px]">
+                  {colRepairs.map((repair, ri) => {
+                    const sla = getSlaTime(repair.created_at);
+                    return (
+                      <motion.div key={repair.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: ri * 0.05 }}
+                        onClick={() => { setSelectedRepair(repair); setSheetOpen(true); }}
+                        className="bg-white border border-[#E8E4DF] rounded-xl p-4 cursor-pointer hover:border-[#FF5C00]/40 hover:shadow-[0_8px_30px_rgba(255,92,0,0.05)] transition-all group relative overflow-hidden shadow-sm"
+                      >
+                        <div className="absolute top-0 left-0 w-1 h-full" style={{ background: col.color }} />
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="text-sm font-semibold text-[#1A1A1A] truncate pr-2">
+                            {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
+                          </span>
+                          {repair.approval_status === 'pending' && <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] absolute right-2 top-2">Waiting Approval</Badge>}
+                        </div>
+                        <div className="flex flex-col gap-1 mb-3">
+                          <span className="text-xs text-[#1A1A1A]/70 truncate font-medium">{repair.customer?.full_name}</span>
+                          <span className="text-xs text-[#1A1A1A]/50 truncate">{repair.repair_type === 'custom' ? repair.custom_repair_description : repair.repair_type?.replace(/_/g, ' ')}</span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 text-[11px] bg-[#F7F7F5] border border-[#E8E4DF] px-2 py-1 rounded w-fit ${sla.color}`}>
+                          <Timer className="w-3 h-3" /> {sla.text}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                  {colRepairs.length === 0 && <div className="h-24 border border-dashed border-[#E8E4DF] rounded-xl flex items-center justify-center text-[#1A1A1A]/30 text-xs bg-white/40">Drop jobs here</div>}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
-          <JobDetailSheet 
-            repair={selectedRepair} 
-            open={sheetOpen} 
-            onOpenChange={setSheetOpen} 
-            onStatusUpdate={handleStatusUpdate}
-            fetchRepairs={fetchRepairs}
-          />
-        </main>
-        
-        <Footer />
-      </div>
-    </RoleGuard>
+      <JobDetailSheet 
+        repair={selectedRepair} 
+        open={sheetOpen} 
+        onOpenChange={setSheetOpen} 
+        onStatusUpdate={handleStatusUpdate}
+        fetchRepairs={fetchRepairs}
+      />
+    </div>
   );
 }

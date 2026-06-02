@@ -17,13 +17,13 @@ import { Wrench, Truck, IndianRupee, Clock, AlertTriangle, FileSearch, MessageSq
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const statusColor = (s: string) => {
   const m: Record<string, string> = {
-    booked: 'bg-blue-500/20 text-blue-400', pickup_scheduled: 'bg-cyan-500/20 text-cyan-400',
-    device_received: 'bg-indigo-500/20 text-indigo-400', diagnostic: 'bg-yellow-500/20 text-yellow-400',
-    repair_in_progress: 'bg-orange-500/20 text-orange-400', qa_testing: 'bg-purple-500/20 text-purple-400',
-    ready: 'bg-teal-500/20 text-teal-400', done: 'bg-green-500/20 text-green-400',
-    out_for_delivery: 'bg-cyan-500/20 text-cyan-400', delivered: 'bg-emerald-500/20 text-emerald-400',
+    booked: 'bg-blue-500/10 text-blue-600', pickup_scheduled: 'bg-cyan-500/10 text-cyan-600',
+    device_received: 'bg-indigo-500/10 text-indigo-600', diagnostic: 'bg-yellow-500/15 text-yellow-600',
+    repair_in_progress: 'bg-orange-500/10 text-orange-600', qa_testing: 'bg-purple-500/10 text-purple-600',
+    ready: 'bg-teal-500/10 text-teal-600', done: 'bg-green-500/10 text-green-600',
+    out_for_delivery: 'bg-cyan-500/10 text-cyan-600', delivered: 'bg-emerald-500/10 text-emerald-600',
   };
-  return m[s] || 'bg-gray-500/20 text-gray-400';
+  return m[s] || 'bg-gray-500/10 text-gray-600';
 };
 
 export default function CommandCenter() {
@@ -92,32 +92,32 @@ export default function CommandCenter() {
   };
 
   const statCards = [
-    { icon: Wrench, label: 'Open Repairs', value: stats.openRepairs, color: 'text-blue-400' },
-    { icon: Truck, label: 'Out for Delivery', value: stats.outForDelivery, color: 'text-cyan-400' },
-    { icon: IndianRupee, label: "Today's Revenue", value: `₹${fmt(stats.todayRevenue)}`, color: 'text-[#00D084]' },
-    { icon: Clock, label: 'Pending Payments', value: `₹${fmt(stats.pendingPayments)}`, color: 'text-amber-400' },
-    { icon: AlertTriangle, label: 'Pending Approvals', value: stats.pendingApprovals, color: 'text-red-400' },
-    { icon: FileSearch, label: 'Pending RCA Reviews', value: stats.pendingRca, color: 'text-purple-400' },
+    { icon: Wrench, label: 'Open Repairs', value: stats.openRepairs, color: 'text-blue-600' },
+    { icon: Truck, label: 'Out for Delivery', value: stats.outForDelivery, color: 'text-cyan-600' },
+    { icon: IndianRupee, label: "Today's Revenue", value: `₹${fmt(stats.todayRevenue)}`, color: 'text-[#FF5C00]' },
+    { icon: Clock, label: 'Pending Payments', value: `₹${fmt(stats.pendingPayments)}`, color: 'text-amber-600' },
+    { icon: AlertTriangle, label: 'Pending Approvals', value: stats.pendingApprovals, color: 'text-red-600' },
+    { icon: FileSearch, label: 'Pending RCA Reviews', value: stats.pendingRca, color: 'text-purple-600' },
   ];
 
   return (
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-white">Command Center</h1>
-        <p className="text-white/50 text-sm mt-1">Real-time overview of all operations</p>
+        <h1 className="text-2xl font-bold text-[#1A1A1A]">Command Center</h1>
+        <p className="text-[#1A1A1A]/60 text-sm mt-1">Real-time overview of all operations</p>
       </motion.div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {statCards.map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card className="bg-white/5 border-white/10 hover:border-[#00D084]/20 transition-colors">
+            <Card className="bg-white border-[#E8E4DF] shadow-sm hover:border-[#FF5C00]/30 hover:shadow-[0_8px_30px_rgba(255,92,0,0.05)] transition-all">
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-white/50">{s.label}</p>
-                  <p className="text-2xl font-bold text-white mt-1">{loading ? '...' : s.value}</p>
+                  <p className="text-xs text-[#1A1A1A]/50 font-medium">{s.label}</p>
+                  <p className="text-2xl font-bold text-[#1A1A1A] mt-1">{loading ? '...' : s.value}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center ${s.color}`}>
+                <div className={`w-10 h-10 rounded-xl bg-[#F7F7F5] flex items-center justify-center ${s.color}`}>
                   <s.icon className="w-5 h-5" />
                 </div>
               </CardContent>
@@ -127,55 +127,55 @@ export default function CommandCenter() {
       </div>
 
       {/* Live Activity Feed */}
-      <Card className="bg-white/5 border-white/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-white text-sm flex items-center gap-2"><Activity className="w-4 h-4 text-[#00D084]" /> Live Activity Feed</CardTitle>
+      <Card className="bg-white border-[#E8E4DF] shadow-sm">
+        <CardHeader className="pb-3 border-b border-[#E8E4DF]">
+          <CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><Activity className="w-4 h-4 text-[#FF5C00]" /> Live Activity Feed</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {loading ? <div className="p-4 space-y-2">{[0,1,2].map(i => <Skeleton key={i} className="h-10 w-full bg-white/5" />)}</div> : (
+          {loading ? <div className="p-4 space-y-2">{[0,1,2].map(i => <Skeleton key={i} className="h-10 w-full bg-[#1A1A1A]/5" />)}</div> : (
             <div className="max-h-80 overflow-y-auto">
               {timeline.map((t: any) => (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b border-white/5 hover:bg-white/[0.02] text-sm">
+                <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b border-[#E8E4DF]/60 hover:bg-[#F7F7F5] text-sm">
                   <Badge className={`shrink-0 text-[10px] ${statusColor(t.status)}`}>{REPAIR_STATUS_LABELS[t.status as RepairStatus] || t.status}</Badge>
-                  <span className="text-white/80 truncate flex-1">
+                  <span className="text-[#1A1A1A]/80 truncate flex-1">
                     {t.repair?.customer?.full_name || 'Customer'} — {t.repair?.device?.brand} {t.repair?.device?.model_name}
                   </span>
-                  <span className="text-white/30 text-xs shrink-0">{t.note?.slice(0, 40)}</span>
-                  <span className="text-white/20 text-xs shrink-0">{new Date(t.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-[#1A1A1A]/50 text-xs shrink-0">{t.note?.slice(0, 40)}</span>
+                  <span className="text-[#1A1A1A]/30 text-xs shrink-0">{new Date(t.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               ))}
-              {timeline.length === 0 && <p className="text-white/30 text-center py-8">No recent activity</p>}
+              {timeline.length === 0 && <p className="text-[#1A1A1A]/40 text-center py-8">No recent activity</p>}
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* 48-Hour Follow-up Queue */}
-      <Card className="bg-white/5 border-white/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-white text-sm flex items-center gap-2"><MessageSquare className="w-4 h-4 text-amber-400" /> 48-Hour Follow-up Queue ({followUps.length})</CardTitle>
+      <Card className="bg-white border-[#E8E4DF] shadow-sm">
+        <CardHeader className="pb-3 border-b border-[#E8E4DF]">
+          <CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><MessageSquare className="w-4 h-4 text-amber-500" /> 48-Hour Follow-up Queue ({followUps.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {loading ? <div className="p-4"><Skeleton className="h-20 w-full bg-white/5" /></div> : followUps.length === 0 ? (
-            <p className="text-white/30 text-center py-8">No pending follow-ups</p>
+          {loading ? <div className="p-4"><Skeleton className="h-20 w-full bg-[#1A1A1A]/5" /></div> : followUps.length === 0 ? (
+            <p className="text-[#1A1A1A]/40 text-center py-8">No pending follow-ups</p>
           ) : (
             <Table>
-              <TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-white/50">Customer</TableHead>
-                <TableHead className="text-white/50">Phone</TableHead>
-                <TableHead className="text-white/50">Device</TableHead>
-                <TableHead className="text-white/50">Delivered</TableHead>
-                <TableHead className="text-white/50">Action</TableHead>
+              <TableHeader><TableRow className="border-[#E8E4DF] hover:bg-transparent">
+                <TableHead className="text-[#1A1A1A]/55">Customer</TableHead>
+                <TableHead className="text-[#1A1A1A]/55">Phone</TableHead>
+                <TableHead className="text-[#1A1A1A]/55">Device</TableHead>
+                <TableHead className="text-[#1A1A1A]/55">Delivered</TableHead>
+                <TableHead className="text-[#1A1A1A]/55">Action</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {followUps.map((r: any) => (
-                  <TableRow key={r.id} className="border-white/5 hover:bg-white/5">
-                    <TableCell className="text-white">{r.customer?.full_name}</TableCell>
-                    <TableCell className="text-white/60">{r.customer?.phone}</TableCell>
-                    <TableCell className="text-white/60">{r.device?.model_name || r.manual_model}</TableCell>
-                    <TableCell className="text-white/40 text-xs">{new Date(r.delivered_at || r.updated_at).toLocaleDateString('en-IN')}</TableCell>
+                  <TableRow key={r.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]">
+                    <TableCell className="text-[#1A1A1A] font-medium">{r.customer?.full_name}</TableCell>
+                    <TableCell className="text-[#1A1A1A]/70">{r.customer?.phone}</TableCell>
+                    <TableCell className="text-[#1A1A1A]/70">{r.device?.model_name || r.manual_model}</TableCell>
+                    <TableCell className="text-[#1A1A1A]/50 text-xs">{new Date(r.delivered_at || r.updated_at).toLocaleDateString('en-IN')}</TableCell>
                     <TableCell>
-                      <Button size="sm" onClick={() => sendFollowUp(r)} className="bg-green-600 hover:bg-green-700 text-white text-xs">
+                      <Button size="sm" onClick={() => sendFollowUp(r)} className="bg-[#FF5C00] hover:bg-[#e05200] text-white text-xs font-semibold">
                         <MessageSquare className="w-3 h-3 mr-1" /> Send WhatsApp
                       </Button>
                     </TableCell>

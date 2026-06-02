@@ -24,12 +24,14 @@ const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const shortId = (id: string) => id.slice(0, 8);
 const statusColor = (s: string) => {
   const m: Record<string, string> = {
-    booked: 'bg-blue-500/20 text-blue-400', device_received: 'bg-indigo-500/20 text-indigo-400',
-    repair_in_progress: 'bg-orange-500/20 text-orange-400', qa_testing: 'bg-purple-500/20 text-purple-400',
-    done: 'bg-green-500/20 text-green-400', out_for_delivery: 'bg-cyan-500/20 text-cyan-400',
-    delivered: 'bg-emerald-500/20 text-emerald-400', pending_approval: 'bg-amber-500/20 text-amber-400',
+    booked: 'bg-blue-500/10 text-blue-600', pickup_scheduled: 'bg-cyan-500/10 text-cyan-600',
+    device_received: 'bg-indigo-500/10 text-indigo-600', diagnostic: 'bg-yellow-500/15 text-yellow-600',
+    repair_in_progress: 'bg-orange-500/10 text-orange-600', qa_testing: 'bg-purple-500/10 text-purple-600',
+    ready: 'bg-teal-500/10 text-teal-600', done: 'bg-green-500/10 text-green-600',
+    out_for_delivery: 'bg-cyan-500/10 text-cyan-600', delivered: 'bg-emerald-500/10 text-emerald-600',
+    pending_approval: 'bg-amber-500/10 text-amber-600',
   };
-  return m[s] || 'bg-gray-500/20 text-gray-400';
+  return m[s] || 'bg-gray-500/10 text-gray-600';
 };
 
 export default function RepairsPage() {
@@ -58,25 +60,40 @@ export default function RepairsPage() {
   const [deliveryMap, setDeliveryMap] = useState<Record<string, { name: string; phone: string; status: string }>>({});
 
   const fetchRepairs = useCallback(async () => {
+    console.debug('[fetchRepairs] starting...');
     try {
       setLoading(true);
-      const { data } = await supabase.from('repairs')
+      console.debug('[fetchRepairs] querying repairs...');
+      const { data, error: err1 } = await supabase.from('repairs')
         .select('*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone), technician:users!repairs_technician_id_fkey(full_name), shop:shops(name)')
         .order('created_at', { ascending: false }).limit(200);
+      
+      if (err1) {
+        console.error('[fetchRepairs] repairs query error:', err1);
+      }
       setRepairs(data || []);
+      console.debug('[fetchRepairs] repairs count:', data?.length || 0);
 
-      const { data: rcas } = await supabase.from('rca_reports')
+      console.debug('[fetchRepairs] querying RCA reports...');
+      const { data: rcas, error: err2 } = await supabase.from('rca_reports')
         .select('*, repair:repairs(id, customer:users!repairs_customer_id_fkey(full_name), device:devices(brand, model_name), technician:users!repairs_technician_id_fkey(full_name))')
         .eq('admin_confirmed', false);
+      if (err2) {
+        console.error('[fetchRepairs] RCA query error:', err2);
+      }
       setPendingRcas(rcas || []);
 
       // Fetch delivery assignments to map delivery boys to repairs
       const repairIds = (data || []).map((r: any) => r.id);
       if (repairIds.length > 0) {
-        const { data: assignments } = await supabase.from('delivery_assignments')
+        console.debug('[fetchRepairs] querying delivery assignments...');
+        const { data: assignments, error: err3 } = await supabase.from('delivery_assignments')
           .select('repair_id, status, delivery_boy:users!delivery_assignments_delivery_boy_id_fkey(full_name, phone)')
           .in('repair_id', repairIds)
           .order('created_at', { ascending: false });
+        if (err3) {
+          console.error('[fetchRepairs] delivery assignments query error:', err3);
+        }
         const dMap: Record<string, { name: string; phone: string; status: string }> = {};
         (assignments || []).forEach((a: any) => {
           // Only keep the latest assignment per repair
@@ -90,20 +107,36 @@ export default function RepairsPage() {
         });
         setDeliveryMap(dMap);
       }
+      console.debug('[fetchRepairs] completed successfully.');
     } catch (e) {
-      console.error('Failed to fetch repairs:', e);
+      console.error('[fetchRepairs] exception caught:', e);
       toast.error('Failed to load repairs');
     } finally {
+      console.debug('[fetchRepairs] setting loading to false.');
       setLoading(false);
     }
   }, []);
 
+  console.debug('[RepairsPage] render state:', { userRole: user?.role, loadingState: loading });
+
   useEffect(() => {
+    console.debug('[RepairsPage] useEffect triggered. user:', user);
     if (user?.role === 'admin') {
-      fetchRepairs();
+      console.debug('[RepairsPage] user is admin, scheduling fetchRepairs in 100ms...');
+      const timer = setTimeout(() => {
+        console.debug('[RepairsPage] executing scheduled fetchRepairs...');
+        fetchRepairs();
+      }, 100);
+      return () => {
+        console.debug('[RepairsPage] clearing scheduled fetchRepairs timer');
+        clearTimeout(timer);
+      };
     } else if (user) {
+      console.debug('[RepairsPage] user is not admin, setting loading to false...');
       // User loaded but not admin — stop skeleton (RoleGuard handles the redirect)
       setLoading(false);
+    } else {
+      console.debug('[RepairsPage] user is null, doing nothing...');
     }
   }, [user, fetchRepairs]);
 
@@ -252,53 +285,53 @@ export default function RepairsPage() {
   return (
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-white">Repairs Management</h1>
-        <p className="text-white/50 text-sm mt-1">View, assign, and manage all repairs</p>
+        <h1 className="text-2xl font-bold text-[#1A1A1A]">Repairs Management</h1>
+        <p className="text-[#1A1A1A]/60 text-sm mt-1">View, assign, and manage all repairs</p>
       </motion.div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-white/40" />
-          <Input className="pl-9 bg-white/5 border-white/10 text-white" placeholder="Search repairs..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-[#1A1A1A]/40" />
+          <Input className="pl-9 bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40" placeholder="Search repairs..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-44 bg-white/5 border-white/10 text-white"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent className="bg-[#1A1A1A] border-white/10">
-            <SelectItem value="all">All Status</SelectItem>
-            {REPAIR_STATUS_ORDER.map(s => <SelectItem key={s} value={s}>{REPAIR_STATUS_LABELS[s]}</SelectItem>)}
+          <SelectTrigger className="w-44 bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+            <SelectItem value="all" className="hover:bg-[#F7F7F5] cursor-pointer">All Status</SelectItem>
+            {REPAIR_STATUS_ORDER.map(s => <SelectItem key={s} value={s} className="hover:bg-[#F7F7F5] cursor-pointer">{REPAIR_STATUS_LABELS[s]}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
       {/* Repairs Table */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-white border-[#E8E4DF] shadow-sm">
         <CardContent className="p-0">
-          {loading ? <div className="p-6"><Skeleton className="h-64 w-full bg-white/5" /></div> : (
+          {loading ? <div className="p-6"><Skeleton className="h-64 w-full bg-[#1A1A1A]/5" /></div> : (
             <Table>
-              <TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-white/50">ID</TableHead>
-                <TableHead className="text-white/50">Customer</TableHead>
-                <TableHead className="text-white/50">Device</TableHead>
-                <TableHead className="text-white/50">Shop</TableHead>
-                <TableHead className="text-white/50">Status</TableHead>
-                <TableHead className="text-white/50">Technician</TableHead>
-                <TableHead className="text-white/50">Delivery</TableHead>
-                <TableHead className="text-white/50">Date</TableHead>
-                <TableHead className="text-white/50">Action</TableHead>
+              <TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent">
+                <TableHead className="text-[#1A1A1A]/50">ID</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Customer</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Device</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Shop</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Status</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Technician</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Delivery</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Date</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Action</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {filtered.slice(0, 50).map(r => (
-                  <TableRow key={r.id} className="border-white/5 hover:bg-white/5">
-                    <TableCell className="font-mono text-[#00D084] text-xs">{shortId(r.id)}</TableCell>
-                    <TableCell className="text-white">{r.customer?.full_name || '—'}</TableCell>
-                    <TableCell className="text-white/60">{r.device?.model_name || r.manual_model || '—'}</TableCell>
-                    <TableCell className="text-white/60">{r.shop?.name || <span className="text-amber-400 text-xs">Unassigned</span>}</TableCell>
+                  <TableRow key={r.id} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5]">
+                    <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(r.id)}</TableCell>
+                    <TableCell className="text-[#1A1A1A] font-medium">{r.customer?.full_name || '—'}</TableCell>
+                    <TableCell className="text-[#1A1A1A]/70">{r.device?.model_name || r.manual_model || '—'}</TableCell>
+                    <TableCell className="text-[#1A1A1A]/70">{r.shop?.name || <span className="text-amber-600 text-xs font-medium">Unassigned</span>}</TableCell>
                     <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
-                    <TableCell className="text-white/60">{r.technician?.full_name || <span className="text-amber-400">Unassigned</span>}</TableCell>
-                    <TableCell className="text-white/60">{deliveryMap[r.id]?.name || <span className="text-white/20">—</span>}</TableCell>
-                    <TableCell className="text-white/40 text-xs">{new Date(r.created_at).toLocaleDateString('en-IN')}</TableCell>
-                    <TableCell><Button size="sm" variant="ghost" onClick={() => openRepairSheet(r)} className="text-[#00D084] hover:bg-[#00D084]/10"><Eye className="w-3.5 h-3.5 mr-1" />View</Button></TableCell>
+                    <TableCell className="text-[#1A1A1A]/70">{r.technician?.full_name || <span className="text-amber-600 font-medium">Unassigned</span>}</TableCell>
+                    <TableCell className="text-[#1A1A1A]/70">{deliveryMap[r.id]?.name || <span className="text-[#1A1A1A]/30">—</span>}</TableCell>
+                    <TableCell className="text-[#1A1A1A]/40 text-xs">{new Date(r.created_at).toLocaleDateString('en-IN')}</TableCell>
+                    <TableCell><Button size="sm" variant="ghost" onClick={() => openRepairSheet(r)} className="text-[#FF5C00] hover:text-[#e05200] hover:bg-[#FF5C00]/10 font-semibold"><Eye className="w-3.5 h-3.5 mr-1" />View</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -309,22 +342,22 @@ export default function RepairsPage() {
 
       {/* Pending RCA Reviews */}
       {pendingRcas.length > 0 && (
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader className="pb-3"><CardTitle className="text-white text-sm flex items-center gap-2"><FileSearch className="w-4 h-4 text-purple-400" /> Pending RCA Reviews ({pendingRcas.length})</CardTitle></CardHeader>
+        <Card className="bg-white border-[#E8E4DF] shadow-sm">
+          <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><FileSearch className="w-4 h-4 text-purple-600" /> Pending RCA Reviews ({pendingRcas.length})</CardTitle></CardHeader>
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-white/50">Repair</TableHead><TableHead className="text-white/50">Customer</TableHead>
-                <TableHead className="text-white/50">Device</TableHead><TableHead className="text-white/50">Technician</TableHead>
-                <TableHead className="text-white/50">Action</TableHead>
+              <TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent">
+                <TableHead className="text-[#1A1A1A]/50">Repair</TableHead><TableHead className="text-[#1A1A1A]/50">Customer</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Device</TableHead><TableHead className="text-[#1A1A1A]/50">Technician</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Action</TableHead>
               </TableRow></TableHeader>
               <TableBody>{pendingRcas.map(rca => (
-                <TableRow key={rca.id} className="border-white/5 hover:bg-white/5">
-                  <TableCell className="font-mono text-[#00D084] text-xs">{shortId(rca.repair_id)}</TableCell>
-                  <TableCell className="text-white">{rca.repair?.customer?.full_name}</TableCell>
-                  <TableCell className="text-white/60">{rca.repair?.device?.brand} {rca.repair?.device?.model_name}</TableCell>
-                  <TableCell className="text-white/60">{rca.repair?.technician?.full_name}</TableCell>
-                  <TableCell><Button size="sm" onClick={() => { setRcaModal(rca); setAdminNotes(''); }} className="bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 text-xs"><Eye className="w-3 h-3 mr-1" />Review</Button></TableCell>
+                <TableRow key={rca.id} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5]">
+                  <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(rca.repair_id)}</TableCell>
+                  <TableCell className="text-[#1A1A1A] font-medium">{rca.repair?.customer?.full_name}</TableCell>
+                  <TableCell className="text-[#1A1A1A]/70">{rca.repair?.device?.brand} {rca.repair?.device?.model_name}</TableCell>
+                  <TableCell className="text-[#1A1A1A]/70">{rca.repair?.technician?.full_name}</TableCell>
+                  <TableCell><Button size="sm" onClick={() => { setRcaModal(rca); setAdminNotes(''); }} className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 text-xs font-semibold"><Eye className="w-3.5 h-3.5 mr-1" />Review</Button></TableCell>
                 </TableRow>
               ))}</TableBody>
             </Table>
@@ -334,102 +367,102 @@ export default function RepairsPage() {
 
       {/* Repair Detail Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="max-w-xl w-full bg-[#0A0A0A] border-l border-white/10 overflow-y-auto">
+        <SheetContent side="right" className="max-w-xl w-full bg-white border-l border-[#E8E4DF] overflow-y-auto text-[#1A1A1A]">
           {selectedRepair && (
             <>
               <SheetHeader className="mb-4">
-                <SheetTitle className="text-white">Repair {shortId(selectedRepair.id)}</SheetTitle>
-                <SheetDescription className="text-white/50">{selectedRepair.issue_description}</SheetDescription>
+                <SheetTitle className="text-[#1A1A1A]">Repair {shortId(selectedRepair.id)}</SheetTitle>
+                <SheetDescription className="text-[#1A1A1A]/60">{selectedRepair.issue_description}</SheetDescription>
               </SheetHeader>
               <div className="space-y-6 pb-12">
                 {/* Info */}
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-white/5 p-3 rounded-lg"><span className="text-white/40 text-xs block">Customer</span><p className="text-white">{selectedRepair.customer?.full_name}</p><p className="text-white/50 text-xs">{selectedRepair.customer?.phone}</p></div>
-                  <div className="bg-white/5 p-3 rounded-lg"><span className="text-white/40 text-xs block">Device</span><p className="text-white">{selectedRepair.device?.brand} {selectedRepair.device?.model_name}</p></div>
-                  <div className="bg-white/5 p-3 rounded-lg"><span className="text-white/40 text-xs block">Status</span><Badge className={statusColor(selectedRepair.status)}>{REPAIR_STATUS_LABELS[selectedRepair.status as RepairStatus]}</Badge></div>
-                  <div className="bg-white/5 p-3 rounded-lg"><span className="text-white/40 text-xs block">Shop</span><p className="text-white">{selectedRepair.shop?.name || <span className="text-amber-400">Unassigned</span>}</p></div>
-                  <div className="bg-white/5 p-3 rounded-lg col-span-2"><span className="text-white/40 text-xs block">Technician</span><p className="text-white">{selectedRepair.technician?.full_name || 'Unassigned'}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Customer</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.customer?.full_name}</p><p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.customer?.phone}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Device</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.device?.brand} {selectedRepair.device?.model_name}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Status</span><div className="mt-1"><Badge className={statusColor(selectedRepair.status)}>{REPAIR_STATUS_LABELS[selectedRepair.status as RepairStatus]}</Badge></div></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Shop</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2"><span className="text-[#1A1A1A]/40 text-xs block">Technician</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.technician?.full_name || 'Unassigned'}</p></div>
                   {deliveryMap[selectedRepair.id] && (
-                    <div className="bg-white/5 p-3 rounded-lg col-span-2 border border-cyan-500/10">
-                      <span className="text-white/40 text-xs block">Delivery Boy</span>
-                      <p className="text-white">{deliveryMap[selectedRepair.id].name}</p>
+                    <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2">
+                      <span className="text-[#1A1A1A]/40 text-xs block">Delivery Boy</span>
+                      <p className="text-[#1A1A1A] font-semibold">{deliveryMap[selectedRepair.id].name}</p>
                       {deliveryMap[selectedRepair.id].phone && (
-                        <a href={`tel:${deliveryMap[selectedRepair.id].phone}`} className="text-[#00D084] text-xs flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{deliveryMap[selectedRepair.id].phone}</a>
+                        <a href={`tel:${deliveryMap[selectedRepair.id].phone}`} className="text-[#FF5C00] text-xs flex items-center gap-1 mt-0.5 font-medium"><Phone className="w-3 h-3" />{deliveryMap[selectedRepair.id].phone}</a>
                       )}
-                      <Badge className="mt-1 text-[10px] bg-cyan-500/15 text-cyan-400 capitalize">{deliveryMap[selectedRepair.id].status.replace(/_/g, ' ')}</Badge>
+                      <Badge className="mt-1 text-[10px] bg-cyan-500/10 text-cyan-600 capitalize">{deliveryMap[selectedRepair.id].status.replace(/_/g, ' ')}</Badge>
                     </div>
                   )}
                 </div>
 
-                <Separator className="bg-white/10" />
+                <Separator className="bg-[#E8E4DF]" />
 
                 {/* Status Change — Admin can set ANY status */}
                 <div>
-                  <p className="text-xs text-white/60 mb-2 font-semibold flex items-center gap-1">⚡ Change Status (Admin)</p>
+                  <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1">⚡ Change Status (Admin)</p>
                   <Select value={selectedRepair.status} onValueChange={(val) => { console.debug('[ADMIN_STATUS_SELECT]', val); changeStatus(val); }} disabled={assigning}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#1A1A1A] border-white/10">
-                      {REPAIR_STATUS_ORDER.map(s => <SelectItem key={s} value={s}>{REPAIR_STATUS_LABELS[s as RepairStatus]}</SelectItem>)}
+                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+                      {REPAIR_STATUS_ORDER.map(s => <SelectItem key={s} value={s} className="hover:bg-[#F7F7F5] cursor-pointer">{REPAIR_STATUS_LABELS[s as RepairStatus]}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <Separator className="bg-white/10" />
+                <Separator className="bg-[#E8E4DF]" />
 
                 {/* Shop Assignment */}
                 <div>
-                  <p className="text-xs text-white/60 mb-2 font-semibold flex items-center gap-1"><Store className="w-3 h-3" /> Assign to Shop</p>
+                  <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Store className="w-3 h-3" /> Assign to Shop</p>
                   <Select value={selectedRepair.shop_id || ''} onValueChange={assignShop} disabled={assigning}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select shop..." /></SelectTrigger>
-                    <SelectContent className="bg-[#1A1A1A] border-white/10">
-                      {shops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select shop..." /></SelectTrigger>
+                    <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+                      {shops.map(s => <SelectItem key={s.id} value={s.id} className="hover:bg-[#F7F7F5] cursor-pointer">{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Technician Assignment (includes admin for self-assign) */}
                 <div>
-                  <p className="text-xs text-white/60 mb-2 font-semibold flex items-center gap-1"><Wrench className="w-3 h-3" /> Assign Technician</p>
+                  <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Wrench className="w-3 h-3" /> Assign Technician</p>
                   <Select onValueChange={assignTechnician} disabled={assigning}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select technician..." /></SelectTrigger>
-                    <SelectContent className="bg-[#1A1A1A] border-white/10">
-                      {technicians.map(t => <SelectItem key={t.id} value={t.id}>{t.full_name} {t.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
+                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select technician..." /></SelectTrigger>
+                    <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+                      {technicians.map(t => <SelectItem key={t.id} value={t.id} className="hover:bg-[#F7F7F5] cursor-pointer">{t.full_name} {t.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Delivery Assignment (includes admin for self-assign) */}
                 <div>
-                  <p className="text-xs text-white/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3" /> Assign Delivery Boy</p>
+                  <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3" /> Assign Delivery Boy</p>
                   <Select onValueChange={assignDelivery} disabled={assigning}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select delivery boy..." /></SelectTrigger>
-                    <SelectContent className="bg-[#1A1A1A] border-white/10">
-                      {deliveryBoys.map(d => <SelectItem key={d.id} value={d.id}>{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
+                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select delivery boy..." /></SelectTrigger>
+                    <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+                      {deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Send Out for Delivery */}
                 {selectedRepair.status === 'done' && (
-                  <Button onClick={sendOutForDelivery} disabled={assigning} className="w-full bg-[#00D084] hover:bg-[#00D084]/90 text-black font-semibold">
+                  <Button onClick={sendOutForDelivery} disabled={assigning} className="w-full bg-[#FF5C00] hover:bg-[#e05200] text-white font-bold">
                     {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />} Send Out for Delivery
                   </Button>
                 )}
 
-                <Separator className="bg-white/10" />
+                <Separator className="bg-[#E8E4DF]" />
 
                 {/* Timeline */}
                 <div>
-                  <p className="text-xs text-white/60 mb-2 font-semibold">Repair Timeline</p>
+                  <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold">Repair Timeline</p>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {timeline.map(t => (
                       <div key={t.id} className="flex items-start gap-2 text-xs">
                         <Badge className={`shrink-0 text-[9px] ${statusColor(t.status)}`}>{REPAIR_STATUS_LABELS[t.status as RepairStatus] || t.status}</Badge>
-                        <span className="text-white/50 flex-1">{t.note}</span>
-                        <span className="text-white/20 shrink-0">{new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-[#1A1A1A]/60 flex-1">{t.note}</span>
+                        <span className="text-[#1A1A1A]/40 shrink-0">{new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     ))}
-                    {timeline.length === 0 && <p className="text-white/20 text-center py-4">No timeline entries</p>}
+                    {timeline.length === 0 && <p className="text-[#1A1A1A]/30 text-center py-4">No timeline entries</p>}
                   </div>
                 </div>
               </div>
@@ -440,47 +473,47 @@ export default function RepairsPage() {
 
       {/* RCA Review Modal */}
       <Dialog open={!!rcaModal} onOpenChange={() => setRcaModal(null)}>
-        <DialogContent className="bg-[#1A1A1A] border-white/10 max-w-lg">
+        <DialogContent className="bg-white border-[#E8E4DF] max-w-lg text-[#1A1A1A]">
           <DialogHeader>
-            <DialogTitle className="text-white">RCA Review</DialogTitle>
-            <DialogDescription className="text-white/50">Review diagnostic report from technician</DialogDescription>
+            <DialogTitle className="text-[#1A1A1A]">RCA Review</DialogTitle>
+            <DialogDescription className="text-[#1A1A1A]/60">Review diagnostic report from technician</DialogDescription>
           </DialogHeader>
           {rcaModal && (
             <div className="space-y-4 text-sm max-h-[60vh] overflow-y-auto">
-              <div><p className="text-white/40 text-xs mb-1">Diagnostic Checklist</p>
+              <div><p className="text-[#1A1A1A]/40 text-xs mb-1 font-semibold">Diagnostic Checklist</p>
                 <div className="grid grid-cols-2 gap-1">{Object.entries(rcaModal.diagnostic_checklist || {}).map(([k, v]) => (
                   <div key={k} className="flex items-center gap-1.5 text-xs">
-                    {v ? <CheckCircle className="w-3 h-3 text-[#00D084]" /> : <XCircle className="w-3 h-3 text-red-400" />}
-                    <span className="text-white/60">{k.replace(/_/g, ' ')}</span>
+                    {v ? <CheckCircle className="w-3 h-3 text-green-600" /> : <XCircle className="w-3 h-3 text-red-500" />}
+                    <span className="text-[#1A1A1A]/70">{k.replace(/_/g, ' ')}</span>
                   </div>
                 ))}</div>
               </div>
               {rcaModal.before_photos?.length > 0 && (
-                <div><p className="text-white/40 text-xs mb-1">Before Photos</p>
+                <div><p className="text-[#1A1A1A]/40 text-xs mb-1 font-semibold">Before Photos</p>
                   <div className="flex gap-2 flex-wrap">{rcaModal.before_photos.map((url: string, i: number) => (
-                    <img key={i} src={url} alt="before" className="w-20 h-20 rounded-lg object-cover border border-white/10" />
+                    <img key={i} src={url} alt="before" className="w-20 h-20 rounded-lg object-cover border border-[#E8E4DF]" />
                   ))}</div>
                 </div>
               )}
               {rcaModal.after_photos?.length > 0 && (
-                <div><p className="text-white/40 text-xs mb-1">After Photos</p>
+                <div><p className="text-[#1A1A1A]/40 text-xs mb-1 font-semibold">After Photos</p>
                   <div className="flex gap-2 flex-wrap">{rcaModal.after_photos.map((url: string, i: number) => (
-                    <img key={i} src={url} alt="after" className="w-20 h-20 rounded-lg object-cover border border-white/10" />
+                    <img key={i} src={url} alt="after" className="w-20 h-20 rounded-lg object-cover border border-[#E8E4DF]" />
                   ))}</div>
                 </div>
               )}
-              <div><p className="text-white/40 text-xs mb-1">Technician Notes</p><p className="text-white">{rcaModal.technician_notes}</p></div>
-              <Separator className="bg-white/10" />
-              <div><p className="text-white/40 text-xs mb-1">Admin Notes (for revision request)</p>
-                <Textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder="Add notes if requesting revision..." className="bg-white/5 border-white/10 text-white min-h-[60px]" />
+              <div><p className="text-[#1A1A1A]/40 text-xs mb-1 font-semibold">Technician Notes</p><p className="text-[#1A1A1A]/80">{rcaModal.technician_notes}</p></div>
+              <Separator className="bg-[#E8E4DF]" />
+              <div><p className="text-[#1A1A1A]/40 text-xs mb-1 font-semibold">Admin Notes (for revision request)</p>
+                <Textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder="Add notes if requesting revision..." className="bg-white border-[#E8E4DF] text-[#1A1A1A] min-h-[60px] placeholder:text-[#1A1A1A]/30" />
               </div>
             </div>
           )}
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => requestRevision(rcaModal)} disabled={rcaProcessing} className="border-red-500/30 text-red-400 hover:bg-red-500/10">
+            <Button variant="outline" onClick={() => requestRevision(rcaModal)} disabled={rcaProcessing} className="border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-600 font-semibold">
               <XCircle className="w-3.5 h-3.5 mr-1" /> Request Revision
             </Button>
-            <Button onClick={() => confirmRca(rcaModal)} disabled={rcaProcessing} className="bg-[#00D084] hover:bg-[#00D084]/90 text-black">
+            <Button onClick={() => confirmRca(rcaModal)} disabled={rcaProcessing} className="bg-[#FF5C00] hover:bg-[#e05200] text-white font-bold">
               {rcaProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle className="w-3.5 h-3.5 mr-1" />} Confirm & Send
             </Button>
           </DialogFooter>

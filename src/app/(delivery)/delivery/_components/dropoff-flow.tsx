@@ -135,33 +135,33 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="max-w-xl w-full bg-[#0A0A0A] border-l border-white/10 overflow-y-auto">
+      <SheetContent side="right" className="max-w-xl w-full bg-white border-l border-[#E8E4DF] overflow-y-auto text-[#1A1A1A]">
         <SheetHeader className="mb-4">
-          <SheetTitle className="text-white flex items-center gap-2">
-            <Package className="w-5 h-5 text-blue-400" /> Drop-off Flow
+          <SheetTitle className="text-[#1A1A1A] flex items-center gap-2">
+            <Package className="w-5 h-5 text-blue-600" /> Drop-off Flow
           </SheetTitle>
-          <SheetDescription className="text-white/50">
+          <SheetDescription className="text-[#1A1A1A]/60">
             {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
           </SheetDescription>
         </SheetHeader>
 
         {/* Delivery Details */}
-        <div className="bg-white/5 rounded-xl p-4 mb-6 space-y-1.5 text-sm">
-          <p className="text-white font-semibold">{repair.customer?.full_name}</p>
-          <a href={`tel:${repair.customer?.phone}`} className="text-[#00D084] flex items-center gap-1.5">
+        <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 mb-6 space-y-1.5 text-sm">
+          <p className="text-[#1A1A1A] font-semibold">{repair.customer?.full_name}</p>
+          <a href={`tel:${repair.customer?.phone}`} className="text-[#FF5C00] flex items-center gap-1.5 font-medium hover:underline">
             <Phone className="w-3 h-3" />{repair.customer?.phone}
           </a>
-          <p className="text-white/50 flex items-center gap-1.5"><MapPin className="w-3 h-3" />{repair.address}</p>
-          <p className="text-white/50 flex items-center gap-1.5">
-            <Smartphone className="w-3 h-3" />
+          <p className="text-[#1A1A1A]/60 flex items-center gap-1.5"><MapPin className="w-3 h-3 text-[#1A1A1A]/40" />{repair.address}</p>
+          <p className="text-[#1A1A1A]/60 flex items-center gap-1.5">
+            <Smartphone className="w-3 h-3 text-[#1A1A1A]/40" />
             {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
-            {repair.repair_type && <span className="text-white/30 ml-1">• {repair.repair_type.replace(/_/g, ' ')}</span>}
+            {repair.repair_type && <span className="text-[#1A1A1A]/40 ml-1">• {repair.repair_type.replace(/_/g, ' ')}</span>}
           </p>
           {invoice && (
-            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
-              <IndianRupee className="w-3.5 h-3.5 text-[#00D084]" />
-              <span className="text-white font-bold text-lg">₹{invoice.total.toLocaleString('en-IN')}</span>
-              <Badge className={invoice.payment_status === 'paid' ? 'bg-[#00D084]/20 text-[#00D084]' : 'bg-amber-500/20 text-amber-500'}>
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#E8E4DF]">
+              <IndianRupee className="w-3.5 h-3.5 text-[#FF5C00]" />
+              <span className="text-[#1A1A1A] font-bold text-lg">₹{invoice.total.toLocaleString('en-IN')}</span>
+              <Badge className={invoice.payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'}>
                 {invoice.payment_status === 'paid' ? 'Paid' : 'Pending'}
               </Badge>
             </div>
@@ -171,11 +171,11 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
         <div className="space-y-6 pb-12">
           {/* STEP 0: Out for Delivery */}
           {assignment.status !== 'out_for_delivery' && assignment.status !== 'delivered' && (
-            <div className="bg-white/5 rounded-xl p-4 border border-white/10 mb-4">
-              <h3 className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
-                <Truck className="w-4 h-4 text-[#00D084]" /> Status Update
+            <div className="bg-[#F7F7F5] rounded-xl p-4 border border-[#E8E4DF] mb-4">
+              <h3 className="text-sm font-semibold text-[#1A1A1A]/80 mb-3 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-[#FF5C00]" /> Status Update
               </h3>
-              <Button onClick={markOutForDelivery} className="w-full bg-white/10 hover:bg-white/20 text-white">
+              <Button onClick={markOutForDelivery} className="w-full bg-white border border-[#E8E4DF] hover:bg-[#F7F7F5] text-[#1A1A1A] font-semibold shadow-xs">
                 Mark as Out for Delivery
               </Button>
             </div>
@@ -184,12 +184,12 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
           {/* STEP 1: OTP Handover */}
           {!otpVerified && (
             <section className="space-y-4">
-              <h3 className="text-sm font-semibold text-white/80 flex items-center gap-2">
-                <Hash className="w-4 h-4 text-blue-400" /> OTP Handover
+              <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2">
+                <Hash className="w-4 h-4 text-blue-600" /> OTP Handover
               </h3>
 
               <Button onClick={sendOtp} disabled={otpSending || otpSent}
-                variant="outline" className="w-full border-blue-500/30 text-blue-400 hover:bg-blue-500/10">
+                variant="outline" className="w-full border-blue-500/30 text-blue-600 hover:bg-blue-500/10 font-semibold">
                 {otpSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {otpSent ? 'OTP Sent ✓' : 'Send OTP to Customer'}
               </Button>
@@ -198,15 +198,15 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
                 <div className="space-y-3">
                   <Input value={otpInput} onChange={e => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="Enter 6-digit OTP" maxLength={6}
-                    className="bg-white/5 border-white/10 text-white text-center text-2xl font-mono tracking-[0.5em] h-14" />
+                    className="bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] text-center text-2xl font-mono tracking-[0.5em] h-14" />
                   <Button onClick={verifyOtp} disabled={otpInput.length !== 6 || otpVerifying}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold">
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                     {otpVerifying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Confirm Handover
                   </Button>
                   <div className="flex justify-between items-center text-xs">
-                    {attempts > 0 && <p className="text-red-400">{3 - attempts} attempt(s) remaining</p>}
-                    <button disabled={resendTimer > 0 || otpSending} onClick={sendOtp} className={`ml-auto ${resendTimer > 0 ? 'text-white/30' : 'text-blue-400 hover:text-blue-300'}`}>
+                    {attempts > 0 && <p className="text-red-600 font-medium">{3 - attempts} attempt(s) remaining</p>}
+                    <button disabled={resendTimer > 0 || otpSending} onClick={sendOtp} className={`ml-auto ${resendTimer > 0 ? 'text-[#1A1A1A]/30' : 'text-blue-600 hover:text-blue-700 font-semibold'}`}>
                       {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
                     </button>
                   </div>
@@ -215,8 +215,8 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
 
               {attempts >= 3 && (
                 <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center">
-                  <p className="text-red-400 font-semibold">Max attempts reached</p>
-                  <p className="text-red-400/60 text-xs mt-1">Please contact support</p>
+                  <p className="text-red-600 font-semibold">Max attempts reached</p>
+                  <p className="text-red-500/60 text-xs mt-1">Please contact support</p>
                 </div>
               )}
             </section>
@@ -224,67 +224,67 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
 
           {/* Success */}
           {otpVerified && !needsPayment && (
-            <div className="bg-[#00D084]/10 border border-[#00D084]/20 rounded-2xl p-8 text-center">
-              <CheckCircle className="w-12 h-12 text-[#00D084] mx-auto mb-3" />
-              <h3 className="text-white text-lg font-bold">Delivered Successfully!</h3>
-              <p className="text-white/50 text-sm mt-1">Job complete — no payment pending</p>
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-8 text-center">
+              <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
+              <h3 className="text-emerald-800 text-lg font-bold">Delivered Successfully!</h3>
+              <p className="text-emerald-700/80 text-sm mt-1 font-medium">Job complete — no payment pending</p>
             </div>
           )}
 
           {/* STEP 2: Payment Collection */}
           {otpVerified && needsPayment && !paymentDone && (
             <section className="space-y-4">
-              <h3 className="text-sm font-semibold text-white/80 flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-[#00D084]" /> Payment Collection
+              <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-[#FF5C00]" /> Payment Collection
               </h3>
 
-              <div className="bg-white/5 rounded-xl p-4 text-center">
-                <p className="text-white/40 text-xs mb-1">Amount Due</p>
-                <p className="text-white text-3xl font-bold">₹{invoice!.total.toLocaleString('en-IN')}</p>
+              <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 text-center">
+                <p className="text-[#1A1A1A]/60 text-xs mb-1">Amount Due</p>
+                <p className="text-[#1A1A1A] text-3xl font-bold">₹{invoice!.total.toLocaleString('en-IN')}</p>
               </div>
 
               <Tabs defaultValue="upi" className="w-full">
-                <TabsList className="bg-white/5 border border-white/10 w-full">
-                  <TabsTrigger value="upi" className="flex-1 data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]">
+                <TabsList className="bg-[#F7F7F5] border border-[#E8E4DF] w-full">
+                  <TabsTrigger value="upi" className="flex-1 data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] text-[#1A1A1A]/70 font-semibold">
                     <CreditCard className="w-3.5 h-3.5 mr-1.5" /> UPI
                   </TabsTrigger>
-                  <TabsTrigger value="cash" className="flex-1 data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]">
+                  <TabsTrigger value="cash" className="flex-1 data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] text-[#1A1A1A]/70 font-semibold">
                     <Banknote className="w-3.5 h-3.5 mr-1.5" /> Cash
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="upi" className="space-y-4 mt-4">
-                  <div className="bg-white rounded-2xl p-6 flex flex-col items-center">
+                  <div className="bg-white border border-[#E8E4DF] rounded-2xl p-6 flex flex-col items-center shadow-xs">
                     <QRCodeSVG value={upiString} size={200} level="H"
                       bgColor="#ffffff" fgColor="#000000" />
-                    <p className="text-black/60 text-xs mt-3 text-center break-all max-w-[200px]">{upiString}</p>
+                    <p className="text-[#1A1A1A]/60 text-xs mt-3 text-center break-all max-w-[200px] font-mono">{upiString}</p>
                   </div>
                   <Button onClick={() => processPayment('upi')} disabled={processingPayment}
-                    className="w-full bg-[#00D084] hover:bg-[#00D084]/90 text-black font-semibold">
+                    className="w-full bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold">
                     {processingPayment ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
                     Payment Received
                   </Button>
                 </TabsContent>
 
                 <TabsContent value="cash" className="space-y-4 mt-4">
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
-                    <p className="text-white/50 text-sm mb-1">Collect from customer</p>
-                    <p className="text-[#00D084] text-3xl font-bold">₹{invoice!.total.toLocaleString('en-IN')}</p>
+                  <div className="bg-[#F7F7F5] rounded-xl p-4 border border-[#E8E4DF] text-center">
+                    <p className="text-[#1A1A1A]/55 text-sm mb-1">Collect from customer</p>
+                    <p className="text-[#FF5C00] text-3xl font-bold">₹{invoice!.total.toLocaleString('en-IN')}</p>
                   </div>
                   <div>
-                    <Label className="text-white/60 text-xs block mb-1">Amount Received (confirmation)</Label>
+                    <Label className="text-[#1A1A1A]/60 text-xs block mb-1">Amount Received (confirmation)</Label>
                     <Input value={cashAmount} onChange={e => setCashAmount(e.target.value.replace(/\D/g, ''))}
                       placeholder={`₹${invoice!.total}`} type="text"
-                      className="bg-white/5 border-white/10 text-white text-center text-xl font-mono h-12" />
+                      className="bg-white border-[#E8E4DF] text-[#1A1A1A] text-center text-xl font-mono h-12" />
                   </div>
                   <Button onClick={() => processPayment('cash')}
                     disabled={processingPayment || Number(cashAmount) !== invoice!.total}
-                    className="w-full bg-[#00D084] hover:bg-[#00D084]/90 text-black font-semibold">
+                    className="w-full bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold">
                     {processingPayment ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Banknote className="w-4 h-4 mr-2" />}
                     Mark Cash Received
                   </Button>
                   {cashAmount && Number(cashAmount) !== invoice!.total && (
-                    <p className="text-xs text-amber-400 text-center">Amount must match ₹{invoice!.total.toLocaleString('en-IN')}</p>
+                    <p className="text-xs text-amber-600 font-semibold text-center">Amount must match ₹{invoice!.total.toLocaleString('en-IN')}</p>
                   )}
                 </TabsContent>
               </Tabs>
@@ -293,10 +293,10 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
 
           {/* Payment Complete */}
           {paymentDone && (
-            <div className="bg-[#00D084]/10 border border-[#00D084]/20 rounded-2xl p-8 text-center">
-              <CheckCircle className="w-12 h-12 text-[#00D084] mx-auto mb-3" />
-              <h3 className="text-white text-lg font-bold">Job Complete!</h3>
-              <p className="text-white/50 text-sm mt-1">Device delivered & payment collected</p>
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-8 text-center">
+              <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
+              <h3 className="text-emerald-800 text-lg font-bold">Job Complete!</h3>
+              <p className="text-emerald-700/80 text-sm mt-1 font-medium">Device delivered & payment collected</p>
             </div>
           )}
         </div>

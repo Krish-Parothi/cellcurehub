@@ -41,6 +41,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** Ensure a users row exists for the given auth user */
   const ensureProfile = useCallback(async (authUser: { id: string; email?: string; user_metadata?: Record<string, any> }): Promise<User | null> => {
     let profile = await fetchProfile(authUser.id);
+
+    // If the profile doesn't exist, or if it exists but is a customer (to catch Google login merge issues)
+    if (!profile || (profile.role === 'customer' && authUser.email)) {
+      if (authUser.email) {
+        // Find if there is an administrative/staff profile created with the same email but a different ID
+        const { data: existingEmailProfile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', authUser.email)
+          .neq('id', authUser.id)
+          .in('role', ['admin', 'shop_admin', 'technician', 'delivery'])
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingEmailProfile) {
+          // If we already have a customer profile for this Google ID, delete it first to avoid conflicts
+          if (profile) {
+            await supabase.from('users').delete().eq('id', authUser.id);
+          }
+
+          // Try to update the existing record's ID directly (preferred to keep all history/relationships)
+          const { error: updateIdError } = await supabase
+            .from('users')
+            .update({ id: authUser.id })
+            .eq('id', existingEmailProfile.id);
+
+          if (!updateIdError) {
+            profile = await fetchProfile(authUser.id);
+            if (profile) return profile;
+          }
+
+          // Fallback if ID update failed (e.g. due to foreign keys)
+          await supabase.from('users').upsert({
+            id: authUser.id,
+            full_name: authUser.user_metadata?.full_name || existingEmailProfile.full_name || authUser.email || 'User',
+            email: authUser.email || null,
+            phone: existingEmailProfile.phone || authUser.user_metadata?.phone || null,
+            avatar_url: authUser.user_metadata?.avatar_url || null,
+            role: existingEmailProfile.role as UserRole,
+            shop_id: existingEmailProfile.shop_id,
+            is_active: existingEmailProfile.is_active ?? true,
+          }, { onConflict: 'id', ignoreDuplicates: true });
+
+          // De-duplicate: mark the old email to avoid future conflicts
+          await supabase
+            .from('users')
+            .update({ email: `${existingEmailProfile.email}_merged_${Date.now()}` })
+            .eq('id', existingEmailProfile.id);
+
+          profile = await fetchProfile(authUser.id);
+          return profile;
+        }
+      }
+    }
+
+    // Default profile creation if nothing exists and no merge candidate is found
     if (!profile) {
       await supabase.from('users').upsert({
         id: authUser.id,
@@ -150,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) { /* sign out error — handled by finally block */ }
     } catch (e) {
       // sign out exception — handled by finally block

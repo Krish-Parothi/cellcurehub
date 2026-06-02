@@ -14,7 +14,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { BarChart3, TrendingUp, Calendar } from 'lucide-react';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
-const COLORS = ['#00D084', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
+const COLORS = ['#FF5C00', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
 
 type DateRange = 'today' | 'week' | 'month' | 'all';
 
@@ -38,7 +38,7 @@ export default function AnalyticsPage() {
     setLoading(true);
     const since = getDateFilter();
     const [rRes, iRes, revRes] = await Promise.all([
-      supabase.from('repairs').select('*, device:devices(brand, model_name), technician:users!repairs_technician_id_fkey(full_name)').gte('created_at', since),
+      supabase.from('repairs').select('*, device:devices(*), technician:users!repairs_technician_id_fkey(full_name)').gte('created_at', since),
       supabase.from('invoices').select('*').gte('created_at', since),
       supabase.from('reviews').select('*, repair:repairs(technician_id)').gte('created_at', since),
     ]);
@@ -111,14 +111,14 @@ export default function AnalyticsPage() {
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <p className="text-white/50 text-sm mt-1">Business intelligence & insights</p>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Analytics</h1>
+          <p className="text-[#1A1A1A]/60 text-sm mt-1">Business intelligence & insights</p>
         </div>
         <div className="flex gap-2">
           {ranges.map(r => (
             <Button key={r.key} size="sm" variant={range === r.key ? 'default' : 'outline'}
               onClick={() => setRange(r.key)}
-              className={range === r.key ? 'bg-[#00D084] text-black' : 'border-white/10 text-white/60 hover:text-white'}>
+              className={range === r.key ? 'bg-[#FF5C00] text-white hover:bg-[#e05200]' : 'border-[#E8E4DF] text-[#1A1A1A]/60 hover:text-[#1A1A1A] hover:bg-[#1A1A1A]/5'}>
               {r.label}
             </Button>
           ))}
@@ -126,76 +126,76 @@ export default function AnalyticsPage() {
       </motion.div>
 
       {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{[0,1,2,3].map(i => <Skeleton key={i} className="h-72 bg-white/5 rounded-xl" />)}</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{[0,1,2,3].map(i => <Skeleton key={i} className="h-72 bg-[#1A1A1A]/5 rounded-xl" />)}</div>
       ) : (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Revenue by Brand */}
-            <Card className="bg-white/5 border-white/10">
-              <CardHeader><CardTitle className="text-white text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#00D084]" />Revenue by Brand</CardTitle></CardHeader>
-              <CardContent><ResponsiveContainer width="100%" height={250}>
-                <BarChart data={brandRevenueData}><CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" /><XAxis dataKey="name" tick={{ fill: '#ffffff60', fontSize: 10 }} /><YAxis tick={{ fill: '#ffffff60', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #ffffff10', borderRadius: 8 }} /><Bar dataKey="value" fill="#00D084" radius={[4, 4, 0, 0]} /></BarChart>
+            <Card className="bg-white border-[#E8E4DF] shadow-sm">
+              <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#FF5C00]" />Revenue by Brand</CardTitle></CardHeader>
+              <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
+                <BarChart data={brandRevenueData}><CartesianGrid strokeDasharray="3 3" stroke="#E8E4DF" /><XAxis dataKey="name" tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><YAxis tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /><Bar dataKey="value" fill="#FF5C00" radius={[4, 4, 0, 0]} /></BarChart>
               </ResponsiveContainer></CardContent>
             </Card>
 
             {/* Daily Revenue Trend */}
-            <Card className="bg-white/5 border-white/10">
-              <CardHeader><CardTitle className="text-white text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4 text-[#00D084]" />Daily Revenue Trend</CardTitle></CardHeader>
-              <CardContent><ResponsiveContainer width="100%" height={250}>
-                <LineChart data={dailyTrend}><CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" /><XAxis dataKey="date" tick={{ fill: '#ffffff60', fontSize: 10 }} /><YAxis tick={{ fill: '#ffffff60', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #ffffff10', borderRadius: 8 }} /><Line type="monotone" dataKey="revenue" stroke="#00D084" strokeWidth={2} dot={{ fill: '#00D084', r: 3 }} /></LineChart>
+            <Card className="bg-white border-[#E8E4DF] shadow-sm">
+              <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4 text-[#FF5C00]" />Daily Revenue Trend</CardTitle></CardHeader>
+              <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
+                <LineChart data={dailyTrend}><CartesianGrid strokeDasharray="3 3" stroke="#E8E4DF" /><XAxis dataKey="date" tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><YAxis tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /><Line type="monotone" dataKey="revenue" stroke="#FF5C00" strokeWidth={2} dot={{ fill: '#FF5C00', r: 3 }} /></LineChart>
               </ResponsiveContainer></CardContent>
             </Card>
 
             {/* Repair Types */}
-            <Card className="bg-white/5 border-white/10">
-              <CardHeader><CardTitle className="text-white text-sm">Repair Types Distribution</CardTitle></CardHeader>
-              <CardContent><ResponsiveContainer width="100%" height={250}>
-                <PieChart><Pie data={typePie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#ffffff30' }}>{typePie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #ffffff10', borderRadius: 8 }} /></PieChart>
+            <Card className="bg-white border-[#E8E4DF] shadow-sm">
+              <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm">Repair Types Distribution</CardTitle></CardHeader>
+              <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
+                <PieChart><Pie data={typePie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A40' }}>{typePie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart>
               </ResponsiveContainer></CardContent>
             </Card>
 
             {/* Payment Methods */}
-            <Card className="bg-white/5 border-white/10">
-              <CardHeader><CardTitle className="text-white text-sm">Payment Methods</CardTitle></CardHeader>
-              <CardContent><ResponsiveContainer width="100%" height={250}>
-                <PieChart><Pie data={pmPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#ffffff30' }}>{pmPie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #ffffff10', borderRadius: 8 }} /></PieChart>
+            <Card className="bg-white border-[#E8E4DF] shadow-sm">
+              <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm">Payment Methods</CardTitle></CardHeader>
+              <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
+                <PieChart><Pie data={pmPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A40' }}>{pmPie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart>
               </ResponsiveContainer></CardContent>
             </Card>
           </div>
 
           {/* Technician Performance */}
-          <Card className="bg-white/5 border-white/10">
-            <CardHeader><CardTitle className="text-white text-sm">Technician Performance</CardTitle></CardHeader>
+          <Card className="bg-white border-[#E8E4DF] shadow-sm">
+            <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm">Technician Performance</CardTitle></CardHeader>
             <CardContent className="p-0">
-              <Table><TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-white/50">Technician</TableHead><TableHead className="text-white/50">Completed</TableHead>
-                <TableHead className="text-white/50">Avg Turnaround (hrs)</TableHead><TableHead className="text-white/50">QA Pass Rate</TableHead>
-                <TableHead className="text-white/50">Avg Rating</TableHead>
+              <Table><TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent">
+                <TableHead className="text-[#1A1A1A]/50">Technician</TableHead><TableHead className="text-[#1A1A1A]/50">Completed</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Avg Turnaround (hrs)</TableHead><TableHead className="text-[#1A1A1A]/50">QA Pass Rate</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Avg Rating</TableHead>
               </TableRow></TableHeader>
               <TableBody>{techPerf.map(t => (
-                <TableRow key={t.name} className="border-white/5 hover:bg-white/5">
-                  <TableCell className="text-white font-medium">{t.name}</TableCell>
-                  <TableCell className="text-white">{t.completed}</TableCell>
-                  <TableCell className="text-white/60">{t.avgTurnaround}h</TableCell>
-                  <TableCell className="text-white/60">{t.qaPassRate}%</TableCell>
-                  <TableCell className="text-amber-400">{t.avgRating} ★</TableCell>
+                <TableRow key={t.name} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5]">
+                  <TableCell className="text-[#1A1A1A] font-medium">{t.name}</TableCell>
+                  <TableCell className="text-[#1A1A1A]">{t.completed}</TableCell>
+                  <TableCell className="text-[#1A1A1A]/70">{t.avgTurnaround}h</TableCell>
+                  <TableCell className="text-[#1A1A1A]/70">{t.qaPassRate}%</TableCell>
+                  <TableCell className="text-amber-600 font-medium">{t.avgRating} ★</TableCell>
                 </TableRow>
               ))}</TableBody></Table>
             </CardContent>
           </Card>
 
           {/* Area Heatmap */}
-          <Card className="bg-white/5 border-white/10">
-            <CardHeader><CardTitle className="text-white text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-[#00D084]" />Area Heatmap — Repairs by Location</CardTitle></CardHeader>
+          <Card className="bg-white border-[#E8E4DF] shadow-sm">
+            <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-[#FF5C00]" />Area Heatmap — Repairs by Location</CardTitle></CardHeader>
             <CardContent className="p-0">
-              <Table><TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-white/50">Area</TableHead><TableHead className="text-white/50">Repairs</TableHead><TableHead className="text-white/50">Share</TableHead>
+              <Table><TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent">
+                <TableHead className="text-[#1A1A1A]/50">Area</TableHead><TableHead className="text-[#1A1A1A]/50">Repairs</TableHead><TableHead className="text-[#1A1A1A]/50">Share</TableHead>
               </TableRow></TableHeader>
               <TableBody>{areaData.map(a => (
-                <TableRow key={a.area} className="border-white/5 hover:bg-white/5">
-                  <TableCell className="text-white font-medium">{a.area}</TableCell>
-                  <TableCell className="text-white">{a.count}</TableCell>
-                  <TableCell><div className="flex items-center gap-2"><div className="h-2 bg-[#00D084] rounded-full" style={{ width: `${(a.count / (areaData[0]?.count || 1)) * 100}%`, maxWidth: 120 }} /><span className="text-white/40 text-xs">{repairs.length > 0 ? Math.round((a.count / repairs.length) * 100) : 0}%</span></div></TableCell>
+                <TableRow key={a.area} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5]">
+                  <TableCell className="text-[#1A1A1A] font-medium">{a.area}</TableCell>
+                  <TableCell className="text-[#1A1A1A]">{a.count}</TableCell>
+                  <TableCell><div className="flex items-center gap-2"><div className="h-2 bg-[#FF5C00] rounded-full" style={{ width: `${(a.count / (areaData[0]?.count || 1)) * 100}%`, maxWidth: 120 }} /><span className="text-[#1A1A1A]/40 text-xs">{repairs.length > 0 ? Math.round((a.count / repairs.length) * 100) : 0}%</span></div></TableCell>
                 </TableRow>
               ))}</TableBody></Table>
             </CardContent>

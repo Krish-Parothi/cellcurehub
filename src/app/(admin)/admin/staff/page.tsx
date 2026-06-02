@@ -161,10 +161,10 @@ export default function StaffPage() {
   };
 
   const attColor = (s: AttendanceStatus | null) => {
-    if (s === 'present') return 'bg-green-500/60';
-    if (s === 'absent') return 'bg-red-500/60';
-    if (s === 'half_day') return 'bg-amber-500/60';
-    return 'bg-white/5';
+    if (s === 'present') return 'bg-green-100 text-green-800 border border-green-200';
+    if (s === 'absent') return 'bg-red-100 text-red-800 border border-red-200';
+    if (s === 'half_day') return 'bg-amber-100 text-amber-800 border border-amber-200';
+    return 'bg-[#F7F7F5] border border-black/[0.03] text-[#1A1A1A]/60';
   };
 
   const attLabel = (s: AttendanceStatus | null) => {
@@ -218,38 +218,38 @@ export default function StaffPage() {
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Staff Management</h1>
-          <p className="text-white/50 text-sm mt-1">Manage employees, attendance, and salaries</p>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Staff Management</h1>
+          <p className="text-[#1A1A1A]/50 text-sm mt-1">Manage employees, attendance, and salaries</p>
         </div>
-        <Button onClick={() => { reset(); setStaffRole('technician'); setSelectedShop(''); setAddDialog(true); }} className="bg-[#00D084] text-black hover:bg-[#00D084]/90"><Plus className="w-4 h-4 mr-1" />Add Staff</Button>
+        <Button onClick={() => { reset(); setStaffRole('technician'); setSelectedShop(''); setAddDialog(true); }} className="bg-[#FF5C00] text-white hover:bg-[#FF5C00]/90"><Plus className="w-4 h-4 mr-1" />Add Staff</Button>
       </motion.div>
 
       <Tabs defaultValue="roster" className="w-full">
-        <TabsList className="bg-white/5 border border-white/10 mb-6">
-          <TabsTrigger value="roster" className="data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]"><Users className="w-3.5 h-3.5 mr-1.5" />Roster</TabsTrigger>
-          <TabsTrigger value="attendance" className="data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]"><Calendar className="w-3.5 h-3.5 mr-1.5" />Attendance</TabsTrigger>
-          <TabsTrigger value="holidays" className="data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]"><Calendar className="w-3.5 h-3.5 mr-1.5" />Holidays</TabsTrigger>
-          <TabsTrigger value="salary" className="data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]"><DollarSign className="w-3.5 h-3.5 mr-1.5" />Salary</TabsTrigger>
+        <TabsList className="bg-black/5 border border-[#E8E4DF] mb-6">
+          <TabsTrigger value="roster" className="data-[state=active]:bg-[#FF5C00]/15 data-[state=active]:text-[#FF5C00]"><Users className="w-3.5 h-3.5 mr-1.5" />Roster</TabsTrigger>
+          <TabsTrigger value="attendance" className="data-[state=active]:bg-[#FF5C00]/15 data-[state=active]:text-[#FF5C00]"><Calendar className="w-3.5 h-3.5 mr-1.5" />Attendance</TabsTrigger>
+          <TabsTrigger value="holidays" className="data-[state=active]:bg-[#FF5C00]/15 data-[state=active]:text-[#FF5C00]"><Calendar className="w-3.5 h-3.5 mr-1.5" />Holidays</TabsTrigger>
+          <TabsTrigger value="salary" className="data-[state=active]:bg-[#FF5C00]/15 data-[state=active]:text-[#FF5C00]"><DollarSign className="w-3.5 h-3.5 mr-1.5" />Salary</TabsTrigger>
         </TabsList>
 
         {/* Staff Roster */}
         <TabsContent value="roster">
-          <Card className="bg-white/5 border-white/10"><CardContent className="p-0">
-            {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-white/5" /></div> : (
-              <Table><TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-white/50">Name</TableHead><TableHead className="text-white/50">Role</TableHead>
-                <TableHead className="text-white/50">Phone</TableHead><TableHead className="text-white/50">Shop</TableHead>
-                <TableHead className="text-white/50">Active</TableHead><TableHead className="text-white/50">Actions</TableHead>
+          <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-0">
+            {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-[#F7F7F5]" /></div> : (
+              <Table><TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent bg-[#F7F7F5]/50">
+                <TableHead className="text-[#1A1A1A]/50 font-medium">Name</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Role</TableHead>
+                <TableHead className="text-[#1A1A1A]/50 font-medium">Phone</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Shop</TableHead>
+                <TableHead className="text-[#1A1A1A]/50 font-medium">Active</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>{staff.map(s => (
-                <TableRow key={s.id} className="border-white/5 hover:bg-white/5">
-                  <TableCell className="text-white font-medium">{s.full_name}</TableCell>
-                  <TableCell><Badge className="bg-white/10 text-white/60 capitalize">{s.role}</Badge></TableCell>
-                  <TableCell className="text-white/60">{s.phone || '—'}</TableCell>
-                  <TableCell className="text-white/60 text-xs">{shops.find(sh => sh.id === s.shop_id)?.name || '—'}</TableCell>
-                  <TableCell><Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} /></TableCell>
+                <TableRow key={s.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]/40">
+                  <TableCell className="text-[#1A1A1A] font-semibold">{s.full_name}</TableCell>
+                  <TableCell><Badge className="bg-black/5 text-[#1A1A1A]/70 capitalize border-0 hover:bg-black/10">{s.role}</Badge></TableCell>
+                  <TableCell className="text-[#1A1A1A]/70">{s.phone || '—'}</TableCell>
+                  <TableCell className="text-[#1A1A1A]/70 text-xs">{shops.find(sh => sh.id === s.shop_id)?.name || '—'}</TableCell>
+                  <TableCell><Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} className="data-[state=checked]:bg-[#FF5C00]" /></TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(s)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 text-xs">
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(s)} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 text-xs">
                       <Trash2 className="w-3 h-3 mr-1" />Remove
                     </Button>
                   </TableCell>
@@ -262,28 +262,28 @@ export default function StaffPage() {
         {/* Attendance Grid */}
         <TabsContent value="attendance">
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white/60 hover:text-white"><ChevronLeft className="w-4 h-4" /></Button>
-            <span className="text-white font-semibold">{monthLabel}</span>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white/60 hover:text-white"><ChevronRight className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={prevMonth} className="text-[#1A1A1A]/60 hover:text-[#1A1A1A]"><ChevronLeft className="w-4 h-4" /></Button>
+            <span className="text-[#1A1A1A] font-bold">{monthLabel}</span>
+            <Button variant="ghost" size="icon" onClick={nextMonth} className="text-[#1A1A1A]/60 hover:text-[#1A1A1A]"><ChevronRight className="w-4 h-4" /></Button>
           </div>
-          <Card className="bg-white/5 border-white/10 overflow-x-auto"><CardContent className="p-0">
+          <Card className="bg-white border-[#E8E4DF] shadow-sm overflow-x-auto"><CardContent className="p-0">
             <table className="w-full text-xs">
-              <thead><tr className="border-b border-white/5">
-                <th className="text-left text-white/50 p-2 sticky left-0 bg-[#0A0A0A] z-10 min-w-[120px]">Employee</th>
+              <thead><tr className="border-b border-[#E8E4DF]/60 bg-[#F7F7F5]/50">
+                <th className="text-left text-[#1A1A1A]/50 p-2 sticky left-0 bg-white border-r border-[#E8E4DF]/60 z-10 min-w-[120px] font-medium">Employee</th>
                 {monthDates.map(d => {
                   const day = new Date(d).getDate();
                   const isToday = d === todayStr;
                   const isHol = holidayDates.has(d);
-                  return <th key={d} className={`text-center p-1 min-w-[28px] ${isToday ? 'bg-[#00D084]/10 text-[#00D084]' : isHol ? 'bg-teal-500/10 text-teal-400' : 'text-white/30'}`}>{day}</th>;
+                  return <th key={d} className={`text-center p-1 min-w-[28px] ${isToday ? 'bg-[#FF5C00]/10 text-[#FF5C00] font-bold' : isHol ? 'bg-teal-600/10 text-teal-700 font-bold' : 'text-[#1A1A1A]/40'}`}>{day}</th>;
                 })}
               </tr></thead>
               <tbody>{staff.map(emp => (
-                <tr key={emp.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                  <td className="text-white/80 p-2 sticky left-0 bg-[#0A0A0A] z-10 truncate">{emp.full_name}</td>
+                <tr key={emp.id} className="border-b border-[#E8E4DF]/60 hover:bg-[#F7F7F5]/40">
+                  <td className="text-[#1A1A1A]/80 font-semibold p-2 sticky left-0 bg-white border-r border-[#E8E4DF]/60 z-10 truncate">{emp.full_name}</td>
                   {monthDates.map(d => {
                     const st = getAttStatus(emp.id, d);
                     return <td key={d} className="text-center p-1">
-                      <button onClick={() => cycleAttendance(emp.id, d)} className={`w-6 h-6 rounded text-[10px] font-bold ${attColor(st)} hover:ring-1 hover:ring-white/30 transition-all`}>
+                      <button onClick={() => cycleAttendance(emp.id, d)} className={`w-6 h-6 rounded text-[10px] font-bold ${attColor(st)} hover:ring-1 hover:ring-[#1A1A1A]/30 transition-all`}>
                         {attLabel(st)}
                       </button>
                     </td>;
@@ -292,23 +292,23 @@ export default function StaffPage() {
               ))}</tbody>
             </table>
           </CardContent></Card>
-          <div className="flex gap-4 mt-3 text-xs text-white/50">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500/60" />Present</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500/60" />Absent</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-500/60" />Half Day</span>
+          <div className="flex gap-4 mt-3 text-xs text-[#1A1A1A]/60">
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-100 border border-green-200" />Present</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 border border-red-200" />Absent</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-200" />Half Day</span>
           </div>
         </TabsContent>
 
         {/* Holidays */}
         <TabsContent value="holidays">
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white/60 hover:text-white"><ChevronLeft className="w-4 h-4" /></Button>
-            <span className="text-white font-semibold">{monthLabel}</span>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white/60 hover:text-white"><ChevronRight className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={prevMonth} className="text-[#1A1A1A]/60 hover:text-[#1A1A1A]"><ChevronLeft className="w-4 h-4" /></Button>
+            <span className="text-[#1A1A1A] font-bold">{monthLabel}</span>
+            <Button variant="ghost" size="icon" onClick={nextMonth} className="text-[#1A1A1A]/60 hover:text-[#1A1A1A]"><ChevronRight className="w-4 h-4" /></Button>
           </div>
-          <Card className="bg-white/5 border-white/10"><CardContent className="p-4">
+          <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-4">
             <div className="grid grid-cols-7 gap-2">
-              {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} className="text-center text-white/30 text-xs font-semibold py-1">{d}</div>)}
+              {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} className="text-center text-[#1A1A1A]/40 text-xs font-semibold py-1">{d}</div>)}
               {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => <div key={`pad-${i}`} />)}
               {monthDates.map(d => {
                 const day = new Date(d).getDate();
@@ -316,9 +316,9 @@ export default function StaffPage() {
                 const holName = holidays.find(h => h.date === d)?.name;
                 return (
                   <button key={d} onClick={() => toggleHoliday(d)}
-                    className={`p-2 rounded-lg text-center transition-all hover:ring-1 hover:ring-white/20 ${isHol ? 'bg-teal-500/20 border border-teal-500/30' : 'bg-white/5 border border-white/5'}`}>
-                    <span className={`text-sm font-medium ${isHol ? 'text-teal-400' : 'text-white/70'}`}>{day}</span>
-                    {isHol && <p className="text-[9px] text-teal-400/70 truncate mt-0.5">{holName}</p>}
+                    className={`p-2 rounded-lg text-center transition-all hover:ring-1 hover:ring-black/10 ${isHol ? 'bg-teal-50 text-teal-800 border border-teal-200' : 'bg-[#F7F7F5] border border-black/[0.03]'}`}>
+                    <span className={`text-sm font-medium ${isHol ? 'text-teal-700 font-bold' : 'text-[#1A1A1A]/70'}`}>{day}</span>
+                    {isHol && <p className="text-[9px] text-teal-700/80 truncate mt-0.5">{holName}</p>}
                   </button>
                 );
               })}
@@ -329,31 +329,31 @@ export default function StaffPage() {
         {/* Salary */}
         <TabsContent value="salary">
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="text-white/60 hover:text-white"><ChevronLeft className="w-4 h-4" /></Button>
-            <span className="text-white font-semibold">{monthLabel}</span>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="text-white/60 hover:text-white"><ChevronRight className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={prevMonth} className="text-[#1A1A1A]/60 hover:text-[#1A1A1A]"><ChevronLeft className="w-4 h-4" /></Button>
+            <span className="text-[#1A1A1A] font-bold">{monthLabel}</span>
+            <Button variant="ghost" size="icon" onClick={nextMonth} className="text-[#1A1A1A]/60 hover:text-[#1A1A1A]"><ChevronRight className="w-4 h-4" /></Button>
           </div>
-          <Card className="bg-white/5 border-white/10 overflow-x-auto"><CardContent className="p-0">
-            <Table><TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-              <TableHead className="text-white/50">Employee</TableHead><TableHead className="text-white/50">Base</TableHead>
-              <TableHead className="text-white/50">Per Day Ded.</TableHead><TableHead className="text-white/50">Absent</TableHead>
-              <TableHead className="text-white/50">Adj. Absent</TableHead><TableHead className="text-white/50">Deduction</TableHead>
-              <TableHead className="text-white/50">Calculated</TableHead><TableHead className="text-white/50">Override</TableHead>
-              <TableHead className="text-white/50">Action</TableHead>
+          <Card className="bg-white border-[#E8E4DF] shadow-sm overflow-x-auto"><CardContent className="p-0">
+            <Table><TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent bg-[#F7F7F5]/50">
+              <TableHead className="text-[#1A1A1A]/50 font-medium">Employee</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Base</TableHead>
+              <TableHead className="text-[#1A1A1A]/50 font-medium">Per Day Ded.</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Absent</TableHead>
+              <TableHead className="text-[#1A1A1A]/50 font-medium">Adj. Absent</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Deduction</TableHead>
+              <TableHead className="text-[#1A1A1A]/50 font-medium">Calculated</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Override</TableHead>
+              <TableHead className="text-[#1A1A1A]/50 font-medium">Action</TableHead>
             </TableRow></TableHeader>
             <TableBody>{staff.map(emp => {
               const sd = getSalaryData(emp);
               return (
-                <TableRow key={emp.id} className="border-white/5 hover:bg-white/5">
-                  <TableCell className="text-white font-medium">{emp.full_name}</TableCell>
-                  <TableCell><Input type="number" defaultValue={sd.baseSalary} className="w-20 h-7 text-xs bg-white/5 border-white/10 text-white" id={`base-${emp.id}`} /></TableCell>
-                  <TableCell><Input type="number" defaultValue={sd.perDay} className="w-16 h-7 text-xs bg-white/5 border-white/10 text-white" id={`pdd-${emp.id}`} /></TableCell>
-                  <TableCell className="text-red-400">{sd.absentDays}</TableCell>
-                  <TableCell className="text-amber-400">{sd.adjustedAbsent}</TableCell>
-                  <TableCell className="text-red-400">₹{fmt(sd.deduction)}</TableCell>
-                  <TableCell className="text-white">₹{fmt(sd.calculated)}</TableCell>
-                  <TableCell><Input type="number" defaultValue={sd.config?.final_salary_override ?? ''} placeholder="—" className="w-20 h-7 text-xs bg-white/5 border-white/10 text-white" id={`ovr-${emp.id}`} /></TableCell>
-                  <TableCell><Button size="sm" className="h-7 text-xs bg-[#00D084] text-black hover:bg-[#00D084]/90" onClick={() => {
+                <TableRow key={emp.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]/40">
+                  <TableCell className="text-[#1A1A1A] font-semibold">{emp.full_name}</TableCell>
+                  <TableCell><Input type="number" defaultValue={sd.baseSalary} className="w-20 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`base-${emp.id}`} /></TableCell>
+                  <TableCell><Input type="number" defaultValue={sd.perDay} className="w-16 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`pdd-${emp.id}`} /></TableCell>
+                  <TableCell className="text-red-600 font-semibold">{sd.absentDays}</TableCell>
+                  <TableCell className="text-amber-600 font-semibold">{sd.adjustedAbsent}</TableCell>
+                  <TableCell className="text-red-600 font-semibold">₹{fmt(sd.deduction)}</TableCell>
+                  <TableCell className="text-[#1A1A1A] font-semibold">₹{fmt(sd.calculated)}</TableCell>
+                  <TableCell><Input type="number" defaultValue={sd.config?.final_salary_override ?? ''} placeholder="—" className="w-20 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`ovr-${emp.id}`} /></TableCell>
+                  <TableCell><Button size="sm" className="h-7 text-xs bg-[#FF5C00] text-white hover:bg-[#FF5C00]/90" onClick={() => {
                     const base = Number((document.getElementById(`base-${emp.id}`) as HTMLInputElement)?.value || 0);
                     const pdd = Number((document.getElementById(`pdd-${emp.id}`) as HTMLInputElement)?.value || 0);
                     const ovr = (document.getElementById(`ovr-${emp.id}`) as HTMLInputElement)?.value;
@@ -368,50 +368,50 @@ export default function StaffPage() {
 
       {/* Add Staff Dialog */}
       <Dialog open={addDialog} onOpenChange={setAddDialog}>
-        <DialogContent className="bg-[#1A1A1A] border-white/10 max-w-sm">
-          <DialogHeader><DialogTitle className="text-white">Add New Staff</DialogTitle><DialogDescription className="text-white/50">Add a staff member to any shop</DialogDescription></DialogHeader>
+        <DialogContent className="bg-white border-[#E8E4DF] max-w-sm">
+          <DialogHeader><DialogTitle className="text-[#1A1A1A]">Add New Staff</DialogTitle><DialogDescription className="text-[#1A1A1A]/50">Add a staff member to any shop</DialogDescription></DialogHeader>
           <form onSubmit={handleSubmit(onAddStaff)} className="space-y-3">
             <div>
-              <Label className="text-white/60">Role *</Label>
+              <Label className="text-[#1A1A1A]/70">Role *</Label>
               <Select value={staffRole} onValueChange={(v) => setStaffRole(v as 'technician' | 'delivery')}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-white/10">
+                <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
                   <SelectItem value="technician">Technician</SelectItem>
                   <SelectItem value="delivery">Delivery Staff</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-white/60">Shop *</Label>
+              <Label className="text-[#1A1A1A]/70">Shop *</Label>
               <Select value={selectedShop} onValueChange={setSelectedShop}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1"><SelectValue placeholder="Select shop..." /></SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-white/10">
+                <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1"><SelectValue placeholder="Select shop..." /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
                   {shops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div><Label className="text-white/60">Full Name *</Label><Input {...register('full_name')} className="bg-white/5 border-white/10 text-white mt-1" />{errors.full_name && <p className="text-red-400 text-xs mt-0.5">{errors.full_name.message}</p>}</div>
-            <div><Label className="text-white/60">Email *</Label><Input {...register('email')} type="email" className="bg-white/5 border-white/10 text-white mt-1" />{errors.email && <p className="text-red-400 text-xs mt-0.5">{errors.email.message}</p>}</div>
-            <div><Label className="text-white/60">Phone *</Label><Input {...register('phone')} className="bg-white/5 border-white/10 text-white mt-1" placeholder="10-digit mobile" />{errors.phone && <p className="text-red-400 text-xs mt-0.5">{errors.phone.message}</p>}</div>
+            <div><Label className="text-[#1A1A1A]/70">Full Name *</Label><Input {...register('full_name')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" />{errors.full_name && <p className="text-red-600 text-xs mt-0.5">{errors.full_name.message}</p>}</div>
+            <div><Label className="text-[#1A1A1A]/70">Email *</Label><Input {...register('email')} type="email" className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" />{errors.email && <p className="text-red-600 text-xs mt-0.5">{errors.email.message}</p>}</div>
+            <div><Label className="text-[#1A1A1A]/70">Phone *</Label><Input {...register('phone')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" placeholder="10-digit mobile" />{errors.phone && <p className="text-red-600 text-xs mt-0.5">{errors.phone.message}</p>}</div>
             {staffRole === 'technician' && (
-              <div><Label className="text-white/60">Aadhar Number *</Label><Input {...register('aadhar')} className="bg-white/5 border-white/10 text-white mt-1" placeholder="12-digit Aadhar" maxLength={12} />{errors.aadhar && <p className="text-red-400 text-xs mt-0.5">{errors.aadhar.message}</p>}</div>
+              <div><Label className="text-[#1A1A1A]/70">Aadhar Number *</Label><Input {...register('aadhar')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" placeholder="12-digit Aadhar" maxLength={12} />{errors.aadhar && <p className="text-red-600 text-xs mt-0.5">{errors.aadhar.message}</p>}</div>
             )}
-            <DialogFooter><Button type="submit" disabled={addingStaff} className="bg-[#00D084] text-black hover:bg-[#00D084]/90">{addingStaff ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}Add {staffRole === 'technician' ? 'Technician' : 'Delivery Staff'}</Button></DialogFooter>
+            <DialogFooter><Button type="submit" disabled={addingStaff} className="bg-[#FF5C00] text-white hover:bg-[#FF5C00]/90">{addingStaff ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}Add {staffRole === 'technician' ? 'Technician' : 'Delivery Staff'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
-        <AlertDialogContent className="bg-[#1A1A1A] border-white/10">
+        <AlertDialogContent className="bg-white border-[#E8E4DF]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Permanently Remove Staff?</AlertDialogTitle>
-            <AlertDialogDescription className="text-white/60">
-              This will permanently remove <span className="text-white font-semibold">{deleteConfirm?.full_name}</span> and all their attendance/salary records. This action cannot be undone.
+            <AlertDialogTitle className="text-[#1A1A1A]">Permanently Remove Staff?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#1A1A1A]/60">
+              This will permanently remove <span className="text-[#1A1A1A] font-bold">{deleteConfirm?.full_name}</span> and all their attendance/salary records. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 text-white/60 hover:bg-white/5">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="border-[#E8E4DF] text-[#1A1A1A]/60 hover:bg-black/5">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteConfirm && handleDelete(deleteConfirm)} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />}Remove Permanently
             </AlertDialogAction>

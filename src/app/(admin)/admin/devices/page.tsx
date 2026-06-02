@@ -70,41 +70,41 @@ export default function DevicesPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-[#1A1A1A]">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Device Models</h1>
-          <p className="text-white/50 text-sm mt-1">Manage supported devices</p>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Device Models</h1>
+          <p className="text-[#1A1A1A]/60 text-sm mt-1">Manage supported devices</p>
         </div>
-        <Button onClick={() => setAddDialog(true)} className="bg-[#00D084] text-black hover:bg-[#00D084]/90"><Plus className="w-4 h-4 mr-1" />Add Model</Button>
+        <Button onClick={() => setAddDialog(true)} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-bold"><Plus className="w-4 h-4 mr-1" />Add Model</Button>
       </motion.div>
 
-      {loading ? <div className="space-y-4">{[0,1,2].map(i => <Skeleton key={i} className="h-16 w-full bg-white/5 rounded-xl" />)}</div> : (
+      {loading ? <div className="space-y-4">{[0,1,2].map(i => <Skeleton key={i} className="h-16 w-full bg-[#1A1A1A]/5 rounded-xl" />)}</div> : (
         <div className="space-y-3">
           {Object.entries(brandGroups).sort(([a], [b]) => a.localeCompare(b)).map(([brand, models]) => (
             <Collapsible key={brand} open={expandedBrands.has(brand)} onOpenChange={() => toggleBrand(brand)}>
-              <Card className="bg-white/5 border-white/10">
+              <Card className="bg-white border-[#E8E4DF] shadow-sm hover:border-[#FF5C00]/30 transition-colors">
                 <CollapsibleTrigger className="w-full">
-                  <CardContent className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.02]">
+                  <CardContent className="p-4 flex items-center justify-between cursor-pointer hover:bg-[#F7F7F5] rounded-t-xl transition-colors">
                     <div className="flex items-center gap-3">
-                      <Smartphone className="w-4 h-4 text-[#00D084]" />
-                      <span className="text-white font-semibold">{brand}</span>
-                      <Badge variant="outline" className="border-white/20 text-white/40 text-xs">{models.length}</Badge>
+                      <Smartphone className="w-4 h-4 text-[#FF5C00]" />
+                      <span className="text-[#1A1A1A] font-semibold">{brand}</span>
+                      <Badge variant="outline" className="border-[#E8E4DF] text-[#1A1A1A]/50 bg-[#F7F7F5] text-xs font-semibold">{models.length}</Badge>
                     </div>
-                    <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${expandedBrands.has(brand) ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-[#1A1A1A]/40 transition-transform ${expandedBrands.has(brand) ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="border-t border-white/5">
+                  <div className="border-t border-[#E8E4DF]">
                     {models.map(d => (
-                      <div key={d.id} className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+                      <div key={d.id} className="flex items-center justify-between px-4 py-2.5 border-b border-[#E8E4DF]/60 last:border-0 hover:bg-[#F7F7F5]/50 transition-colors">
                         <div className="flex items-center gap-3">
-                          <span className={`text-sm ${d.is_active ? 'text-white' : 'text-white/30 line-through'}`}>{d.model_name}</span>
-                          <Badge className="bg-white/10 text-white/40 text-[10px] capitalize">{d.category}</Badge>
+                          <span className={`text-sm font-medium ${d.is_active ? 'text-[#1A1A1A]' : 'text-[#1A1A1A]/30 line-through'}`}>{d.model_name}</span>
+                          <Badge variant="outline" className="bg-[#F7F7F5] border-[#E8E4DF]/60 text-[#1A1A1A]/60 text-[10px] capitalize font-medium">{d.category}</Badge>
                         </div>
                         <div className="flex items-center gap-2">
                           <Switch checked={d.is_active} onCheckedChange={() => toggleActive(d)} />
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-white/40 hover:text-red-400" onClick={() => deleteDevice(d)}><Trash2 className="w-3 h-3" /></Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-[#1A1A1A]/40 hover:text-red-500 hover:bg-red-50 transition-colors" onClick={() => deleteDevice(d)}><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
                       </div>
                     ))}
@@ -117,30 +117,30 @@ export default function DevicesPage() {
       )}
 
       <Dialog open={addDialog} onOpenChange={setAddDialog}>
-        <DialogContent className="bg-[#1A1A1A] border-white/10 max-w-sm">
-          <DialogHeader><DialogTitle className="text-white">Add Device Model</DialogTitle><DialogDescription className="text-white/50">Add a new device to the catalog</DialogDescription></DialogHeader>
+        <DialogContent className="bg-white border-[#E8E4DF] max-w-sm text-[#1A1A1A]">
+          <DialogHeader><DialogTitle className="text-[#1A1A1A]">Add Device Model</DialogTitle><DialogDescription className="text-[#1A1A1A]/60">Add a new device to the catalog</DialogDescription></DialogHeader>
           <div className="space-y-3">
-            <div><Label className="text-white/60">Brand</Label>
+            <div><Label className="text-[#1A1A1A]/70 font-semibold">Brand</Label>
               <Select value={form.brand} onValueChange={v => setForm(f => ({ ...f, brand: v }))}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1"><SelectValue placeholder="Select brand" /></SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-white/10">
-                  {DEVICE_BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1"><SelectValue placeholder="Select brand" /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+                  {DEVICE_BRANDS.map(b => <SelectItem key={b} value={b} className="hover:bg-[#F7F7F5] cursor-pointer">{b}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div><Label className="text-white/60">Model Name</Label><Input className="bg-white/5 border-white/10 text-white mt-1" value={form.model_name} onChange={e => setForm(f => ({ ...f, model_name: e.target.value }))} placeholder="e.g. iPhone 15 Pro" /></div>
-            <div><Label className="text-white/60">Category</Label>
+            <div><Label className="text-[#1A1A1A]/70 font-semibold">Model Name</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1 placeholder:text-[#1A1A1A]/30" value={form.model_name} onChange={e => setForm(f => ({ ...f, model_name: e.target.value }))} placeholder="e.g. iPhone 15 Pro" /></div>
+            <div><Label className="text-[#1A1A1A]/70 font-semibold">Category</Label>
               <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-white/10">
-                  <SelectItem value="smartphone">Smartphone</SelectItem>
-                  <SelectItem value="laptop">Laptop</SelectItem>
-                  <SelectItem value="tablet">Tablet</SelectItem>
+                <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+                  <SelectItem value="smartphone" className="hover:bg-[#F7F7F5] cursor-pointer">Smartphone</SelectItem>
+                  <SelectItem value="laptop" className="hover:bg-[#F7F7F5] cursor-pointer">Laptop</SelectItem>
+                  <SelectItem value="tablet" className="hover:bg-[#F7F7F5] cursor-pointer">Tablet</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <DialogFooter><Button onClick={addDevice} className="bg-[#00D084] text-black hover:bg-[#00D084]/90">Add Model</Button></DialogFooter>
+          <DialogFooter><Button onClick={addDevice} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-bold">Add Model</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

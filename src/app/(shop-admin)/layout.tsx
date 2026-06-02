@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: '/shop-admin', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/shop-admin/repairs', icon: Wrench, label: 'Repairs' },
   { href: '/shop-admin/staff', icon: Users, label: 'Staff' },
+  { href: '/shop-admin/inventory', icon: Package, label: 'Inventory' },
   { href: '/shop-admin/analytics', icon: BarChart3, label: 'Analytics' },
   { href: '/shop-admin/customers', icon: UserCircle, label: 'Customers' },
   { href: '/shop-admin/devices', icon: Smartphone, label: 'Devices' },
@@ -56,25 +57,25 @@ export default function ShopAdminLayout({ children }: { children: React.ReactNod
     <nav className="flex flex-col gap-1 p-4">
       {/* Shop name badge */}
       {shopName && (
-        <div className="flex items-center gap-2 px-3 py-2 mb-1 rounded-lg bg-[#00D084]/10 border border-[#00D084]/20">
-          <Store className="w-3.5 h-3.5 text-[#00D084] shrink-0" />
-          <span className="text-[#00D084] text-xs font-semibold truncate">{shopName}</span>
+        <div className="flex items-center gap-2 px-3 py-2 mb-1 rounded-lg bg-[#FF5C00]/10 border border-[#FF5C00]/20">
+          <Store className="w-3.5 h-3.5 text-[#FF5C00] shrink-0" />
+          <span className="text-[#FF5C00] text-xs font-semibold truncate">{shopName}</span>
         </div>
       )}
       {/* Back to admin button */}
       {isAdmin && (
-        <button onClick={handleBackToAdmin} className="flex items-center gap-2 px-3 py-2 mb-2 rounded-lg text-xs text-amber-400 hover:bg-amber-500/10 transition-colors">
+        <button onClick={handleBackToAdmin} className="flex items-center gap-2 px-3 py-2 mb-2 rounded-lg text-xs text-[#FF5C00] hover:bg-[#FF5C00]/10 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Admin
         </button>
       )}
-      <p className="text-xs text-white/30 font-semibold uppercase tracking-wider px-3 mb-2">Shop Admin</p>
+      <p className="text-xs text-[#1A1A1A]/40 font-semibold uppercase tracking-wider px-3 mb-2">Shop Admin</p>
       {NAV_ITEMS.map(item => (
         <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
             isActive(item.href)
-              ? 'bg-[#00D084]/10 text-[#00D084] font-semibold'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+              ? 'bg-[#FF5C00]/10 text-[#FF5C00] font-semibold'
+              : 'text-[#1A1A1A]/60 hover:text-[#1A1A1A] hover:bg-[#1A1A1A]/5'
           }`}>
           <item.icon className="w-4 h-4" />
           {item.label}
@@ -85,20 +86,20 @@ export default function ShopAdminLayout({ children }: { children: React.ReactNod
 
   return (
     <RoleGuard allowedRoles={['shop_admin', 'admin']}>
-      <div className="min-h-screen bg-[#0A0A0A] flex flex-col">
+      <div className="min-h-screen bg-[#F7F7F5] flex flex-col text-[#1A1A1A]">
         <Navbar />
         <div className="flex flex-1 pt-20">
           {/* Desktop Sidebar */}
-          <aside className="hidden lg:flex flex-col w-56 min-h-[calc(100vh-5rem)] border-r border-white/5 bg-white/[0.02] sticky top-20 shrink-0">
+          <aside className="hidden lg:flex flex-col w-56 min-h-[calc(100vh-5rem)] border-r border-[#E8E4DF] bg-white sticky top-20 shrink-0">
             <SidebarContent />
           </aside>
 
           {/* Mobile Sidebar */}
           {sidebarOpen && (
             <div className="fixed inset-0 z-50 lg:hidden">
-              <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
-              <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#0A0A0A] border-r border-white/10 pt-16">
-                <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-white/60 hover:text-white">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
+              <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#F7F7F5] border-r border-[#E8E4DF] pt-16">
+                <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-[#1A1A1A]/60 hover:text-[#1A1A1A]">
                   <X className="w-5 h-5" />
                 </button>
                 <SidebarContent />
@@ -108,7 +109,7 @@ export default function ShopAdminLayout({ children }: { children: React.ReactNod
 
           {/* Mobile Hamburger */}
           <button onClick={() => setSidebarOpen(true)}
-            className="fixed bottom-6 right-6 z-40 lg:hidden w-12 h-12 rounded-full bg-[#00D084] text-black flex items-center justify-center shadow-lg">
+            className="fixed bottom-6 right-6 z-40 lg:hidden w-12 h-12 rounded-full bg-[#FF5C00] text-white flex items-center justify-center shadow-lg hover:bg-[#e05200]">
             <Menu className="w-5 h-5" />
           </button>
 

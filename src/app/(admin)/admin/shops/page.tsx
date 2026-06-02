@@ -127,45 +127,45 @@ export default function ShopsPage() {
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Shops</h1>
-          <p className="text-white/50 text-sm mt-1">Manage shop locations</p>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Shops</h1>
+          <p className="text-[#1A1A1A]/60 text-sm mt-1">Manage shop locations</p>
         </div>
-        <Button onClick={() => setAddDialog(true)} className="bg-[#00D084] text-black hover:bg-[#00D084]/90"><Plus className="w-4 h-4 mr-1" />Add Shop</Button>
+        <Button onClick={() => setAddDialog(true)} className="bg-[#FF5C00] text-white hover:bg-[#e05200]"><Plus className="w-4 h-4 mr-1" />Add Shop</Button>
       </motion.div>
 
-      <Card className="bg-white/5 border-white/10"><CardContent className="p-0">
-        {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-white/5" /></div> : (
-          <Table><TableHeader><TableRow className="border-white/5 hover:bg-transparent">
-            <TableHead className="text-white/50">Name</TableHead><TableHead className="text-white/50">Address</TableHead>
-            <TableHead className="text-white/50">Area</TableHead><TableHead className="text-white/50">Phone</TableHead>
-            <TableHead className="text-white/50">Shop Admin</TableHead><TableHead className="text-white/50">Active</TableHead>
-            <TableHead className="text-white/50">Actions</TableHead>
+      <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-0">
+        {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-[#1A1A1A]/5" /></div> : (
+          <Table><TableHeader><TableRow className="border-[#E8E4DF] hover:bg-transparent">
+            <TableHead className="text-[#1A1A1A]/55">Name</TableHead><TableHead className="text-[#1A1A1A]/55">Address</TableHead>
+            <TableHead className="text-[#1A1A1A]/55">Area</TableHead><TableHead className="text-[#1A1A1A]/55">Phone</TableHead>
+            <TableHead className="text-[#1A1A1A]/55">Shop Admin</TableHead><TableHead className="text-[#1A1A1A]/55">Active</TableHead>
+            <TableHead className="text-[#1A1A1A]/55">Actions</TableHead>
           </TableRow></TableHeader>
           <TableBody>{shops.map(shop => {
             const admin = getShopAdmin(shop.id);
             return (
-              <TableRow key={shop.id} className="border-white/5 hover:bg-white/5">
-                <TableCell className="text-white font-medium flex items-center gap-2"><Store className="w-4 h-4 text-[#00D084]" />{shop.name}</TableCell>
-                <TableCell className="text-white/60 text-xs max-w-[160px] truncate">{shop.address || '—'}</TableCell>
-                <TableCell><Badge className="bg-white/10 text-white/60 text-[10px]">{shop.area || '—'}</Badge></TableCell>
-                <TableCell className="text-white/60">{shop.phone || '—'}</TableCell>
+              <TableRow key={shop.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]">
+                <TableCell className="text-[#1A1A1A] font-medium flex items-center gap-2"><Store className="w-4 h-4 text-[#FF5C00]" />{shop.name}</TableCell>
+                <TableCell className="text-[#1A1A1A]/70 text-xs max-w-[160px] truncate">{shop.address || '—'}</TableCell>
+                <TableCell><Badge className="bg-[#F7F7F5] border border-[#E8E4DF] text-[#1A1A1A]/70 text-[10px]">{shop.area || '—'}</Badge></TableCell>
+                <TableCell className="text-[#1A1A1A]/70">{shop.phone || '—'}</TableCell>
                 <TableCell>{admin ? (
-                  <span className="text-[#00D084] text-xs">{admin.full_name}</span>
+                  <span className="text-[#FF5C00] font-semibold text-xs">{admin.full_name}</span>
                 ) : (
                   <div className="flex items-center gap-2">
                     <Select onValueChange={v => assignShopAdmin(shop.id, v)}>
-                      <SelectTrigger className="h-7 text-xs bg-white/5 border-white/10 text-white w-32"><SelectValue placeholder="Assign..." /></SelectTrigger>
-                      <SelectContent className="bg-[#1A1A1A] border-white/10">
-                        {shopAdmins.filter(sa => !sa.shop_id).map(sa => <SelectItem key={sa.id} value={sa.id}>{sa.full_name}</SelectItem>)}
+                      <SelectTrigger className="h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] w-32"><SelectValue placeholder="Assign..." /></SelectTrigger>
+                      <SelectContent className="bg-white border-[#E8E4DF]">
+                        {shopAdmins.filter(sa => !sa.shop_id).map(sa => <SelectItem key={sa.id} value={sa.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{sa.full_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button size="sm" variant="ghost" onClick={() => setInviteDialog(shop)} className="text-amber-400 hover:bg-amber-500/10 text-xs h-7"><UserPlus className="w-3 h-3 mr-1" />Invite</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setInviteDialog(shop)} className="text-amber-600 hover:bg-amber-500/10 text-xs h-7 font-semibold"><UserPlus className="w-3 h-3 mr-1" />Invite</Button>
                   </div>
                 )}</TableCell>
                 <TableCell><Switch checked={shop.is_active} onCheckedChange={async () => { await supabase.from('shops').update({ is_active: !shop.is_active }).eq('id', shop.id); fetchData(); }} /></TableCell>
                 <TableCell className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" className="h-7 text-[#00D084] hover:bg-[#00D084]/10 text-xs" onClick={() => { setAdminShopOverride(shop.id); router.push('/shop-admin'); }}><ExternalLink className="w-3 h-3 mr-1" />Manage</Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-white/40 hover:text-red-400" onClick={() => deleteShop(shop)}><Trash2 className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-[#FF5C00] hover:bg-[#FF5C00]/10 text-xs font-semibold" onClick={() => { setAdminShopOverride(shop.id); router.push('/shop-admin'); }}><ExternalLink className="w-3 h-3 mr-1" />Manage</Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-[#1A1A1A]/40 hover:text-red-600" onClick={() => deleteShop(shop)}><Trash2 className="w-3 h-3" /></Button>
                 </TableCell>
               </TableRow>
             );
@@ -175,33 +175,33 @@ export default function ShopsPage() {
 
       {/* Add Shop Dialog */}
       <Dialog open={addDialog} onOpenChange={setAddDialog}>
-        <DialogContent className="bg-[#1A1A1A] border-white/10 max-w-sm">
-          <DialogHeader><DialogTitle className="text-white">Add Shop</DialogTitle><DialogDescription className="text-white/50">Create a new shop location</DialogDescription></DialogHeader>
+        <DialogContent className="bg-white border-[#E8E4DF] max-w-sm">
+          <DialogHeader><DialogTitle className="text-[#1A1A1A]">Add Shop</DialogTitle><DialogDescription className="text-[#1A1A1A]/60">Create a new shop location</DialogDescription></DialogHeader>
           <div className="space-y-3">
-            <div><Label className="text-white/60">Name *</Label><Input className="bg-white/5 border-white/10 text-white mt-1" value={shopForm.name} onChange={e => setShopForm(f => ({ ...f, name: e.target.value }))} /></div>
-            <div><Label className="text-white/60">Address</Label><Input className="bg-white/5 border-white/10 text-white mt-1" value={shopForm.address} onChange={e => setShopForm(f => ({ ...f, address: e.target.value }))} /></div>
-            <div><Label className="text-white/60">Area</Label>
+            <div><Label className="text-[#1A1A1A]/70">Name *</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={shopForm.name} onChange={e => setShopForm(f => ({ ...f, name: e.target.value }))} /></div>
+            <div><Label className="text-[#1A1A1A]/70">Address</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={shopForm.address} onChange={e => setShopForm(f => ({ ...f, address: e.target.value }))} /></div>
+            <div><Label className="text-[#1A1A1A]/70">Area</Label>
               <Select value={shopForm.area} onValueChange={v => setShopForm(f => ({ ...f, area: v }))}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white mt-1"><SelectValue placeholder="Select area" /></SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-white/10">{NAGPUR_AREAS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1"><SelectValue placeholder="Select area" /></SelectTrigger>
+                <SelectContent className="bg-white border-[#E8E4DF]">{NAGPUR_AREAS.map(a => <SelectItem key={a} value={a} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{a}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label className="text-white/60">Phone</Label><Input className="bg-white/5 border-white/10 text-white mt-1" value={shopForm.phone} onChange={e => setShopForm(f => ({ ...f, phone: e.target.value }))} /></div>
+            <div><Label className="text-[#1A1A1A]/70">Phone</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={shopForm.phone} onChange={e => setShopForm(f => ({ ...f, phone: e.target.value }))} /></div>
           </div>
-          <DialogFooter><Button onClick={addShop} className="bg-[#00D084] text-black hover:bg-[#00D084]/90">Add Shop</Button></DialogFooter>
+          <DialogFooter><Button onClick={addShop} className="bg-[#FF5C00] text-white hover:bg-[#e05200]">Add Shop</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Invite Shop Admin Dialog */}
       <Dialog open={!!inviteDialog} onOpenChange={() => setInviteDialog(null)}>
-        <DialogContent className="bg-[#1A1A1A] border-white/10 max-w-sm">
-          <DialogHeader><DialogTitle className="text-white">Invite Shop Admin</DialogTitle><DialogDescription className="text-white/50">For: {inviteDialog?.name}</DialogDescription></DialogHeader>
+        <DialogContent className="bg-white border-[#E8E4DF] max-w-sm">
+          <DialogHeader><DialogTitle className="text-[#1A1A1A]">Invite Shop Admin</DialogTitle><DialogDescription className="text-[#1A1A1A]/60">For: {inviteDialog?.name}</DialogDescription></DialogHeader>
           <div className="space-y-3">
-            <div><Label className="text-white/60">Full Name *</Label><Input className="bg-white/5 border-white/10 text-white mt-1" value={inviteForm.full_name} onChange={e => setInviteForm(f => ({ ...f, full_name: e.target.value }))} /></div>
-            <div><Label className="text-white/60">Email *</Label><Input type="email" className="bg-white/5 border-white/10 text-white mt-1" value={inviteForm.email} onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))} /></div>
-            <div><Label className="text-white/60">Phone</Label><Input className="bg-white/5 border-white/10 text-white mt-1" value={inviteForm.phone} onChange={e => setInviteForm(f => ({ ...f, phone: e.target.value }))} /></div>
+            <div><Label className="text-[#1A1A1A]/70">Full Name *</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.full_name} onChange={e => setInviteForm(f => ({ ...f, full_name: e.target.value }))} /></div>
+            <div><Label className="text-[#1A1A1A]/70">Email *</Label><Input type="email" className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.email} onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))} /></div>
+            <div><Label className="text-[#1A1A1A]/70">Phone</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.phone} onChange={e => setInviteForm(f => ({ ...f, phone: e.target.value }))} /></div>
           </div>
-          <DialogFooter><Button onClick={inviteShopAdmin} disabled={inviting} className="bg-[#00D084] text-black hover:bg-[#00D084]/90">{inviting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}Invite</Button></DialogFooter>
+          <DialogFooter><Button onClick={inviteShopAdmin} disabled={inviting} className="bg-[#FF5C00] text-white hover:bg-[#e05200]">{inviting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}Invite</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

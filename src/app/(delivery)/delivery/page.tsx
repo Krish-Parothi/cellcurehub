@@ -112,196 +112,192 @@ export default function DeliveryDashboard() {
   const areaCount = new Set(todayJobs.map(j => getArea(j.repair?.address))).size;
 
   const stats = [
-    { icon: Truck, color: 'text-[#00D084]', count: pickupCount, label: 'Pickups' },
-    { icon: Package, color: 'text-blue-400', count: dropoffCount, label: 'Drop-offs' },
-    { icon: CheckCircle, color: 'text-purple-400', count: completedJobs.length, label: 'Completed' },
-    { icon: MapPin, color: 'text-amber-400', count: areaCount, label: 'Areas' },
+    { icon: Truck, color: 'text-[#FF5C00]', count: pickupCount, label: 'Pickups' },
+    { icon: Package, color: 'text-blue-600', count: dropoffCount, label: 'Drop-offs' },
+    { icon: CheckCircle, color: 'text-emerald-600', count: completedJobs.length, label: 'Completed' },
+    { icon: MapPin, color: 'text-amber-600', count: areaCount, label: 'Areas' },
   ];
 
   return (
-    <RoleGuard allowedRoles={['delivery', 'admin', 'shop_admin']}>
-      <div className="min-h-screen bg-[#0A0A0A] flex flex-col">
-        <Navbar />
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-[#00D084]/5 blur-[100px]" />
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-blue-500/5 blur-[100px]" />
-        </div>
+    <div className="space-y-8">
+      {/* Background Blurs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-[#FF5C00]/5 blur-[100px]" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-[#FF5C00]/5 blur-[100px]" />
+      </div>
 
-        <main className="relative z-10 flex-1 pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-          {/* Top Bar */}
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
-                <Truck className="w-7 h-7 text-[#00D084]" /> Delivery Dashboard
-              </h1>
-              <p className="text-white/50 text-sm mt-1">Welcome, {user?.full_name}</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 flex items-center gap-2 backdrop-blur-sm">
-              <Clock className="w-4 h-4 text-[#00D084]" />
-              <span className="text-white/70 text-sm">{today}</span>
-            </div>
-          </motion.div>
+      <div className="relative z-10">
+        {/* Top Bar */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#1A1A1A] flex items-center gap-3">
+              <Truck className="w-7 h-7 text-[#FF5C00]" /> Delivery Dashboard
+            </h1>
+            <p className="text-[#1A1A1A]/60 text-sm mt-1">Welcome back, {user?.full_name}</p>
+          </div>
+          <div className="bg-white border border-[#E8E4DF] rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-sm">
+            <Clock className="w-4 h-4 text-[#FF5C00]" />
+            <span className="text-[#1A1A1A]/70 text-sm">{today}</span>
+          </div>
+        </motion.div>
 
-          {/* Stats */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            {stats.map(s => (
-              <Card key={s.label} className="bg-white/[0.03] border-white/10 backdrop-blur-sm">
-                <CardContent className="p-4 text-center">
-                  <s.icon className={`w-5 h-5 ${s.color} mx-auto mb-1`} />
-                  <p className="text-2xl font-bold text-white">{s.count}</p>
-                  <p className="text-white/40 text-xs">{s.label}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </motion.div>
+        {/* Stats */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          {stats.map(s => (
+            <Card key={s.label} className="bg-white border-[#E8E4DF] shadow-sm hover:border-[#FF5C00]/30 hover:shadow-[0_8px_30px_rgba(255,92,0,0.05)] transition-all">
+              <CardContent className="p-4 text-center">
+                <s.icon className={`w-5 h-5 ${s.color} mx-auto mb-1`} />
+                <p className="text-2xl font-bold text-[#1A1A1A]">{s.count}</p>
+                <p className="text-[#1A1A1A]/55 text-xs">{s.label}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </motion.div>
 
-          {/* Tabs */}
-          <Tabs defaultValue="today" className="w-full">
-            <TabsList className="bg-white/5 border border-white/10 mb-6">
-              <TabsTrigger value="today" className="data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]">
-                <Truck className="w-4 h-4 mr-2" /> Today&apos;s Jobs ({todayJobs.length})
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-[#00D084]/15 data-[state=active]:text-[#00D084]">
-                <CheckCircle className="w-4 h-4 mr-2" /> Completed ({completedJobs.length})
-              </TabsTrigger>
-            </TabsList>
+        {/* Tabs */}
+        <Tabs defaultValue="today" className="w-full">
+          <TabsList className="bg-white border border-[#E8E4DF] mb-6 shadow-xs">
+            <TabsTrigger value="today" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] text-[#1A1A1A]/70">
+              <Truck className="w-4 h-4 mr-2" /> Today&apos;s Jobs ({todayJobs.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] text-[#1A1A1A]/70">
+              <CheckCircle className="w-4 h-4 mr-2" /> Completed ({completedJobs.length})
+            </TabsTrigger>
+          </TabsList>
 
-            {/* TAB 1: Today's Jobs */}
-            <TabsContent value="today">
-              {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[0, 1, 2, 3].map(i => (
-                    <div key={i} className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-3">
-                      <div className="flex justify-between"><Skeleton className="h-5 w-28 bg-white/10" /><Skeleton className="h-5 w-16 bg-white/10 rounded-full" /></div>
-                      <Skeleton className="h-4 w-3/4 bg-white/10" />
-                      <Skeleton className="h-4 w-1/2 bg-white/10" />
-                    </div>
-                  ))}
-                </div>
-              ) : todayJobs.length === 0 ? (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white/[0.03] border border-white/10 rounded-2xl p-12 flex flex-col items-center text-center backdrop-blur-sm">
-                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                    <Truck className="w-8 h-8 text-white/20" />
+          {/* TAB 1: Today's Jobs */}
+          <TabsContent value="today">
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} className="bg-white border border-[#E8E4DF] rounded-2xl p-5 space-y-3 shadow-xs">
+                    <div className="flex justify-between"><Skeleton className="h-5 w-28 bg-[#1A1A1A]/5" /><Skeleton className="h-5 w-16 bg-[#1A1A1A]/5 rounded-full" /></div>
+                    <Skeleton className="h-4 w-3/4 bg-[#1A1A1A]/5" />
+                    <Skeleton className="h-4 w-1/2 bg-[#1A1A1A]/5" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">No jobs scheduled today</h3>
-                  <p className="text-white/50 text-sm">Check back later for new assignments</p>
-                </motion.div>
-              ) : (
-                Object.entries(groupByArea(todayJobs))
-                  .sort(([a], [b]) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b))
-                  .map(([area, jobs]) => (
-                    <div key={area} className="mb-6">
-                      <div className="flex items-center gap-2 mb-3">
-                        <MapPin className="w-4 h-4 text-[#00D084]" />
-                        <h3 className="text-white font-semibold text-lg">{area}</h3>
-                        <Badge variant="outline" className="border-white/20 text-white/50 text-xs">{jobs.length}</Badge>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {jobs.map((job, i) => (
-                          <motion.div key={job.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                            onClick={() => openJob(job)}
-                            className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 cursor-pointer hover:border-[#00D084]/40 transition-all backdrop-blur-sm group">
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                              <div className="min-w-0">
-                                <h4 className="text-white font-semibold truncate">{job.repair?.customer?.full_name}</h4>
-                                <a href={`tel:${job.repair?.customer?.phone}`} onClick={e => e.stopPropagation()}
-                                  className="text-[#00D084] text-sm flex items-center gap-1.5 mt-0.5 hover:underline">
-                                  <Phone className="w-3 h-3" />{job.repair?.customer?.phone || 'N/A'}
-                                </a>
-                              </div>
-                              <div className="flex flex-col items-end gap-1 shrink-0">
-                                <Badge className={`${job.job_type === 'pickup' ? 'bg-[#00D084]/15 text-[#00D084] border-[#00D084]/25' : 'bg-blue-500/15 text-blue-400 border-blue-500/25'}`}>
-                                  {job.job_type === 'pickup' ? 'PICKUP' : 'DROP-OFF'}
-                                </Badge>
-                                <Badge variant="outline" className="border-white/20 text-white/40 text-[10px]">
-                                  {DELIVERY_STATUS_LABELS[job.status as DeliveryStatus]}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="space-y-1.5 text-sm text-white/60 mb-3">
-                              <p className="flex items-start gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span className="line-clamp-2">{job.repair?.address || 'No address'}</span></p>
-                              <p className="flex items-center gap-1.5">
-                                <Smartphone className="w-3.5 h-3.5" />
-                                {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : job.repair?.manual_model}
-                                {job.repair?.repair_type && <span className="text-white/30 ml-1">• {job.repair.repair_type.replace(/_/g, ' ')}</span>}
-                              </p>
-                            </div>
-                            {job.special_instructions && (
-                              <p className="text-amber-400/80 text-xs mb-3 bg-amber-500/5 px-2 py-1 rounded">⚠ {job.special_instructions}</p>
-                            )}
-                            <div className="flex items-center justify-end text-[#00D084] text-xs font-medium group-hover:translate-x-0.5 transition-transform">
-                              Open Job <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-              )}
-            </TabsContent>
-
-            {/* TAB 2: Completed */}
-            <TabsContent value="completed">
-              {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[0, 1].map(i => (
-                    <div key={i} className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-3">
-                      <Skeleton className="h-5 w-32 bg-white/10" />
-                      <Skeleton className="h-4 w-3/4 bg-white/10" />
-                    </div>
-                  ))}
+                ))}
+              </div>
+            ) : todayJobs.length === 0 ? (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className="bg-white border border-[#E8E4DF] rounded-2xl p-12 flex flex-col items-center text-center shadow-sm">
+                <div className="w-16 h-16 rounded-full bg-[#F7F7F5] flex items-center justify-center mb-4">
+                  <Truck className="w-8 h-8 text-[#1A1A1A]/20" />
                 </div>
-              ) : completedJobs.length === 0 ? (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                  className="bg-white/[0.03] border border-white/10 rounded-2xl p-12 flex flex-col items-center text-center backdrop-blur-sm">
-                  <CheckCircle className="w-12 h-12 text-white/20 mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">No completed jobs yet</h3>
-                  <p className="text-white/50 text-sm">Your delivered and returned jobs will appear here</p>
-                </motion.div>
-              ) : (
-                Object.entries(groupByDate(completedJobs)).map(([date, jobs]) => (
-                  <div key={date} className="mb-6">
+                <h3 className="text-xl font-semibold text-[#1A1A1A] mb-2">No jobs scheduled today</h3>
+                <p className="text-[#1A1A1A]/50 text-sm">Check back later for new assignments</p>
+              </motion.div>
+            ) : (
+              Object.entries(groupByArea(todayJobs))
+                .sort(([a], [b]) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b))
+                .map(([area, jobs]) => (
+                  <div key={area} className="mb-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <Clock className="w-4 h-4 text-white/40" />
-                      <h3 className="text-white/60 font-medium text-sm">
-                        {new Date(date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                      </h3>
-                      <Badge variant="outline" className="border-white/10 text-white/30 text-xs">{jobs.length}</Badge>
+                      <MapPin className="w-4 h-4 text-[#FF5C00]" />
+                      <h3 className="text-[#1A1A1A] font-semibold text-lg">{area}</h3>
+                      <Badge variant="outline" className="border-[#E8E4DF] text-[#1A1A1A]/60 text-xs bg-white">{jobs.length}</Badge>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {jobs.map(job => (
-                        <div key={job.id} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 opacity-70">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-white/80 font-medium text-sm">{job.repair?.customer?.full_name}</span>
-                            <Badge className={`text-[10px] ${job.status === 'delivered' ? 'bg-[#00D084]/10 text-[#00D084]' : 'bg-red-500/10 text-red-400'}`}>
-                              {DELIVERY_STATUS_LABELS[job.status as DeliveryStatus]}
-                            </Badge>
+                      {jobs.map((job, i) => (
+                        <motion.div key={job.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          onClick={() => openJob(job)}
+                          className="bg-white border border-[#E8E4DF] rounded-2xl p-5 cursor-pointer hover:border-[#FF5C00]/30 hover:shadow-[0_8px_30px_rgba(255,92,0,0.05)] transition-all group shadow-sm">
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="min-w-0">
+                              <h4 className="text-[#1A1A1A] font-semibold truncate">{job.repair?.customer?.full_name}</h4>
+                              <a href={`tel:${job.repair?.customer?.phone}`} onClick={e => e.stopPropagation()}
+                                className="text-[#FF5C00] text-sm flex items-center gap-1.5 mt-0.5 hover:underline font-medium">
+                                <Phone className="w-3 h-3" />{job.repair?.customer?.phone || 'N/A'}
+                              </a>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <Badge className={`${job.job_type === 'pickup' ? 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20' : 'bg-blue-500/10 text-blue-600 border-blue-500/20'}`}>
+                                {job.job_type === 'pickup' ? 'PICKUP' : 'DROP-OFF'}
+                              </Badge>
+                              <Badge variant="outline" className="border-[#E8E4DF] text-[#1A1A1A]/60 text-[10px] bg-[#F7F7F5]">
+                                {DELIVERY_STATUS_LABELS[job.status as DeliveryStatus]}
+                              </Badge>
+                            </div>
                           </div>
-                          <p className="text-white/40 text-xs">
-                            {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : job.repair?.manual_model}
-                            <span className="mx-1">•</span>
-                            {job.job_type === 'pickup' ? 'Pickup' : 'Drop-off'}
-                          </p>
-                        </div>
+                          <div className="space-y-1.5 text-sm text-[#1A1A1A]/70 mb-3">
+                            <p className="flex items-start gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span className="line-clamp-2">{job.repair?.address || 'No address'}</span></p>
+                            <p className="flex items-center gap-1.5">
+                              <Smartphone className="w-3.5 h-3.5" />
+                              {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : job.repair?.manual_model}
+                              {job.repair?.repair_type && <span className="text-[#1A1A1A]/40 ml-1">• {job.repair.repair_type.replace(/_/g, ' ')}</span>}
+                            </p>
+                          </div>
+                          {job.special_instructions && (
+                            <p className="text-amber-700 text-xs mb-3 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded font-medium">⚠ {job.special_instructions}</p>
+                          )}
+                          <div className="flex items-center justify-end text-[#FF5C00] text-xs font-semibold group-hover:translate-x-0.5 transition-transform">
+                            Open Job <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                          </div>
+                        </motion.div>
                       ))}
                     </div>
                   </div>
                 ))
-              )}
-            </TabsContent>
-          </Tabs>
-        </main>
+            )}
+          </TabsContent>
 
-        {/* Flow Sheets */}
-        <PickupFlow assignment={selectedJob} open={pickupOpen} onOpenChange={setPickupOpen} onComplete={fetchJobs} />
-        <DropoffFlow assignment={selectedJob} open={dropoffOpen} onOpenChange={setDropoffOpen} onComplete={fetchJobs} />
-
-        <Footer />
+          {/* TAB 2: Completed */}
+          <TabsContent value="completed">
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[0, 1].map(i => (
+                  <div key={i} className="bg-white border border-[#E8E4DF] rounded-2xl p-5 space-y-3 shadow-xs">
+                    <Skeleton className="h-5 w-32 bg-[#1A1A1A]/5" />
+                    <Skeleton className="h-4 w-3/4 bg-[#1A1A1A]/5" />
+                  </div>
+                ))}
+              </div>
+            ) : completedJobs.length === 0 ? (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className="bg-white border border-[#E8E4DF] rounded-2xl p-12 flex flex-col items-center text-center shadow-sm">
+                <CheckCircle className="w-12 h-12 text-[#1A1A1A]/20 mb-4" />
+                <h3 className="text-xl font-semibold text-[#1A1A1A] mb-2">No completed jobs yet</h3>
+                <p className="text-[#1A1A1A]/50 text-sm">Your delivered and returned jobs will appear here</p>
+              </motion.div>
+            ) : (
+              Object.entries(groupByDate(completedJobs)).map(([date, jobs]) => (
+                <div key={date} className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-[#1A1A1A]/40" />
+                    <h3 className="text-[#1A1A1A]/60 font-medium text-sm">
+                      {new Date(date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </h3>
+                    <Badge variant="outline" className="border-[#E8E4DF] text-[#1A1A1A]/55 bg-white">{jobs.length}</Badge>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {jobs.map(job => (
+                      <div key={job.id} className="bg-white border border-[#E8E4DF]/60 rounded-2xl p-4 opacity-90 shadow-xs hover:border-[#FF5C00]/20 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[#1A1A1A] font-semibold text-sm">{job.repair?.customer?.full_name}</span>
+                          <Badge className={`text-[10px] ${job.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20'}`}>
+                            {DELIVERY_STATUS_LABELS[job.status as DeliveryStatus]}
+                          </Badge>
+                        </div>
+                        <p className="text-[#1A1A1A]/60 text-xs font-medium">
+                          {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : job.repair?.manual_model}
+                          <span className="mx-1 text-[#1A1A1A]/30">•</span>
+                          {job.job_type === 'pickup' ? 'Pickup' : 'Drop-off'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
-    </RoleGuard>
+
+      {/* Flow Sheets */}
+      <PickupFlow assignment={selectedJob} open={pickupOpen} onOpenChange={setPickupOpen} onComplete={fetchJobs} />
+      <DropoffFlow assignment={selectedJob} open={dropoffOpen} onOpenChange={setDropoffOpen} onComplete={fetchJobs} />
+    </div>
   );
 }
