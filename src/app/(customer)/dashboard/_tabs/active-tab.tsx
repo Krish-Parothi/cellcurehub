@@ -79,62 +79,62 @@ export default function ActiveTab({ userId }: { userId: string }) {
     fetchRepairs();
   };
 
-  if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-40 rounded-2xl bg-white/5" />)}</div>;
+  if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-40 rounded-2xl bg-[#1A1A1A]/5" />)}</div>;
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white hidden lg:block">Active Repairs</h1>
-        <Link href="/book"><Button className="bg-[#00D084] hover:bg-[#00D084]/90 text-[#0A0A0A] font-semibold"><Wrench className="w-4 h-4 mr-2" />Book a Repair</Button></Link>
+        <h1 className="text-2xl font-bold text-[#1A1A1A] hidden lg:block">Active Repairs</h1>
+        <Link href="/book"><Button className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold"><Wrench className="w-4 h-4 mr-2" />Book a Repair</Button></Link>
       </div>
 
       {repairs.length === 0 ? (
-        <div className="glass rounded-2xl p-12 flex flex-col items-center text-center">
-          <div className="w-16 h-16 rounded-full bg-[#00D084]/10 flex items-center justify-center mb-4"><CheckCircle className="w-8 h-8 text-[#00D084]" /></div>
-          <h3 className="text-xl font-semibold text-white mb-2">No active repairs</h3>
-          <p className="text-white/50 text-sm mb-6 max-w-sm">Book a repair to get started.</p>
-          <Link href="/book"><Button className="gradient-green text-[#0A0A0A] font-semibold px-6">Book a Repair</Button></Link>
+        <div className="bg-white border border-[#E8E4DF] rounded-2xl p-12 flex flex-col items-center text-center shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-[#FF5C00]/10 flex items-center justify-center mb-4"><CheckCircle className="w-8 h-8 text-[#FF5C00]" /></div>
+          <h3 className="text-xl font-semibold text-[#1A1A1A] mb-2">No active repairs</h3>
+          <p className="text-[#1A1A1A]/60 text-sm mb-6 max-w-sm">Book a repair to get started.</p>
+          <Link href="/book"><Button className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold px-6">Book a Repair</Button></Link>
         </div>
       ) : (
         <div className="space-y-4">
           {repairs.map((r, idx) => (
-            <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }} className="glass glass-hover rounded-2xl p-6">
+            <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }} className="bg-white border border-[#E8E4DF] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
               {/* Approval Gateway */}
               {r.approval_status === 'pending' && (
                 <div className="mb-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                  <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-4 h-4 text-amber-400" /><span className="text-sm font-semibold text-amber-400">⚠️ Action Required</span></div>
-                  {r.approval_note && <p className="text-sm text-white/60 mb-3">{r.approval_note}</p>}
+                  <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-4 h-4 text-amber-600" /><span className="text-sm font-semibold text-amber-600">⚠️ Action Required</span></div>
+                  {r.approval_note && <p className="text-sm text-[#1A1A1A]/60 mb-3">{r.approval_note}</p>}
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleApprove(r.id)} disabled={approvalLoading === r.id} className="bg-[#00D084] hover:bg-[#00D084]/90 text-black text-xs">{approvalLoading === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Approve'}</Button>
-                    <Button size="sm" variant="outline" onClick={() => handleReject(r.id)} disabled={approvalLoading === r.id} className="border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs">✗ Reject</Button>
+                    <Button size="sm" onClick={() => handleApprove(r.id)} disabled={approvalLoading === r.id} className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white text-xs">{approvalLoading === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Approve'}</Button>
+                    <Button size="sm" variant="outline" onClick={() => handleReject(r.id)} disabled={approvalLoading === r.id} className="border-red-500/20 text-red-500 hover:bg-red-500/5 text-xs">✗ Reject</Button>
                   </div>
                 </div>
               )}
 
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
                 <div>
-                  <h3 className="text-white font-semibold text-lg">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</h3>
-                  <p className="text-white/50 text-sm mt-0.5">{r.repair_type?.replace(/_/g, ' ') || r.issue_description}</p>
+                  <h3 className="text-[#1A1A1A] font-semibold text-lg">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</h3>
+                  <p className="text-[#1A1A1A]/60 text-sm mt-0.5">{r.repair_type?.replace(/_/g, ' ') || r.issue_description}</p>
                 </div>
-                <Badge className="bg-[#00D084]/15 text-[#00D084] border border-[#00D084]/25 shrink-0 self-start">{REPAIR_STATUS_LABELS[r.status]}</Badge>
+                <Badge className="bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20 shrink-0 self-start">{REPAIR_STATUS_LABELS[r.status]}</Badge>
               </div>
 
-              <div className="flex items-center gap-4 text-sm text-white/50 mb-3">
+              <div className="flex items-center gap-4 text-sm text-[#1A1A1A]/60 mb-3">
                 {r.estimated_cost != null && <span className="flex items-center gap-1"><IndianRupee className="w-3.5 h-3.5" />Est. {r.estimated_cost.toLocaleString('en-IN')}</span>}
                 <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
               </div>
 
               <div className="flex items-center gap-3">
-                <button onClick={() => handleExpand(r.id)} className="text-[#00D084] text-sm font-medium flex items-center gap-1 hover:underline">
+                <button onClick={() => handleExpand(r.id)} className="text-[#FF5C00] text-sm font-medium flex items-center gap-1 hover:underline">
                   {expandedId === r.id ? <><ChevronUp className="w-4 h-4" />Hide Timeline</> : <><ChevronDown className="w-4 h-4" />Show Timeline</>}
                 </button>
                 {confirmedRcaIds.has(r.id) && (
-                  <button onClick={() => handleViewRca(r.id)} className="text-white/50 text-sm font-medium flex items-center gap-1 hover:text-white"><ClipboardCheck className="w-4 h-4" />View RCA</button>
+                  <button onClick={() => handleViewRca(r.id)} className="text-[#1A1A1A]/60 text-sm font-medium flex items-center gap-1 hover:text-[#1A1A1A]"><ClipboardCheck className="w-4 h-4" />View RCA</button>
                 )}
               </div>
 
               {expandedId === r.id && timelines[r.id] && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4 pt-4 border-t border-white/5">
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4 pt-4 border-t border-[#E8E4DF]">
                   <VerticalTimeline entries={timelines[r.id]} currentStatus={r.status} />
                 </motion.div>
               )}

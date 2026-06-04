@@ -206,7 +206,7 @@ export default function BookPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F7F5] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#FF5C00] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -217,7 +217,7 @@ export default function BookPage() {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex flex-col">
+    <div className="min-h-screen bg-[#F7F7F5] flex flex-col">
       <Navbar />
       <main className="flex-1 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
@@ -226,12 +226,12 @@ export default function BookPage() {
             {STEP_LABELS.map((label, i) => (
               <div key={label} className="flex items-center">
                 <div className="flex flex-col items-center">
-                  <motion.div initial={false} animate={{ backgroundColor: i <= step ? '#FF5C00' : 'rgba(255,255,255,0.1)', scale: i === step ? 1.1 : 1 }} transition={{ duration: 0.3 }} className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold">
-                    {i < step ? <Check className="w-5 h-5 text-white" /> : <span className={i === step ? 'text-white' : 'text-white/50'}>{i + 1}</span>}
+                  <motion.div initial={false} animate={{ backgroundColor: i <= step ? '#FF5C00' : '#E8E4DF', scale: i === step ? 1.1 : 1 }} transition={{ duration: 0.3 }} className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold">
+                    {i < step ? <Check className="w-5 h-5 text-white" /> : <span className={i === step ? 'text-white' : 'text-[#1A1A1A]/50'}>{i + 1}</span>}
                   </motion.div>
-                  <span className={`mt-2 text-xs font-medium ${i <= step ? 'text-[#FF5C00]' : 'text-white/40'}`}>{label}</span>
+                  <span className={`mt-2 text-xs font-medium ${i <= step ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/60'}`}>{label}</span>
                 </div>
-                {i < STEP_LABELS.length - 1 && <div className={`w-12 sm:w-20 h-0.5 mx-2 mb-6 transition-colors duration-300 ${i < step ? 'bg-[#FF5C00]' : 'bg-white/10'}`} />}
+                {i < STEP_LABELS.length - 1 && <div className={`w-12 sm:w-20 h-0.5 mx-2 mb-6 transition-colors duration-300 ${i < step ? 'bg-[#FF5C00]' : 'bg-[#E8E4DF]'}`} />}
               </div>
             ))}
           </div>
@@ -240,8 +240,8 @@ export default function BookPage() {
             {/* STEP 1 */}
             {step === 0 && (
               <motion.div key="s1" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.3 }}>
-                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-                  <CardHeader><CardTitle className="text-xl text-white">Select Your Device</CardTitle></CardHeader>
+                <Card className="border-[#E8E4DF] bg-white shadow-sm">
+                  <CardHeader><CardTitle className="text-xl text-[#1A1A1A]">Select Your Device</CardTitle></CardHeader>
                   <CardContent className="space-y-6">
                     <DeviceSelector onSelect={handleDeviceSelect} showManualOption selectedDevice={selectedDevice} selectedManualModel={manualModel} />
                     <div className="flex justify-end">
@@ -255,23 +255,23 @@ export default function BookPage() {
             {/* STEP 2 */}
             {step === 1 && (
               <motion.div key="s2" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.3 }}>
-                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                <Card className="border-[#E8E4DF] bg-white shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-xl text-white">Repair Details</CardTitle>
-                    <p className="text-sm text-white/50 mt-1">{selectedDevice ? `${selectedDevice.brand} ${selectedDevice.model_name}` : manualModel}</p>
+                    <CardTitle className="text-xl text-[#1A1A1A]">Repair Details</CardTitle>
+                    <p className="text-sm text-[#1A1A1A]/60 mt-1">{selectedDevice ? `${selectedDevice.brand} ${selectedDevice.model_name}` : manualModel}</p>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Repair Type */}
                     <div className="space-y-3">
-                      <Label className="text-white/80 text-sm">Repair Type</Label>
+                      <Label className="text-[#1A1A1A]/80 text-sm">Repair Type</Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {REPAIR_TYPE_OPTIONS.map((rt) => {
                           const Icon = REPAIR_TYPE_ICONS[rt.value] || Wrench;
                           const active = repairType === rt.value;
                           return (
-                            <motion.button key={rt.value} type="button" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setRepairType(rt.value)} className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 text-center ${active ? 'border-[#FF5C00] bg-[#FF5C00]/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
-                              <Icon className={`w-6 h-6 ${active ? 'text-[#FF5C00]' : 'text-white/60'}`} />
-                              <span className={`text-xs font-medium ${active ? 'text-[#FF5C00]' : 'text-white/60'}`}>{rt.label}</span>
+                            <motion.button key={rt.value} type="button" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setRepairType(rt.value)} className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 text-center ${active ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]' : 'border-[#E8E4DF] bg-[#F7F7F5] text-[#1A1A1A]/60 hover:border-[#E8E4DF]/80 hover:bg-[#E8E4DF]/20'}`}>
+                              <Icon className="w-6 h-6 shrink-0" />
+                              <span className="text-xs font-medium">{rt.label}</span>
                             </motion.button>
                           );
                         })}
@@ -281,29 +281,29 @@ export default function BookPage() {
                     {/* Custom description */}
                     {repairType === 'custom' && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-2">
-                        <Label className="text-white/80 text-sm">Describe the Issue *</Label>
-                        <Textarea value={customDescription} onChange={(e) => setCustomDescription(e.target.value)} placeholder="Describe what's wrong..." className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#FF5C00] min-h-[80px]" />
+                        <Label className="text-[#1A1A1A]/80 text-sm">Describe the Issue *</Label>
+                        <Textarea value={customDescription} onChange={(e) => setCustomDescription(e.target.value)} placeholder="Describe what's wrong..." className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00] min-h-[80px]" />
                       </motion.div>
                     )}
 
                     {/* Notes for standard types */}
                     {repairType && repairType !== 'custom' && (
                       <div className="space-y-2">
-                        <Label className="text-white/80 text-sm">Additional Notes (optional)</Label>
-                        <Textarea value={issueNotes} onChange={(e) => setIssueNotes(e.target.value)} placeholder="Any extra details..." className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#FF5C00] min-h-[60px]" />
+                        <Label className="text-[#1A1A1A]/80 text-sm">Additional Notes (optional)</Label>
+                        <Textarea value={issueNotes} onChange={(e) => setIssueNotes(e.target.value)} placeholder="Any extra details..." className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00] min-h-[60px]" />
                       </div>
                     )}
 
                     {/* Pricing display */}
                     {repairType && repairType !== 'custom' && (
                       <div className="flex items-center gap-3 p-4 rounded-xl bg-[#FF5C00]/10 border border-[#FF5C00]/20">
-                        <span className="text-sm text-white/70">Estimated Cost:</span>
+                        <span className="text-sm text-[#1A1A1A]/70">Estimated Cost:</span>
                         {pricingLoading ? (
-                          <span className="text-sm text-white/50">Loading...</span>
+                          <span className="text-sm text-[#1A1A1A]/60">Loading...</span>
                         ) : pricing ? (
                           <span className="text-lg font-semibold text-[#FF5C00]">₹{pricing.min_price.toLocaleString('en-IN')} – ₹{pricing.max_price.toLocaleString('en-IN')}</span>
                         ) : (
-                          <span className="text-sm text-amber-400">Contact us for pricing</span>
+                          <span className="text-sm text-[#FF5C00] font-medium">Contact us for pricing</span>
                         )}
                       </div>
                     )}
@@ -311,20 +311,20 @@ export default function BookPage() {
                     {/* Phone Number & IMEI */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-white/80 text-sm">Phone Number *</Label>
-                        <Input type="tel" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile number" className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#FF5C00]" />
-                        {phone.length > 0 && !/^[6-9]\d{9}$/.test(phone) && <p className="text-xs text-red-400">Invalid phone number</p>}
+                        <Label className="text-[#1A1A1A]/80 text-sm">Phone Number *</Label>
+                        <Input type="tel" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile number" className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00]" />
+                        {phone.length > 0 && !/^[6-9]\d{9}$/.test(phone) && <p className="text-xs text-red-500">Invalid phone number</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-white/80 text-sm">IMEI Number (Optional)</Label>
-                        <Input type="text" maxLength={15} value={imei} onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI number" className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#FF5C00] font-mono" />
-                        <p className="text-xs text-white/30">Dial *#06# on your phone to find IMEI</p>
-                        {imei.length > 0 && imei.length !== 15 && <p className="text-xs text-red-400">IMEI must be exactly 15 digits</p>}
+                        <Label className="text-[#1A1A1A]/80 text-sm">IMEI Number (Optional)</Label>
+                        <Input type="text" maxLength={15} value={imei} onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI number" className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00] font-mono" />
+                        <p className="text-xs text-[#1A1A1A]/40">Dial *#06# on your phone to find IMEI</p>
+                        {imei.length > 0 && imei.length !== 15 && <p className="text-xs text-red-500">IMEI must be exactly 15 digits</p>}
                       </div>
                     </div>
 
                     <div className="flex justify-between">
-                      <Button variant="outline" onClick={() => setStep(0)} className="border-white/10 bg-white/5 hover:bg-white/10 text-white"><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>
+                      <Button variant="outline" onClick={() => setStep(0)} className="border-[#E8E4DF] bg-white hover:bg-[#F7F7F5] text-[#1A1A1A]"><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>
                       <Button disabled={!step2Valid} onClick={() => setStep(2)} className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold">Next <ChevronRight className="w-4 h-4 ml-1" /></Button>
                     </div>
                   </CardContent>
@@ -335,8 +335,8 @@ export default function BookPage() {
             {/* STEP 3 */}
             {step === 2 && (
               <motion.div key="s3" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.3 }}>
-                <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
-                  <CardHeader><CardTitle className="text-xl text-white">Pickup & Schedule</CardTitle></CardHeader>
+                <Card className="border-[#E8E4DF] bg-white shadow-sm">
+                  <CardHeader><CardTitle className="text-xl text-[#1A1A1A]">Pickup & Schedule</CardTitle></CardHeader>
                   <CardContent className="space-y-6">
                     {/* Pickup type */}
                     <div className="grid grid-cols-2 gap-3">
@@ -344,9 +344,9 @@ export default function BookPage() {
                         { type: 'home' as const, icon: Truck, label: '🏠 Home Pickup', desc: 'We come to you' },
                         { type: 'store' as const, icon: Store, label: '🏪 Drop at Store', desc: 'Visit our center' },
                       ].map((opt) => (
-                        <motion.button key={opt.type} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setPickupType(opt.type)} className={`p-4 rounded-xl border text-center transition-all ${pickupType === opt.type ? 'border-[#FF5C00] bg-[#FF5C00]/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
-                          <p className={`text-lg mb-1 ${pickupType === opt.type ? 'text-[#FF5C00]' : 'text-white/70'}`}>{opt.label}</p>
-                          <p className="text-xs text-white/40">{opt.desc}</p>
+                        <motion.button key={opt.type} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setPickupType(opt.type)} className={`p-4 rounded-xl border text-center transition-all ${pickupType === opt.type ? 'border-[#FF5C00] bg-[#FF5C00]/10' : 'border-[#E8E4DF] bg-[#F7F7F5] hover:border-[#E8E4DF]/80 hover:bg-[#E8E4DF]/20'}`}>
+                          <p className={`text-lg mb-1 ${pickupType === opt.type ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/70'}`}>{opt.label}</p>
+                          <p className="text-xs text-[#1A1A1A]/50">{opt.desc}</p>
                         </motion.button>
                       ))}
                     </div>
@@ -355,46 +355,46 @@ export default function BookPage() {
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                         {/* Address */}
                         <div className="space-y-2">
-                          <Label className="text-white/80 text-sm">Pickup Address</Label>
-                          <Textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="House/Flat No, Street, Landmark..." className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#FF5C00] min-h-[70px]" />
-                          <Button type="button" variant="outline" size="sm" onClick={handleGeolocation} disabled={geoLoading} className="border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:border-[#FF5C00]/40 text-xs">
+                          <Label className="text-[#1A1A1A]/80 text-sm">Pickup Address</Label>
+                          <Textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="House/Flat No, Street, Landmark..." className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00] min-h-[70px]" />
+                          <Button type="button" variant="outline" size="sm" onClick={handleGeolocation} disabled={geoLoading} className="border-[#E8E4DF] bg-white text-[#1A1A1A]/70 hover:bg-[#F7F7F5] hover:border-[#FF5C00]/40 text-xs">
                             <Navigation className="w-3 h-3 mr-1" /> {geoLoading ? 'Capturing...' : '📍 Use Current Location'}
                           </Button>
                         </div>
 
                         {/* Area */}
                         <div className="space-y-2">
-                          <Label className="text-white/80 text-sm">Area</Label>
+                          <Label className="text-[#1A1A1A]/80 text-sm">Area</Label>
                           <Select value={area} onValueChange={setArea}>
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white"><SelectValue placeholder="Select area" /></SelectTrigger>
-                            <SelectContent className="bg-[#1A1A1A] border-white/10">
-                              {NAGPUR_AREAS.map((a) => <SelectItem key={a} value={a} className="text-white/80 focus:bg-[#FF5C00]/10 focus:text-[#FF5C00]">{a}</SelectItem>)}  
+                            <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select area" /></SelectTrigger>
+                            <SelectContent className="bg-white border-[#E8E4DF]">
+                              {NAGPUR_AREAS.map((a) => <SelectItem key={a} value={a} className="text-[#1A1A1A]/80 focus:bg-[#FF5C00]/10 focus:text-[#FF5C00] hover:bg-[#F7F7F5] cursor-pointer">{a}</SelectItem>)}  
                             </SelectContent>
                           </Select>
                         </div>
 
                         {/* Date */}
                         <div className="space-y-2">
-                          <Label className="text-white/80 text-sm">Preferred Date</Label>
+                          <Label className="text-[#1A1A1A]/80 text-sm">Preferred Date</Label>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-[#FF5C00]/40">
-                                <CalendarDays className="w-4 h-4 mr-2 text-white/40" />
+                              <Button variant="outline" className="w-full justify-start border-[#E8E4DF] bg-white text-[#1A1A1A] hover:bg-[#F7F7F5] hover:border-[#FF5C00]/40">
+                                <CalendarDays className="w-4 h-4 mr-2 text-[#1A1A1A]/40" />
                                 {preferredDate ? preferredDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pick a date'}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 bg-[#1A1A1A] border-white/10" align="start">
-                              <Calendar mode="single" selected={preferredDate} onSelect={setPreferredDate} disabled={(date) => date < tomorrow} className="bg-[#1A1A1A] text-white" />
+                            <PopoverContent className="w-auto p-0 bg-white border-[#E8E4DF]" align="start">
+                              <Calendar mode="single" selected={preferredDate} onSelect={setPreferredDate} disabled={(date) => date < tomorrow} className="bg-white text-[#1A1A1A]" />
                             </PopoverContent>
                           </Popover>
                         </div>
 
                         {/* Time Slot */}
                         <div className="space-y-2">
-                          <Label className="text-white/80 text-sm">Time Slot</Label>
+                          <Label className="text-[#1A1A1A]/80 text-sm">Time Slot</Label>
                           <div className="grid grid-cols-3 gap-3">
                             {TIME_SLOTS.map((slot) => (
-                              <motion.button key={slot.value} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setTimeSlot(slot.value)} className={`flex items-center justify-center gap-1 p-3 rounded-xl border text-sm transition-all ${timeSlot === slot.value ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]' : 'border-white/10 bg-white/5 text-white/60 hover:border-white/20'}`}>
+                              <motion.button key={slot.value} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setTimeSlot(slot.value)} className={`flex items-center justify-center gap-1 p-3 rounded-xl border text-sm transition-all ${timeSlot === slot.value ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]' : 'border-[#E8E4DF] bg-[#F7F7F5] text-[#1A1A1A]/60 hover:border-[#E8E4DF]/80'}`}>
                                 <Clock className="w-3.5 h-3.5" /> {slot.label}
                               </motion.button>
                             ))}
@@ -405,19 +405,19 @@ export default function BookPage() {
 
                     {pickupType === 'store' && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-[#F7F7F5] border border-[#E8E4DF]">
                           <MapPin className="w-5 h-5 text-[#FF5C00] mt-0.5 shrink-0" />
                           <div>
-                            <p className="text-white font-medium text-sm">CellCureHub Service Center</p>
-                            <p className="text-white/50 text-sm mt-1">42, Central Bazaar Road, Dharampeth,<br />Nagpur 440010</p>
-                            <p className="text-white/40 text-xs mt-2">Open Mon–Sat, 9:00 AM – 9:00 PM</p>
+                            <p className="text-[#1A1A1A] font-medium text-sm">CellCureHub Service Center</p>
+                            <p className="text-[#1A1A1A]/60 text-sm mt-1">42, Central Bazaar Road, Dharampeth,<br />Nagpur 440010</p>
+                            <p className="text-[#1A1A1A]/50 text-xs mt-2">Open Mon–Sat, 9:00 AM – 9:00 PM</p>
                           </div>
                         </div>
                       </motion.div>
                     )}
 
                     <div className="flex justify-between pt-2">
-                      <Button variant="outline" onClick={() => setStep(1)} className="border-white/10 bg-white/5 hover:bg-white/10 text-white"><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>
+                      <Button variant="outline" onClick={() => setStep(1)} className="border-[#E8E4DF] bg-white hover:bg-[#F7F7F5] text-[#1A1A1A]"><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>
                       <Button disabled={!step3Valid || sendingOtp || submitting} onClick={handleSendOtp} className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold px-6">
                         {sendingOtp ? (<span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Sending OTP...</span>) : (<span className="flex items-center gap-2"><Check className="w-4 h-4" /> Confirm Booking</span>)}
                       </Button>
@@ -431,21 +431,21 @@ export default function BookPage() {
 
         <AnimatePresence>
           {showOtp && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0A0A0A] border border-white/10 p-6 rounded-2xl w-full max-w-sm">
-                <h3 className="text-xl font-bold text-white mb-2">Verify Phone Number</h3>
-                <p className="text-sm text-white/60 mb-6">Enter the 6-digit code sent to +91 {phone}</p>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white border border-[#E8E4DF] p-6 rounded-2xl w-full max-w-sm shadow-xl">
+                <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">Verify Phone Number</h3>
+                <p className="text-sm text-[#1A1A1A]/60 mb-6">Enter the 6-digit code sent to +91 {phone}</p>
                 
                 <div className="space-y-4">
-                  <Input type="text" maxLength={6} value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} placeholder="000000" className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-white/5 border-white/10 text-white focus-visible:ring-[#FF5C00]" />
+                  <Input type="text" maxLength={6} value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} placeholder="000000" className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" />
                   
                   <Button disabled={otpCode.length !== 6 || verifyingOtp || submitting} onClick={handleVerifyOtpAndSubmit} className="w-full h-12 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold text-lg">
                     {verifyingOtp || submitting ? 'Verifying & Booking...' : 'Verify & Book'}
                   </Button>
                   
                   <div className="flex justify-between items-center text-sm">
-                    <button onClick={() => setShowOtp(false)} className="text-white/40 hover:text-white">Cancel</button>
-                    <button disabled={resendTimer > 0 || sendingOtp} onClick={handleSendOtp} className={`${resendTimer > 0 ? 'text-white/30' : 'text-[#FF5C00] hover:text-[#FF5C00]/80'}`}>
+                    <button onClick={() => setShowOtp(false)} className="text-[#1A1A1A]/50 hover:text-[#1A1A1A]">Cancel</button>
+                    <button disabled={resendTimer > 0 || sendingOtp} onClick={handleSendOtp} className={`${resendTimer > 0 ? 'text-[#1A1A1A]/30' : 'text-[#FF5C00] hover:text-[#FF5C00]/80'}`}>
                       {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
                     </button>
                   </div>

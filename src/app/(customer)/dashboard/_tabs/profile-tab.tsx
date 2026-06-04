@@ -58,56 +58,56 @@ export default function ProfileTab({ user }: { user: User }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <h1 className="text-2xl font-bold text-white mb-6 hidden lg:block">Profile & Settings</h1>
+      <h1 className="text-2xl font-bold text-[#1A1A1A] mb-6 hidden lg:block">Profile & Settings</h1>
 
-      <div className="glass rounded-2xl p-6 max-w-xl">
+      <div className="bg-white border border-[#E8E4DF] rounded-2xl p-6 max-w-xl shadow-sm">
         {/* Avatar */}
-        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-white/10">
-          <Avatar className="h-16 w-16 border-2 border-[#00D084]/30">
+        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#E8E4DF]">
+          <Avatar className="h-16 w-16 border-2 border-[#FF5C00]/30">
             {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.full_name} />}
-            <AvatarFallback className="bg-[#00D084]/20 text-[#00D084] text-xl font-bold">{user.full_name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+            <AvatarFallback className="bg-[#FF5C00]/10 text-[#FF5C00] text-xl font-bold">{user.full_name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="text-white font-semibold">{user.full_name}</h3>
-            <p className="text-white/40 text-sm capitalize">{user.role}</p>
+            <h3 className="text-[#1A1A1A] font-semibold">{user.full_name}</h3>
+            <p className="text-[#1A1A1A]/60 text-sm capitalize">{user.role}</p>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="glass rounded-xl p-4 text-center">
-            <Shield className="w-5 h-5 text-[#00D084] mx-auto mb-1" />
-            <p className="text-white font-bold text-lg">{warranties}</p>
-            <p className="text-white/40 text-xs">Active Warranties</p>
+          <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 text-center">
+            <Shield className="w-5 h-5 text-[#FF5C00] mx-auto mb-1" />
+            <p className="text-[#1A1A1A] font-bold text-lg">{warranties}</p>
+            <p className="text-[#1A1A1A]/60 text-xs">Active Warranties</p>
           </div>
-          <div className="glass rounded-xl p-4 text-center">
-            <Wrench className="w-5 h-5 text-[#00D084] mx-auto mb-1" />
-            <p className="text-white font-bold text-lg">{totalRepairs}</p>
-            <p className="text-white/40 text-xs">Total Repairs</p>
+          <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 text-center">
+            <Wrench className="w-5 h-5 text-[#FF5C00] mx-auto mb-1" />
+            <p className="text-[#1A1A1A] font-bold text-lg">{totalRepairs}</p>
+            <p className="text-[#1A1A1A]/60 text-xs">Total Repairs</p>
           </div>
         </div>
 
-        <Separator className="bg-white/10 mb-6" />
+        <Separator className="bg-[#E8E4DF] mb-6" />
 
         {/* Editable Fields */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="pname" className="text-white/70 flex items-center gap-1"><UserIcon className="w-3 h-3" /> Full Name</Label>
-            <Input id="pname" value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-white/5 border-white/10 text-white focus-visible:ring-[#00D084]" />
+            <Label htmlFor="pname" className="text-[#1A1A1A]/70 flex items-center gap-1"><UserIcon className="w-3. h-3" /> Full Name</Label>
+            <Input id="pname" value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pphone" className="text-white/70 flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</Label>
-            <Input id="pphone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+91 9876543210" className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084]" />
+            <Label htmlFor="pphone" className="text-[#1A1A1A]/70 flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</Label>
+            <Input id="pphone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+91 9876543210" className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00]" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pemail" className="text-white/70 flex items-center gap-1"><Mail className="w-3 h-3" /> Email</Label>
-            <Input id="pemail" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="bg-white/5 border-white/10 text-white focus-visible:ring-[#00D084]" />
+            <Label htmlFor="pemail" className="text-[#1A1A1A]/70 flex items-center gap-1"><Mail className="w-3 h-3" /> Email</Label>
+            <Input id="pemail" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="paddr" className="text-white/70 flex items-center gap-1"><MapPin className="w-3 h-3" /> Default Address</Label>
-            <Textarea id="paddr" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} placeholder="Your default pickup address..." className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084] min-h-[70px]" />
+            <Label htmlFor="paddr" className="text-[#1A1A1A]/70 flex items-center gap-1"><MapPin className="w-3 h-3" /> Default Address</Label>
+            <Textarea id="paddr" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} placeholder="Your default pickup address..." className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00] min-h-[70px]" />
           </div>
-          <Button onClick={handleSave} disabled={saving} className="gradient-green text-[#0A0A0A] font-semibold mt-2">{saving ? 'Saving...' : 'Save Changes'}</Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold mt-2 w-full sm:w-auto">{saving ? 'Saving...' : 'Save Changes'}</Button>
         </div>
       </div>
     </motion.div>

@@ -94,7 +94,7 @@ export default function DeviceSelector({
     <div className="space-y-6">
       {/* Brand Grid */}
       <div className="space-y-3">
-        <Label className="text-white/80 text-sm">Select Brand</Label>
+        <Label className="text-[#1A1A1A]/80 text-sm">Select Brand</Label>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
           {DEVICE_BRANDS.map((brand) => {
             const Icon = getCategoryIcon(brand);
@@ -108,18 +108,18 @@ export default function DeviceSelector({
                 onClick={() => handleBrandClick(brand)}
                 className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border transition-all duration-200 ${
                   active
-                    ? 'border-[#00D084] bg-[#00D084]/10 green-glow'
-                    : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.07]'
+                    ? 'border-[#FF5C00] bg-[#FF5C00]/10 shadow-sm'
+                    : 'border-[#E8E4DF] bg-[#F7F7F5] hover:border-[#E8E4DF]/80 hover:bg-[#E8E4DF]/20'
                 }`}
               >
                 <Icon
                   className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                    active ? 'text-[#00D084]' : 'text-white/60'
+                    active ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/60'
                   }`}
                 />
                 <span
                   className={`text-[11px] sm:text-xs font-medium leading-tight text-center ${
-                    active ? 'text-[#00D084]' : 'text-white/60'
+                    active ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/60'
                   }`}
                 >
                   {brand}
@@ -140,24 +140,24 @@ export default function DeviceSelector({
             transition={{ duration: 0.3 }}
             className="space-y-3"
           >
-            <Label className="text-white/80 text-sm">Select Model</Label>
+            <Label className="text-[#1A1A1A]/80 text-sm">Select Model</Label>
 
             {modelsLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 rounded-xl bg-white/5" />
+                  <Skeleton key={i} className="h-16 rounded-xl bg-[#F7F7F5]" />
                 ))}
               </div>
             ) : models.length === 0 && !isManual ? (
               <div className="text-center py-6">
-                <p className="text-white/40 text-sm mb-3">
+                <p className="text-[#1A1A1A]/40 text-sm mb-3">
                   No models found for {selectedBrand}
                 </p>
                 {showManualOption && (
                   <button
                     type="button"
                     onClick={handleManualToggle}
-                    className="text-[#00D084] text-sm font-medium hover:underline"
+                    className="text-[#FF5C00] text-sm font-medium hover:underline"
                   >
                     Enter model manually
                   </button>
@@ -177,18 +177,18 @@ export default function DeviceSelector({
                         onClick={() => handleModelClick(model)}
                         className={`p-3 rounded-xl border text-left transition-all duration-200 ${
                           active
-                            ? 'border-[#00D084] bg-[#00D084]/10 green-glow'
-                            : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.07]'
+                            ? 'border-[#FF5C00] bg-[#FF5C00]/10 shadow-sm'
+                            : 'border-[#E8E4DF] bg-[#F7F7F5] hover:border-[#E8E4DF]/80 hover:bg-[#E8E4DF]/20'
                         }`}
                       >
                         <span
                           className={`text-sm font-medium ${
-                            active ? 'text-[#00D084]' : 'text-white/70'
+                            active ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/70'
                           }`}
                         >
                           {model.model_name}
                         </span>
-                        <span className="block text-xs text-white/40 capitalize mt-1">
+                        <span className="block text-xs text-[#1A1A1A]/40 capitalize mt-1">
                           {model.category}
                         </span>
                       </motion.button>
@@ -201,7 +201,7 @@ export default function DeviceSelector({
                   <button
                     type="button"
                     onClick={handleManualToggle}
-                    className="text-[#00D084] text-sm font-medium hover:underline mt-2"
+                    className="text-[#FF5C00] text-sm font-medium hover:underline mt-2"
                   >
                     My model isn&apos;t listed
                   </button>
@@ -219,7 +219,7 @@ export default function DeviceSelector({
                   className="space-y-2"
                 >
                   <div className="flex items-center justify-between">
-                    <Label className="text-white/80 text-sm">
+                    <Label className="text-[#1A1A1A]/80 text-sm">
                       Enter Model Name
                     </Label>
                     <button
@@ -229,7 +229,7 @@ export default function DeviceSelector({
                         setManualModel('');
                         onSelect(null);
                       }}
-                      className="text-white/40 hover:text-white/60"
+                      className="text-[#1A1A1A]/40 hover:text-[#1A1A1A]/60"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -239,7 +239,7 @@ export default function DeviceSelector({
                     placeholder="e.g. iPhone 15 Pro Max"
                     value={manualModel}
                     onChange={(e) => handleManualChange(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084]"
+                    className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00]"
                   />
                 </motion.div>
               )}

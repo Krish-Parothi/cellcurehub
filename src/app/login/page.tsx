@@ -107,11 +107,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F7F5] px-4 py-8">
       {/* Decorative background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-[#00D084]/5 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-[#00D084]/5 blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-[#FF5C00]/5 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-[#FF5C00]/5 blur-3xl" />
       </div>
 
       <motion.div
@@ -120,11 +120,11 @@ export default function LoginPage() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="relative w-full max-w-md"
       >
-        {/* Glassmorphism card */}
-        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 shadow-2xl">
+        {/* White shadow card */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-xl">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-[#00D084] flex items-center justify-center mb-3">
+            <div className="w-12 h-12 rounded-xl bg-[#FF5C00] flex items-center justify-center mb-3">
               <svg
                 width="28"
                 height="28"
@@ -140,16 +140,16 @@ export default function LoginPage() {
                 <path d="M2 12l10 5 10-5" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-white">CellCureHub</h1>
+            <h1 className="text-2xl font-bold text-gray-900">CellCureHub</h1>
           </div>
 
           {/* Heading */}
-          <h2 className="text-xl font-semibold text-white text-center mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 text-center mb-6">
             Welcome Back
           </h2>
 
           {/* Method toggle */}
-          <div className="flex rounded-lg bg-white/5 p-1 mb-6">
+          <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
             <button
               type="button"
               onClick={() => {
@@ -158,8 +158,8 @@ export default function LoginPage() {
               }}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${
                 method === 'phone'
-                  ? 'bg-[#00D084] text-black'
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-[#FF5C00] text-white'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <Phone className="w-4 h-4" />
@@ -173,8 +173,8 @@ export default function LoginPage() {
               }}
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${
                 method === 'email'
-                  ? 'bg-[#00D084] text-black'
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-[#FF5C00] text-white'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <Mail className="w-4 h-4" />
@@ -192,11 +192,11 @@ export default function LoginPage() {
               className="space-y-4"
             >
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-white/80">
+                <Label htmlFor="phone" className="text-gray-700">
                   Phone Number
                 </Label>
                 <div className="flex gap-2">
-                  <div className="flex items-center rounded-md border border-white/10 bg-white/5 px-3 text-white/60 text-sm shrink-0">
+                  <div className="flex items-center rounded-md border border-gray-200 bg-gray-50 px-3 text-gray-600 text-sm shrink-0">
                     +91
                   </div>
                   <Input
@@ -205,13 +205,13 @@ export default function LoginPage() {
                     placeholder="Enter phone number"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084]"
+                    className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00]"
                   />
                   <Button
                     type="button"
                     onClick={handleSendOtp}
                     disabled={otpLoading}
-                    className="bg-[#00D084] hover:bg-[#00D084]/90 text-black shrink-0"
+                    className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white shrink-0 font-medium"
                   >
                     {otpLoading ? 'Sending...' : 'Send OTP'}
                   </Button>
@@ -225,7 +225,7 @@ export default function LoginPage() {
                   transition={{ duration: 0.3 }}
                   className="space-y-2"
                 >
-                  <Label htmlFor="otp" className="text-white/80">
+                  <Label htmlFor="otp" className="text-gray-700">
                     OTP
                   </Label>
                   <div className="flex gap-2">
@@ -236,13 +236,13 @@ export default function LoginPage() {
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
                       maxLength={6}
-                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084]"
+                      className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00]"
                     />
                     <Button
                       type="button"
                       onClick={handleVerifyOtp}
                       disabled={loading}
-                      className="bg-[#00D084] hover:bg-[#00D084]/90 text-black shrink-0"
+                      className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white shrink-0 font-medium"
                     >
                       {loading ? (
                         'Verifying...'
@@ -268,35 +268,35 @@ export default function LoginPage() {
               className="space-y-4"
             >
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white/80">
+                <Label htmlFor="email" className="text-gray-700">
                   Email
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084] pl-10"
+                    className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00] pl-10"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white/80">
+                <Label htmlFor="password" className="text-gray-700">
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084] pl-10"
+                    className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00] pl-10"
                   />
                 </div>
               </div>
@@ -305,7 +305,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleEmailSignIn}
                 disabled={loading}
-                className="w-full bg-[#00D084] hover:bg-[#00D084]/90 text-black font-medium"
+                className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-medium"
               >
                 {loading ? (
                   'Signing In...'
@@ -321,10 +321,10 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10" />
+              <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-transparent px-3 text-white/40">Or</span>
+              <span className="bg-white px-3 text-gray-500">Or</span>
             </div>
           </div>
 
@@ -334,7 +334,7 @@ export default function LoginPage() {
             variant="outline"
             onClick={handleGoogleSignIn}
             disabled={googleLoading}
-            className="w-full border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium"
+            className="w-full border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium"
           >
             {googleLoading ? (
               'Connecting...'
@@ -364,11 +364,11 @@ export default function LoginPage() {
           </Button>
 
           {/* Sign up link */}
-          <p className="mt-6 text-center text-sm text-white/50">
+          <p className="mt-6 text-center text-sm text-gray-600">
             Don&apos;t have an account?{' '}
             <a
               href="/signup"
-              className="text-[#00D084] hover:text-[#00D084]/80 font-medium transition-colors"
+              className="text-[#FF5C00] hover:text-[#e05200] font-medium transition-colors"
             >
               Sign Up
             </a>

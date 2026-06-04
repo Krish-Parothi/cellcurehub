@@ -193,26 +193,26 @@ export default function TrackPage() {
               {/* Approval Gateway */}
               {repair.approval_status === 'pending' && (
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                  <Card className="backdrop-blur-xl bg-amber-500/5 border-amber-500/20 shadow-2xl">
+                  <Card className="bg-amber-50 border-amber-200 shadow-sm">
                     <CardHeader>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-amber-400" /></div>
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-amber-600" /></div>
                         <div>
-                          <CardTitle className="text-lg text-white">⚠️ Action Required</CardTitle>
-                          <CardDescription className="text-white/40">Please review the revised quote</CardDescription>
+                          <CardTitle className="text-lg text-[#1A1A1A]">⚠️ Action Required</CardTitle>
+                          <CardDescription className="text-amber-800/80">Please review the revised quote</CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {repair.approval_note && <div className="bg-white/5 rounded-xl p-4 border border-white/5"><p className="text-xs text-white/40 mb-1">Technician&apos;s Note</p><p className="text-sm text-white/80">{repair.approval_note}</p></div>}
+                      {repair.approval_note && <div className="bg-white rounded-xl p-4 border border-[#E8E4DF] shadow-sm"><p className="text-xs text-gray-500 mb-1">Technician&apos;s Note</p><p className="text-sm text-[#1A1A1A] font-medium">{repair.approval_note}</p></div>}
                       {repair.approval_photo_url && (
-                        <a href={repair.approval_photo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-[#FF5C00] hover:underline"><ImageIcon className="w-4 h-4" /> View diagnostic photo</a>
+                        <a href={repair.approval_photo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-[#FF5C00] hover:underline font-medium"><ImageIcon className="w-4 h-4" /> View diagnostic photo</a>
                       )}
                       <div className="flex flex-col sm:flex-row gap-3">
                         <Button onClick={handleApprove} disabled={approvalLoading} className="flex-1 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold h-11">
                           {approvalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4" /> ✓ Approve & Continue</span>}
                         </Button>
-                        <Button onClick={handleReject} disabled={approvalLoading} variant="outline" className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10 font-semibold h-11">✗ Reject Repair</Button>
+                        <Button onClick={handleReject} disabled={approvalLoading} variant="outline" className="flex-1 border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 font-semibold h-11">✗ Reject Repair</Button>
                       </div>
                     </CardContent>
                   </Card>

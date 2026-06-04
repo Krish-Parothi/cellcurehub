@@ -28,7 +28,7 @@ export default function AnalyticsTab({ userId }: { userId: string }) {
     })();
   }, [userId]);
 
-  if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-2xl bg-white/5" />)}</div>;
+  if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-2xl bg-[#1A1A1A]/5" />)}</div>;
 
   // Calculations
   const paidInvoices = data.flatMap(r => r.invoices.filter(inv => inv.payment_status === 'paid'));
@@ -62,38 +62,38 @@ export default function AnalyticsTab({ userId }: { userId: string }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <h1 className="text-2xl font-bold text-white mb-6 hidden lg:block">Spend Analytics</h1>
+      <h1 className="text-2xl font-bold text-[#1A1A1A] mb-6 hidden lg:block">Spend Analytics</h1>
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="glass rounded-2xl p-5 text-center">
-          <IndianRupee className="w-5 h-5 text-[#00D084] mx-auto mb-2" />
-          <p className="text-2xl font-bold text-white">₹{totalSpent.toLocaleString('en-IN')}</p>
-          <p className="text-white/40 text-xs mt-1">Total Spent</p>
+        <div className="bg-white border border-[#E8E4DF] rounded-2xl p-5 text-center shadow-sm">
+          <IndianRupee className="w-5 h-5 text-[#FF5C00] mx-auto mb-2" />
+          <p className="text-2xl font-bold text-[#1A1A1A]">₹{totalSpent.toLocaleString('en-IN')}</p>
+          <p className="text-[#1A1A1A]/60 text-xs mt-1">Total Spent</p>
         </div>
-        <div className="glass rounded-2xl p-5 text-center">
-          <TrendingUp className="w-5 h-5 text-[#00D084] mx-auto mb-2" />
-          <p className="text-2xl font-bold text-white">{totalRepairs}</p>
-          <p className="text-white/40 text-xs mt-1">Total Repairs</p>
+        <div className="bg-white border border-[#E8E4DF] rounded-2xl p-5 text-center shadow-sm">
+          <TrendingUp className="w-5 h-5 text-[#FF5C00] mx-auto mb-2" />
+          <p className="text-2xl font-bold text-[#1A1A1A]">{totalRepairs}</p>
+          <p className="text-[#1A1A1A]/60 text-xs mt-1">Total Repairs</p>
         </div>
-        <div className="glass rounded-2xl p-5 text-center">
-          <BarChart3 className="w-5 h-5 text-[#00D084] mx-auto mb-2" />
-          <p className="text-2xl font-bold text-white">₹{Math.round(avgCost).toLocaleString('en-IN')}</p>
-          <p className="text-white/40 text-xs mt-1">Avg Cost/Repair</p>
+        <div className="bg-white border border-[#E8E4DF] rounded-2xl p-5 text-center shadow-sm">
+          <BarChart3 className="w-5 h-5 text-[#FF5C00] mx-auto mb-2" />
+          <p className="text-2xl font-bold text-[#1A1A1A]">₹{Math.round(avgCost).toLocaleString('en-IN')}</p>
+          <p className="text-[#1A1A1A]/60 text-xs mt-1">Avg Cost/Repair</p>
         </div>
       </div>
 
       {/* Bar Chart - Spend by Brand */}
       {brandData.length > 0 && (
-        <div className="glass rounded-2xl p-6 mb-6">
-          <h3 className="text-white font-semibold mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#00D084]" />Spend by Device Brand</h3>
+        <div className="bg-white border border-[#E8E4DF] rounded-2xl p-6 mb-6 shadow-sm">
+          <h3 className="text-[#1A1A1A] font-semibold mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#FF5C00]" />Spend by Device Brand</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={brandData}>
-                <XAxis dataKey="name" tick={{ fill: '#ffffff80', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#ffffff40', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} />
-                <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }} formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Spent']} />
-                <Bar dataKey="total" fill="#00D084" radius={[8, 8, 0, 0]} />
+                <XAxis dataKey="name" tick={{ fill: '#1A1A1A80', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#1A1A1A40', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} />
+                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: '12px', color: '#1A1A1A' }} formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Spent']} />
+                <Bar dataKey="total" fill="#FF5C00" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -101,25 +101,25 @@ export default function AnalyticsTab({ userId }: { userId: string }) {
       )}
 
       {/* Line Chart - Monthly Spend */}
-      <div className="glass rounded-2xl p-6">
-        <h3 className="text-white font-semibold mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-[#00D084]" />Monthly Spend (Last 12 Months)</h3>
+      <div className="bg-white border border-[#E8E4DF] rounded-2xl p-6 shadow-sm">
+        <h3 className="text-[#1A1A1A] font-semibold mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-[#FF5C00]" />Monthly Spend (Last 12 Months)</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="month" tick={{ fill: '#ffffff60', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#ffffff40', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} />
-              <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }} formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Spent']} />
-              <Line type="monotone" dataKey="total" stroke="#00D084" strokeWidth={2} dot={{ fill: '#00D084', r: 4 }} activeDot={{ r: 6, fill: '#00D084' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+              <XAxis dataKey="month" tick={{ fill: '#1A1A1A60', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#1A1A1A40', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} />
+              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: '12px', color: '#1A1A1A' }} formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Spent']} />
+              <Line type="monotone" dataKey="total" stroke="#FF5C00" strokeWidth={2} dot={{ fill: '#FF5C00', r: 4 }} activeDot={{ r: 6, fill: '#FF5C00' }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {totalRepairs === 0 && (
-        <div className="glass rounded-2xl p-12 text-center mt-6">
-          <BarChart3 className="w-10 h-10 text-white/20 mx-auto mb-3" />
-          <p className="text-white/50 text-sm">No repair data yet. Book a repair to see analytics.</p>
+        <div className="bg-white border border-[#E8E4DF] rounded-2xl p-12 text-center mt-6 shadow-sm">
+          <BarChart3 className="w-10 h-10 text-[#1A1A1A]/20 mx-auto mb-3" />
+          <p className="text-[#1A1A1A]/60 text-sm">No repair data yet. Book a repair to see analytics.</p>
         </div>
       )}
     </motion.div>

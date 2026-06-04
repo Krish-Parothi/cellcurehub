@@ -42,55 +42,55 @@ export default function DashboardPage() {
   const handleLogout = async () => { await signOut(); router.replace('/login'); };
 
   if (authLoading) return (
-    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-      <div className="w-10 h-10 rounded-full border-2 border-[#00D084] border-t-transparent animate-spin" />
+    <div className="min-h-screen bg-[#F7F7F5] flex items-center justify-center">
+      <div className="w-10 h-10 rounded-full border-2 border-[#FF5C00] border-t-transparent animate-spin" />
     </div>
   );
-
+ 
   const Sidebar = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       <div className="p-6 flex flex-col items-center text-center">
-        <Avatar className="h-16 w-16 border-2 border-[#00D084]/30 mb-3">
+        <Avatar className="h-16 w-16 border-2 border-[#FF5C00]/30 mb-3">
           {user?.avatar_url && <AvatarImage src={user.avatar_url} alt={user.full_name} />}
-          <AvatarFallback className="bg-[#00D084]/20 text-[#00D084] text-xl font-bold">{user?.full_name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+          <AvatarFallback className="bg-[#FF5C00]/20 text-[#FF5C00] text-xl font-bold">{user?.full_name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
         </Avatar>
-        <h3 className="text-white font-semibold text-sm">{user?.full_name}</h3>
-        <p className="text-white/40 text-xs mt-0.5">{user?.email}</p>
+        <h3 className="text-[#1A1A1A] font-semibold text-sm">{user?.full_name}</h3>
+        <p className="text-[#1A1A1A]/60 text-xs mt-0.5">{user?.email}</p>
       </div>
-      <Separator className="bg-white/10" />
+      <Separator className="bg-[#E8E4DF]" />
       <nav className="flex-1 p-3 space-y-1">
         {TABS.map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => { setTab(key); setDrawerOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${tab === key ? 'bg-[#00D084]/15 text-[#00D084] border border-[#00D084]/20' : 'text-white/50 hover:text-white hover:bg-white/5 border border-transparent'}`}>
+          <button key={key} onClick={() => { setTab(key); setDrawerOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${tab === key ? 'bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20' : 'text-[#1A1A1A]/60 hover:text-[#1A1A1A] hover:bg-[#1A1A1A]/5 border border-transparent'}`}>
             <Icon className="w-4 h-4" />{label}
           </button>
         ))}
       </nav>
-      <div className="p-3 border-t border-white/10">
-        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all"><LogOut className="w-4 h-4" />Logout</button>
+      <div className="p-3 border-t border-[#E8E4DF]">
+        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-all"><LogOut className="w-4 h-4" />Logout</button>
       </div>
     </div>
   );
-
+ 
   return (
     <RoleGuard allowedRoles={['customer', 'admin']}>
-      <div className="min-h-screen bg-[#0A0A0A] flex flex-col">
+      <div className="min-h-screen bg-[#F7F7F5] flex flex-col text-[#1A1A1A]">
         <Navbar />
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-[#00D084]/5 blur-[100px]" />
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-[#00D084]/5 blur-[100px]" />
+          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-[#FF5C00]/5 blur-[100px]" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-[#FF5C00]/5 blur-[100px]" />
         </div>
         <div className="flex flex-1 pt-20 relative z-10">
-          <aside className="hidden lg:flex w-72 flex-shrink-0 border-r border-white/10 bg-[#0A0A0A]/50 backdrop-blur-md h-[calc(100vh-5rem)] sticky top-20"><Sidebar /></aside>
+          <aside className="hidden lg:flex w-72 flex-shrink-0 border-r border-[#E8E4DF] bg-white h-[calc(100vh-5rem)] sticky top-20"><Sidebar /></aside>
           <AnimatePresence>
             {drawerOpen && (<>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setDrawerOpen(false)} />
-              <motion.aside initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed left-0 top-0 bottom-0 w-72 bg-[#0A0A0A] border-r border-white/10 z-50 lg:hidden"><Sidebar /></motion.aside>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setDrawerOpen(false)} />
+              <motion.aside initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-[#E8E4DF] z-50 lg:hidden"><Sidebar /></motion.aside>
             </>)}
           </AnimatePresence>
           <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
             <div className="lg:hidden flex items-center justify-between mb-6">
-              <button onClick={() => setDrawerOpen(true)} className="flex items-center gap-2 text-white/70 hover:text-white"><Settings className="w-5 h-5" /><span className="text-sm font-medium">Menu</span></button>
-              <h2 className="text-lg font-semibold text-white">{TABS.find(t => t.key === tab)?.label}</h2>
+              <button onClick={() => setDrawerOpen(true)} className="flex items-center gap-2 text-[#1A1A1A]/70 hover:text-[#1A1A1A]"><Settings className="w-5 h-5" /><span className="text-sm font-medium">Menu</span></button>
+              <h2 className="text-lg font-semibold text-[#1A1A1A]">{TABS.find(t => t.key === tab)?.label}</h2>
               <div className="w-16" />
             </div>
             {tab === 'active' && user && <ActiveTab userId={user.id} />}

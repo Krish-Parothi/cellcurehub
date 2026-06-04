@@ -15,12 +15,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CircleCheck as CheckCircle, Star, Clock, IndianRupee, Calendar, ClipboardCheck, Download, History } from 'lucide-react';
 
 function getWarrantyInfo(deliveredAt: string | null) {
-  if (!deliveredAt) return { expired: true, days: 0, text: 'No delivery date', color: 'text-white/30' };
+  if (!deliveredAt) return { expired: true, days: 0, text: 'No delivery date', color: 'text-[#1A1A1A]/30' };
   const expiry = new Date(new Date(deliveredAt).getTime() + 90 * 24 * 60 * 60 * 1000);
   const diff = expiry.getTime() - Date.now();
-  if (diff <= 0) return { expired: true, days: 0, text: 'Warranty expired', color: 'text-white/30' };
+  if (diff <= 0) return { expired: true, days: 0, text: 'Warranty expired', color: 'text-[#1A1A1A]/30' };
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const color = days > 30 ? 'text-[#00D084]' : days > 10 ? 'text-amber-400' : 'text-red-400';
+  const color = days > 30 ? 'text-[#FF5C00]' : days > 10 ? 'text-amber-600' : 'text-red-500';
   return { expired: false, days, text: `${days} day${days !== 1 ? 's' : ''} remaining`, color };
 }
 
@@ -77,16 +77,16 @@ export default function HistoryTab({ userId }: { userId: string }) {
     fetchData();
   };
 
-  if (loading) return <div className="space-y-4">{[1,2].map(i => <Skeleton key={i} className="h-40 rounded-2xl bg-white/5" />)}</div>;
-
+  if (loading) return <div className="space-y-4">{[1,2].map(i => <Skeleton key={i} className="h-40 rounded-2xl bg-[#1A1A1A]/5" />)}</div>;
+ 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <h1 className="text-2xl font-bold text-white mb-6 hidden lg:block">Repair History</h1>
+      <h1 className="text-2xl font-bold text-[#1A1A1A] mb-6 hidden lg:block">Repair History</h1>
       {repairs.length === 0 ? (
-        <div className="glass rounded-2xl p-12 flex flex-col items-center text-center">
-          <History className="w-10 h-10 text-white/20 mb-3" />
-          <h3 className="text-xl font-semibold text-white mb-2">No repair history yet</h3>
-          <p className="text-white/50 text-sm">Completed repairs will appear here.</p>
+        <div className="bg-white border border-[#E8E4DF] rounded-2xl p-12 flex flex-col items-center text-center shadow-sm">
+          <History className="w-10 h-10 text-[#1A1A1A]/20 mb-3" />
+          <h3 className="text-xl font-semibold text-[#1A1A1A] mb-2">No repair history yet</h3>
+          <p className="text-[#1A1A1A]/60 text-sm">Completed repairs will appear here.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -94,60 +94,60 @@ export default function HistoryTab({ userId }: { userId: string }) {
             const warranty = getWarrantyInfo(r.delivered_at);
             const review = reviews[r.id];
             return (
-              <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }} className="glass glass-hover rounded-2xl p-6">
+              <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }} className="bg-white border border-[#E8E4DF] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                   <div>
-                    <h3 className="text-white font-semibold text-lg">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</h3>
-                    <p className="text-white/50 text-sm mt-0.5">{r.repair_type?.replace(/_/g, ' ') || r.issue_description}</p>
+                    <h3 className="text-[#1A1A1A] font-semibold text-lg">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</h3>
+                    <p className="text-[#1A1A1A]/60 text-sm mt-0.5">{r.repair_type?.replace(/_/g, ' ') || r.issue_description}</p>
                   </div>
-                  <Badge className="bg-[#00D084]/15 text-[#00D084] border border-[#00D084]/25 shrink-0"><CheckCircle className="w-3 h-3 mr-1" />Delivered</Badge>
+                  <Badge className="bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20 shrink-0"><CheckCircle className="w-3 h-3 mr-1" />Delivered</Badge>
                 </div>
-
+ 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                  <div className="glass rounded-xl p-3"><p className="text-white/40 text-xs flex items-center gap-1"><IndianRupee className="w-3 h-3" />Final Cost</p><p className="text-white font-semibold text-sm">{r.final_cost != null ? `₹${r.final_cost.toLocaleString('en-IN')}` : 'N/A'}</p></div>
-                  <div className="glass rounded-xl p-3"><p className="text-white/40 text-xs flex items-center gap-1"><Calendar className="w-3 h-3" />Delivered</p><p className="text-white/70 text-sm">{r.delivered_at ? new Date(r.delivered_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}</p></div>
-                  <div className="glass rounded-xl p-3"><p className="text-white/40 text-xs flex items-center gap-1"><Clock className="w-3 h-3" />Warranty</p><p className={`text-sm font-medium ${warranty.color}`}>{warranty.text}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-3"><p className="text-[#1A1A1A]/60 text-xs flex items-center gap-1"><IndianRupee className="w-3 h-3" />Final Cost</p><p className="text-[#1A1A1A] font-semibold text-sm">{r.final_cost != null ? `₹${r.final_cost.toLocaleString('en-IN')}` : 'N/A'}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-3"><p className="text-[#1A1A1A]/60 text-xs flex items-center gap-1"><Calendar className="w-3 h-3" />Delivered</p><p className="text-[#1A1A1A]/80 text-sm">{r.delivered_at ? new Date(r.delivered_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-3"><p className="text-[#1A1A1A]/60 text-xs flex items-center gap-1"><Clock className="w-3 h-3" />Warranty</p><p className={`text-sm font-medium ${warranty.color}`}>{warranty.text}</p></div>
                 </div>
-
+ 
                 {/* Review */}
                 {review ? (
-                  <div className="flex items-center gap-2 mb-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                    <div className="flex gap-0.5">{Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'text-[#00D084] fill-[#00D084]' : 'text-white/20'}`} />)}</div>
-                    {review.comment && <p className="text-white/50 text-sm ml-2 truncate">{review.comment}</p>}
+                  <div className="flex items-center gap-2 mb-3 p-3 rounded-xl bg-gray-50 border border-gray-200">
+                    <div className="flex gap-0.5">{Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'text-[#FF5C00] fill-[#FF5C00]' : 'text-gray-300'}`} />)}</div>
+                    {review.comment && <p className="text-[#1A1A1A]/60 text-sm ml-2 truncate">{review.comment}</p>}
                   </div>
                 ) : (
-                  <Button size="sm" variant="outline" onClick={() => { setReviewRepairId(r.id); setReviewRating(5); setReviewComment(''); setReviewOpen(true); }} className="border-[#00D084]/30 text-[#00D084] hover:bg-[#00D084]/10 mb-3"><Star className="w-3.5 h-3.5 mr-1.5" />Leave Review</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setReviewRepairId(r.id); setReviewRating(5); setReviewComment(''); setReviewOpen(true); }} className="border-[#FF5C00]/30 text-[#FF5C00] hover:bg-[#FF5C00]/10 mb-3"><Star className="w-3.5 h-3.5 mr-1.5" />Leave Review</Button>
                 )}
-
+ 
                 {confirmedRcaIds.has(r.id) && (
-                  <button onClick={() => handleViewRca(r.id)} className="text-white/50 text-sm font-medium flex items-center gap-1 hover:text-white"><ClipboardCheck className="w-4 h-4" />View RCA</button>
+                  <button onClick={() => handleViewRca(r.id)} className="text-[#1A1A1A]/60 text-sm font-medium flex items-center gap-1 hover:text-[#1A1A1A]"><ClipboardCheck className="w-4 h-4" />View RCA</button>
                 )}
               </motion.div>
             );
           })}
         </div>
       )}
-
+ 
       {/* Review Dialog */}
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent className="bg-[#0A0A0A] border-white/10 backdrop-blur-xl">
+        <DialogContent className="bg-white border border-[#E8E4DF] shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">Leave a Review</DialogTitle>
-            <DialogDescription className="text-white/50">Share your experience</DialogDescription>
+            <DialogTitle className="text-[#1A1A1A]">Leave a Review</DialogTitle>
+            <DialogDescription className="text-[#1A1A1A]/60">Share your experience</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-white/70">Rating</Label>
-              <div className="flex gap-1">{Array.from({ length: 5 }).map((_, i) => <button key={i} onClick={() => setReviewRating(i + 1)} className="p-0.5 hover:scale-110 transition-transform"><Star className={`w-7 h-7 ${i < reviewRating ? 'text-[#00D084] fill-[#00D084]' : 'text-white/20'}`} /></button>)}</div>
+              <Label className="text-[#1A1A1A]/70">Rating</Label>
+              <div className="flex gap-1">{Array.from({ length: 5 }).map((_, i) => <button key={i} onClick={() => setReviewRating(i + 1)} className="p-0.5 hover:scale-110 transition-transform"><Star className={`w-7 h-7 ${i < reviewRating ? 'text-[#FF5C00] fill-[#FF5C00]' : 'text-gray-300'}`} /></button>)}</div>
             </div>
             <div className="space-y-2">
-              <Label className="text-white/70">Comment (optional)</Label>
-              <Textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} placeholder="How was your experience?" className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#00D084] min-h-[80px]" />
+              <Label className="text-[#1A1A1A]/70">Comment (optional)</Label>
+              <Textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} placeholder="How was your experience?" className="bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] placeholder:text-gray-400 focus-visible:ring-[#FF5C00] min-h-[80px]" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setReviewOpen(false)} className="border-white/10 text-white/60">Cancel</Button>
-            <Button onClick={handleSubmitReview} disabled={submitting} className="gradient-green text-[#0A0A0A] font-semibold">{submitting ? 'Submitting...' : 'Submit Review'}</Button>
+            <Button variant="outline" onClick={() => setReviewOpen(false)} className="border-gray-200 text-gray-600 hover:bg-gray-50">Cancel</Button>
+            <Button onClick={handleSubmitReview} disabled={submitting} className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold">{submitting ? 'Submitting...' : 'Submit Review'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

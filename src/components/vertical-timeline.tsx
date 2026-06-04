@@ -32,7 +32,7 @@ export default function VerticalTimeline({ entries, currentStatus }: VerticalTim
 
   return (
     <div className="relative space-y-0">
-      <div className="absolute left-[15px] top-4 bottom-4 w-px bg-gradient-to-b from-[#00D084]/50 via-[#00D084]/20 to-white/5" />
+      <div className="absolute left-[15px] top-4 bottom-4 w-px bg-gradient-to-b from-[#FF5C00]/50 via-[#FF5C00]/20 to-gray-200/10" />
       {REPAIR_STATUS_ORDER.map((status, i) => {
         const isPast = i < currentIndex;
         const isCurrent = i === currentIndex;
@@ -42,19 +42,19 @@ export default function VerticalTimeline({ entries, currentStatus }: VerticalTim
         return (
           <motion.div key={status} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }} className={cn('relative flex gap-4 py-3', isFuture && 'opacity-40')}>
             <div className="relative z-10 flex-shrink-0">
-              <motion.div initial={false} animate={{ scale: isCurrent ? 1.15 : 1 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className={cn('flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 transition-all duration-500', isPast && 'bg-[#00D084] border-[#00D084]', isCurrent && 'bg-[#0A0A0A] border-[#00D084]', isFuture && 'bg-[#0A0A0A] border-zinc-700')}>
-                {isPast ? <CheckCircle className="w-3.5 h-3.5 text-black" /> : <StatusIcon className={cn('w-3.5 h-3.5', isCurrent ? 'text-[#00D084]' : 'text-zinc-600')} />}
-                {isCurrent && (<><motion.div className="absolute inset-0 rounded-full border-2 border-[#00D084]" animate={{ boxShadow: ['0 0 0px 0 rgba(0,208,132,0.4)', '0 0 12px 4px rgba(0,208,132,0.3)', '0 0 0px 0 rgba(0,208,132,0.4)'] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} /><motion.div className="absolute inset-0 rounded-full bg-[#00D084]/20" animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} /></>)}
+              <motion.div initial={false} animate={{ scale: isCurrent ? 1.15 : 1 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className={cn('flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 transition-all duration-500', isPast && 'bg-[#FF5C00] border-[#FF5C00]', isCurrent && 'bg-white border-[#FF5C00]', isFuture && 'bg-white border-zinc-200')}>
+                {isPast ? <CheckCircle className="w-3.5 h-3.5 text-white" /> : <StatusIcon className={cn('w-3.5 h-3.5', isCurrent ? 'text-[#FF5C00]' : 'text-zinc-400')} />}
+                {isCurrent && (<><motion.div className="absolute inset-0 rounded-full border-2 border-[#FF5C00]" animate={{ boxShadow: ['0 0 0px 0 rgba(255,92,0,0.4)', '0 0 12px 4px rgba(255,92,0,0.3)', '0 0 0px 0 rgba(255,92,0,0.4)'] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} /><motion.div className="absolute inset-0 rounded-full bg-[#FF5C00]/20" animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} /></>)}
               </motion.div>
             </div>
             <div className="flex-1 min-w-0 pb-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={cn('text-sm font-semibold', isPast && 'text-[#00D084]', isCurrent && 'text-white', isFuture && 'text-zinc-600')}>{REPAIR_STATUS_LABELS[status]}</span>
-                {isCurrent && <span className="text-[10px] font-medium text-[#00D084] bg-[#00D084]/10 px-2 py-0.5 rounded-full">Current</span>}
+                <span className={cn('text-sm font-semibold', isPast && 'text-[#FF5C00]', isCurrent && 'text-[#1A1A1A] font-bold', isFuture && 'text-zinc-400')}>{REPAIR_STATUS_LABELS[status]}</span>
+                {isCurrent && <span className="text-[10px] font-medium text-[#FF5C00] bg-[#FF5C00]/10 px-2 py-0.5 rounded-full">Current</span>}
               </div>
-              {entry?.note && (isPast || isCurrent) && <p className="mt-1 text-sm text-white/50 leading-relaxed">{entry.note}</p>}
-              {entry?.photo_url && (isPast || isCurrent) && <a href={entry.photo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-[#00D084] hover:underline">📷 View photo</a>}
-              {entry && (isPast || isCurrent) && <p className="mt-1 text-xs text-white/30">{formatDate(entry.created_at)}</p>}
+              {entry?.note && (isPast || isCurrent) && <p className="mt-1 text-sm text-[#1A1A1A]/60 leading-relaxed">{entry.note}</p>}
+              {entry?.photo_url && (isPast || isCurrent) && <a href={entry.photo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-[#FF5C00] hover:underline font-medium font-medium">📷 View photo</a>}
+              {entry && (isPast || isCurrent) && <p className="mt-1 text-xs text-[#1A1A1A]/40">{formatDate(entry.created_at)}</p>}
             </div>
           </motion.div>
         );
