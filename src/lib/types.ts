@@ -17,7 +17,7 @@ export type RepairStatus =
 export type PickupType = 'home' | 'store';
 export type PaymentStatus = 'pending' | 'paid';
 export type PaymentMethod = 'cash' | 'upi' | 'card';
-export type EwasteStatus = 'pending' | 'valued' | 'picked_up' | 'credited';
+export type EwasteStatus = 'pending' | 'admin_offered' | 'valued' | 'agreed' | 'rejected' | 'picked_up' | 'credited';
 export type DeviceCategory = 'smartphone' | 'laptop' | 'tablet';
 export type TimeSlot = 'morning' | 'afternoon' | 'evening';
 export type EwasteCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'dead' | 'powers_off';
@@ -135,6 +135,11 @@ export interface Ewaste {
   condition_description: string | null;
   quoted_value: number | null;
   payout_method: string | null;
+  requested_price: number | null;
+  admin_offer: number | null;
+  customer_agreed: boolean | null;
+  address: string | null;
+  customer?: User;
 }
 
 export interface Review {
@@ -313,8 +318,10 @@ export interface DeliveryAssignment {
   delivery_otp: string | null;
   created_at: string;
   updated_at: string;
+  ewaste_id?: string | null;
   // Joined
   repair?: Repair;
+  ewaste?: Ewaste;
   invoice?: Invoice;
 }
 

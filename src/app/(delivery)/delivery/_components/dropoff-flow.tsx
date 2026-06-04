@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import type { DeliveryAssignment, Invoice } from '@/lib/types';
-import { Package, CheckCircle, Loader2, Hash, Phone, MapPin, Smartphone, CreditCard, Banknote, IndianRupee, Truck } from 'lucide-react';
+import { Package, CheckCircle, Loader2, Hash, Phone, MapPin, Smartphone, CreditCard, Banknote, IndianRupee, Truck, Navigation } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { sendDeliveryTwilioOtp, verifyDeliveryTwilioOtp } from '@/lib/actions/delivery';
 
@@ -55,6 +55,9 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
   }, [resendTimer]);
 
   if (!assignment) return null;
+  const isEwaste = !!assignment.ewaste_id;
+  if (isEwaste) return null; // E-waste is pickup only
+
   const repair = assignment.repair;
   const invoicesArray = assignment.repair?.invoices || [];
   const invoice: Invoice | null = invoicesArray.length > 0 ? invoicesArray[0] : null;
@@ -146,7 +149,7 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
         </SheetHeader>
 
         {/* Delivery Details */}
-        <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 mb-6 space-y-1.5 text-sm">
+        <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 mb-6 space-y-1.5 text-sm relative">
           <p className="text-[#1A1A1A] font-semibold">{repair.customer?.full_name}</p>
           <a href={`tel:${repair.customer?.phone}`} className="text-[#FF5C00] flex items-center gap-1.5 font-medium hover:underline">
             <Phone className="w-3 h-3" />{repair.customer?.phone}
@@ -166,6 +169,14 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
               </Badge>
             </div>
           )}
+          <Button 
+            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(repair.address || '')}`, '_blank')}
+            variant="outline" 
+            size="sm" 
+            className="absolute top-4 right-4 bg-white border-[#FF5C00]/20 text-[#FF5C00] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00]"
+          >
+            <Navigation className="w-3.5 h-3.5 mr-1.5" /> Navigate
+          </Button>
         </div>
 
         <div className="space-y-6 pb-12">

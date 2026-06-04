@@ -19,17 +19,19 @@ import HistoryTab from './_tabs/history-tab';
 import AnalyticsTab from './_tabs/analytics-tab';
 import EwasteTab from './_tabs/ewaste-tab';
 import ProfileTab from './_tabs/profile-tab';
+import ShopTab from './_tabs/shop-tab';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Wrench, History, Recycle, ChartBar as BarChart3, User, LogOut, Settings } from 'lucide-react';
+import { Wrench, History, Recycle, ChartBar as BarChart3, User, LogOut, Settings, ShoppingBag } from 'lucide-react';
 
-type Tab = 'active' | 'history' | 'analytics' | 'ewaste' | 'profile';
+type Tab = 'active' | 'history' | 'analytics' | 'ewaste' | 'shop' | 'profile';
 const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'active', label: 'Active Repairs', icon: Wrench },
   { key: 'history', label: 'Repair History', icon: History },
   { key: 'analytics', label: 'Spend Analytics', icon: BarChart3 },
   { key: 'ewaste', label: 'E-Waste Portal', icon: Recycle },
+  { key: 'shop', label: 'Store', icon: ShoppingBag },
   { key: 'profile', label: 'Profile', icon: User },
 ];
 
@@ -97,6 +99,7 @@ export default function DashboardPage() {
             {tab === 'history' && user && <HistoryTab userId={user.id} />}
             {tab === 'analytics' && user && <AnalyticsTab userId={user.id} />}
             {tab === 'ewaste' && user && <EwasteTab userId={user.id} />}
+            {tab === 'shop' && user && <ShopTab />}
             {tab === 'profile' && user && <ProfileTab user={user} />}
           </main>
         </div>

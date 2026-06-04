@@ -13,11 +13,11 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { INTAKE_CONDITION_CHECKS } from '@/lib/types';
 import type { DeliveryAssignment } from '@/lib/types';
-import { Camera, CheckCircle, Loader2, Truck, PenTool, Hash, MapPin, Phone, Smartphone, Package } from 'lucide-react';
+import { Camera, CheckCircle, Loader2, Truck, PenTool, Hash, MapPin, Phone, Smartphone, Package, Navigation } from 'lucide-react';
 import { sendDeliveryTwilioOtp, verifyDeliveryTwilioOtp } from '@/lib/actions/delivery';
 
 interface PickupFlowProps {
-  assignment: (DeliveryAssignment & { repair: any }) | null;
+  assignment: (DeliveryAssignment & { repair?: any; ewaste?: any }) | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: () => void;
@@ -131,7 +131,9 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
   };
 
   if (!assignment) return null;
-  const repair = assignment.repair;
+  const isEwaste = !!assignment.ewaste_id;
+  const targetId = assignment.ewaste_id || assignment.repair_id;
+  const customerName = isEwaste ? assignment.ewaste?.customer?.full_name : assignment.repair?.customer?.full_name;
 
   // --- Step 1: Submit Intake ---
   const canProceedStep1 = photos.length >= 1 && Object.values(conditionChecks).some(Boolean);
@@ -142,7 +144,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
     try {
       const urls: string[] = [];
       for (const file of photos) {
-        const path = `repair-photos/${repair.id}/intake/${Date.now()}_${file.name}`;
+        const path = `repair-photos/${targetId}/intake/${Date.now()}_${file.name}`;
         await supabase.storage.from('repair-photos').upload(path, file);
         const { data: { publicUrl } } = supabase.storage.from('repair-photos').getPublicUrl(path);
         urls.push(publicUrl);
@@ -166,7 +168,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
     try {
       const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png'));
       if (!blob) throw new Error('Canvas export failed');
-      const path = `repair-photos/${repair.id}/signature/pickup_${Date.now()}.png`;
+      const path = `repair-photos/${targetId}/signature/pickup_${Date.now()}.png`;
       await supabase.storage.from('repair-photos').upload(path, blob);
       const { data: { publicUrl } } = supabase.storage.from('repair-photos').getPublicUrl(path);
       await supabase.from('delivery_assignments').update({ customer_signature_url: publicUrl }).eq('id', assignment.id);
@@ -195,20 +197,24 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
     setOtpVerifying(true);
     const result = await verifyDeliveryTwilioOtp(assignment.id, 'pickup', otpInput);
     if (result.success) {
-      // Update all tables
-      await supabase.from('repairs').update({ status: 'device_received', updated_at: new Date().toISOString() }).eq('id', repair.id);
+      if (isEwaste) {
+        await supabase.from('ewaste').update({ status: 'picked_up' }).eq('id', targetId);
+      } else {
+        await supabase.from('repairs').update({ status: 'device_received', updated_at: new Date().toISOString() }).eq('id', targetId);
+        await supabase.from('repair_timeline').insert({
+          repair_id: targetId, status: 'device_received',
+          note: 'Device picked up from customer — OTP confirmed', updated_by: user?.id,
+        });
+      }
       await supabase.from('delivery_assignments').update({ status: 'picked_up' }).eq('id', assignment.id);
-      await supabase.from('repair_timeline').insert({
-        repair_id: repair.id, status: 'device_received',
-        note: 'Device picked up from customer — OTP confirmed', updated_by: user?.id,
-      });
+
       // Notify admins
       const { data: admins } = await supabase.from('users').select('id').in('role', ['admin', 'shop_admin']);
       if (admins?.length) {
         await supabase.from('notifications').insert(
           admins.map(a => ({
             recipient_id: a.id, type: 'pickup_confirmed',
-            message: `Device picked up from ${repair.customer?.full_name} for repair ${repair.id.split('-')[0]}`,
+            message: `Device picked up from ${customerName} for ${isEwaste ? 'e-waste' : 'repair'} ${targetId.split('-')[0]}`,
           }))
         );
       }
@@ -226,16 +232,18 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
   const markReachedStore = async () => {
     setMarkingStore(true);
     await supabase.from('delivery_assignments').update({ status: 'at_store' }).eq('id', assignment.id);
-    await supabase.from('repair_timeline').insert({
-      repair_id: repair.id, status: 'device_received',
-      note: 'Device arrived at shop', updated_by: user?.id,
-    });
+    if (!isEwaste) {
+      await supabase.from('repair_timeline').insert({
+        repair_id: targetId, status: 'device_received',
+        note: 'Device arrived at shop', updated_by: user?.id,
+      });
+    }
     const { data: admins } = await supabase.from('users').select('id').in('role', ['admin', 'shop_admin']);
     if (admins?.length) {
       await supabase.from('notifications').insert(
         admins.map(a => ({
           recipient_id: a.id, type: 'device_at_store',
-          message: `${repair.customer?.full_name}'s device has arrived at the store`,
+          message: `${customerName}'s device has arrived at the store`,
         }))
       );
     }
@@ -253,7 +261,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
             <Truck className="w-5 h-5 text-[#FF5C00]" /> Pickup Flow
           </SheetTitle>
           <SheetDescription className="text-[#1A1A1A]/60">
-            {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
+            {isEwaste ? assignment.ewaste?.device_description : (assignment.repair?.device ? `${assignment.repair.device.brand} ${assignment.repair.device.model_name}` : assignment.repair?.manual_model)}
           </SheetDescription>
         </SheetHeader>
 
@@ -271,19 +279,27 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
         </div>
 
         {/* Customer Info */}
-        <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 mb-6 space-y-1.5 text-sm">
-          <p className="text-[#1A1A1A] font-semibold">{repair.customer?.full_name}</p>
-          <a href={`tel:${repair.customer?.phone}`} className="text-[#FF5C00] flex items-center gap-1.5 font-medium hover:underline">
-            <Phone className="w-3 h-3" />{repair.customer?.phone}
+        <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 mb-6 space-y-1.5 text-sm relative">
+          <p className="text-[#1A1A1A] font-semibold">{customerName}</p>
+          <a href={`tel:${isEwaste ? assignment.ewaste?.customer?.phone : assignment.repair?.customer?.phone}`} className="text-[#FF5C00] flex items-center gap-1.5 font-medium hover:underline">
+            <Phone className="w-3 h-3" />{isEwaste ? assignment.ewaste?.customer?.phone : assignment.repair?.customer?.phone}
           </a>
-          <p className="text-[#1A1A1A]/60 flex items-center gap-1.5"><MapPin className="w-3 h-3 text-[#1A1A1A]/40" />{repair.address}</p>
+          <p className="text-[#1A1A1A]/60 flex items-center gap-1.5"><MapPin className="w-3 h-3 text-[#1A1A1A]/40" />{isEwaste ? assignment.ewaste?.address : assignment.repair?.address}</p>
           <p className="text-[#1A1A1A]/60 flex items-center gap-1.5">
             <Smartphone className="w-3 h-3 text-[#1A1A1A]/40" />
-            {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
+            {isEwaste ? assignment.ewaste?.device_description : (assignment.repair?.device ? `${assignment.repair.device.brand} ${assignment.repair.device.model_name}` : assignment.repair?.manual_model)}
           </p>
           {assignment.special_instructions && (
             <p className="text-amber-700 text-xs mt-2 font-medium">⚠ {assignment.special_instructions}</p>
           )}
+          <Button 
+            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((isEwaste ? assignment.ewaste?.address : assignment.repair?.address) || '')}`, '_blank')}
+            variant="outline" 
+            size="sm" 
+            className="absolute top-4 right-4 bg-white border-[#FF5C00]/20 text-[#FF5C00] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00]"
+          >
+            <Navigation className="w-3.5 h-3.5 mr-1.5" /> Navigate
+          </Button>
         </div>
 
         <div className="space-y-6 pb-12">

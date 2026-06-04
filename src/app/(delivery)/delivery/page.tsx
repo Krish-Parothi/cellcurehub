@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Truck, Package, CheckCircle, Phone, MapPin, Smartphone, Clock, ChevronRight } from 'lucide-react';
+import { Truck, Package, CheckCircle, Phone, MapPin, Smartphone, Clock, ChevronRight, Navigation } from 'lucide-react';
 import PickupFlow from './_components/pickup-flow';
 import DropoffFlow from './_components/dropoff-flow';
 
@@ -24,11 +24,16 @@ type AssignmentWithJoins = DeliveryAssignment & {
   invoice: any;
 };
 
-const ASSIGNMENT_SELECT = `*, repair:repairs(*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone), invoices(*))`;
+const ASSIGNMENT_SELECT = `*, repair:repairs(*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone), invoices(*)), ewaste:ewaste(*, customer:users!ewaste_customer_id_fkey(full_name, phone))`;
 
 const getArea = (address: string | null | undefined) => {
   if (!address) return 'Other';
   return NAGPUR_AREAS.find(a => address.toLowerCase().includes(a.toLowerCase())) || 'Other';
+};
+
+const getNavigationUrl = (address: string | null | undefined) => {
+  if (!address) return '#';
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
 };
 
 export default function DeliveryDashboard() {
@@ -90,7 +95,8 @@ export default function DeliveryDashboard() {
   const groupByArea = (jobs: AssignmentWithJoins[]) => {
     const groups: Record<string, AssignmentWithJoins[]> = {};
     jobs.forEach(j => {
-      const area = getArea(j.repair?.address);
+      const address = j.repair?.address || j.ewaste?.address;
+      const area = getArea(address);
       (groups[area] ??= []).push(j);
     });
     return groups;
@@ -109,7 +115,7 @@ export default function DeliveryDashboard() {
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const pickupCount = todayJobs.filter(j => j.job_type === 'pickup').length;
   const dropoffCount = todayJobs.filter(j => j.job_type === 'dropoff').length;
-  const areaCount = new Set(todayJobs.map(j => getArea(j.repair?.address))).size;
+  const areaCount = new Set(todayJobs.map(j => getArea(j.repair?.address || j.ewaste?.address))).size;
 
   const stats = [
     { icon: Truck, color: 'text-[#FF5C00]', count: pickupCount, label: 'Pickups' },
@@ -206,15 +212,15 @@ export default function DeliveryDashboard() {
                           className="bg-white border border-[#E8E4DF] rounded-2xl p-5 cursor-pointer hover:border-[#FF5C00]/30 hover:shadow-[0_8px_30px_rgba(255,92,0,0.05)] transition-all group shadow-sm">
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="min-w-0">
-                              <h4 className="text-[#1A1A1A] font-semibold truncate">{job.repair?.customer?.full_name}</h4>
-                              <a href={`tel:${job.repair?.customer?.phone}`} onClick={e => e.stopPropagation()}
+                              <h4 className="text-[#1A1A1A] font-semibold truncate">{job.repair?.customer?.full_name || job.ewaste?.customer?.full_name || 'Unknown Customer'}</h4>
+                              <a href={`tel:${job.repair?.customer?.phone || job.ewaste?.customer?.phone}`} onClick={e => e.stopPropagation()}
                                 className="text-[#FF5C00] text-sm flex items-center gap-1.5 mt-0.5 hover:underline font-medium">
-                                <Phone className="w-3 h-3" />{job.repair?.customer?.phone || 'N/A'}
+                                <Phone className="w-3 h-3" />{job.repair?.customer?.phone || job.ewaste?.customer?.phone || 'N/A'}
                               </a>
                             </div>
                             <div className="flex flex-col items-end gap-1 shrink-0">
                               <Badge className={`${job.job_type === 'pickup' ? 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20' : 'bg-blue-500/10 text-blue-600 border-blue-500/20'}`}>
-                                {job.job_type === 'pickup' ? 'PICKUP' : 'DROP-OFF'}
+                                {job.job_type === 'pickup' ? (job.ewaste ? 'E-WASTE PICKUP' : 'PICKUP') : 'DROP-OFF'}
                               </Badge>
                               <Badge variant="outline" className="border-[#E8E4DF] text-[#1A1A1A]/60 text-[10px] bg-[#F7F7F5]">
                                 {DELIVERY_STATUS_LABELS[job.status as DeliveryStatus]}
@@ -222,18 +228,31 @@ export default function DeliveryDashboard() {
                             </div>
                           </div>
                           <div className="space-y-1.5 text-sm text-[#1A1A1A]/70 mb-3">
-                            <p className="flex items-start gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span className="line-clamp-2">{job.repair?.address || 'No address'}</span></p>
+                            <p className="flex items-start gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span className="line-clamp-2">{job.repair?.address || job.ewaste?.address || 'No address'}</span></p>
                             <p className="flex items-center gap-1.5">
                               <Smartphone className="w-3.5 h-3.5" />
-                              {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : job.repair?.manual_model}
+                              {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : (job.repair?.manual_model || job.ewaste?.device_description || 'Unknown Device')}
                               {job.repair?.repair_type && <span className="text-[#1A1A1A]/40 ml-1">• {job.repair.repair_type.replace(/_/g, ' ')}</span>}
                             </p>
                           </div>
                           {job.special_instructions && (
                             <p className="text-amber-700 text-xs mb-3 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded font-medium">⚠ {job.special_instructions}</p>
                           )}
-                          <div className="flex items-center justify-end text-[#FF5C00] text-xs font-semibold group-hover:translate-x-0.5 transition-transform">
-                            Open Job <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                          <div className="flex items-center justify-between mt-2 pt-3 border-t border-[#E8E4DF]/60">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 text-[#FF5C00] hover:text-[#FF5C00] hover:bg-[#FF5C00]/10 px-2 -ml-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(getNavigationUrl(job.repair?.address || job.ewaste?.address), '_blank');
+                              }}
+                            >
+                              <Navigation className="w-3.5 h-3.5 mr-1.5" /> Navigate
+                            </Button>
+                            <div className="flex items-center text-[#1A1A1A]/40 group-hover:text-[#FF5C00] text-xs font-semibold group-hover:translate-x-0.5 transition-all">
+                              Open <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                            </div>
                           </div>
                         </motion.div>
                       ))}
@@ -275,13 +294,13 @@ export default function DeliveryDashboard() {
                     {jobs.map(job => (
                       <div key={job.id} className="bg-white border border-[#E8E4DF]/60 rounded-2xl p-4 opacity-90 shadow-xs hover:border-[#FF5C00]/20 transition-all">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[#1A1A1A] font-semibold text-sm">{job.repair?.customer?.full_name}</span>
+                          <span className="text-[#1A1A1A] font-semibold text-sm">{job.repair?.customer?.full_name || job.ewaste?.customer?.full_name || 'Unknown Customer'}</span>
                           <Badge className={`text-[10px] ${job.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20'}`}>
                             {DELIVERY_STATUS_LABELS[job.status as DeliveryStatus]}
                           </Badge>
                         </div>
                         <p className="text-[#1A1A1A]/60 text-xs font-medium">
-                          {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : job.repair?.manual_model}
+                          {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : (job.repair?.manual_model || job.ewaste?.device_description || 'Unknown Device')}
                           <span className="mx-1 text-[#1A1A1A]/30">•</span>
                           {job.job_type === 'pickup' ? 'Pickup' : 'Drop-off'}
                         </p>
