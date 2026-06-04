@@ -106,18 +106,17 @@ export default function AdminEwastePage() {
     if (!selectedDeliveryBoy) { toast.error('Select a delivery boy'); return; }
     setUpdating(item.id);
     try {
+      const today = new Date().toISOString().split('T')[0];
       const { error } = await supabase.from('delivery_assignments').insert({
         ewaste_id: item.id,
         delivery_boy_id: selectedDeliveryBoy,
         job_type: 'pickup',
-        status: 'assigned'
+        status: 'assigned',
+        scheduled_date: today
       });
       if (error) throw error;
       
-      const { error: ewasteError } = await supabase.from('ewaste').update({ status: 'picked_up' }).eq('id', item.id);
-      if (ewasteError) throw ewasteError;
-
-      toast.success('Delivery boy assigned and status updated to picked_up');
+      toast.success('Delivery boy assigned for pickup today');
       fetchData();
       setDetailsDialog({ open: false, item: null });
       setSelectedDeliveryBoy('');
