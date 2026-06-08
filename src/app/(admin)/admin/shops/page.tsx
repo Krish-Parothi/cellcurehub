@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { setAdminShopOverride } from '@/lib/use-shop-id';
 import { NAGPUR_AREAS } from '@/lib/types';
 import type { Shop, User } from '@/lib/types';
@@ -22,7 +22,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Store, Plus, Trash2, UserPlus, Loader2, ExternalLink } from 'lucide-react';
 
 export default function ShopsPage() {
-  const { user } = useAuth();
+  
   const router = useRouter();
   const [shops, setShops] = useState<Shop[]>([]);
   const [shopAdmins, setShopAdmins] = useState<User[]>([]);
@@ -44,7 +44,7 @@ export default function ShopsPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (user?.role === 'admin') fetchData(); }, [user, fetchData]);
+  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const getShopAdmin = (shopId: string) => shopAdmins.find(sa => sa.shop_id === shopId);
 

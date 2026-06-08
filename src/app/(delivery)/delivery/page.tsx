@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { useAuth } from '@/lib/auth-context';
 import { NAGPUR_AREAS, DELIVERY_STATUS_LABELS } from '@/lib/types';
 import type { DeliveryAssignment, DeliveryStatus } from '@/lib/types';
@@ -37,27 +38,26 @@ const getNavigationUrl = (address: string | null | undefined) => {
 };
 
 export default function DeliveryDashboard() {
-  const { user } = useAuth();
   const [todayJobs, setTodayJobs] = useState<AssignmentWithJoins[]>([]);
   const [completedJobs, setCompletedJobs] = useState<AssignmentWithJoins[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Flow sheets
   const [pickupOpen, setPickupOpen] = useState(false);
   const [dropoffOpen, setDropoffOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<AssignmentWithJoins | null>(null);
 
-  const fetchJobs = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
+  // We need a stable user reference for the fetch callback
+  const { user: authUser } = useAuth();
 
+  const fetchJobs = useCallback(async () => {
+    if (!authUser) return;
     const today = new Date().toISOString().split('T')[0];
 
     const [todayRes, completedRes] = await Promise.all([
       supabase
         .from('delivery_assignments')
         .select(ASSIGNMENT_SELECT)
-        .eq('delivery_boy_id', user.id)
+        .eq('delivery_boy_id', authUser.id)
         .eq('scheduled_date', today)
         .neq('status', 'delivered')
         .neq('status', 'returned')
@@ -65,7 +65,7 @@ export default function DeliveryDashboard() {
       supabase
         .from('delivery_assignments')
         .select(ASSIGNMENT_SELECT)
-        .eq('delivery_boy_id', user.id)
+        .eq('delivery_boy_id', authUser.id)
         .in('status', ['delivered', 'returned'])
         .order('scheduled_date', { ascending: false })
         .limit(50),
@@ -76,14 +76,12 @@ export default function DeliveryDashboard() {
 
     setTodayJobs((todayRes.data as AssignmentWithJoins[]) || []);
     setCompletedJobs((completedRes.data as AssignmentWithJoins[]) || []);
-    setLoading(false);
-  }, [user]);
+  }, [authUser]);
 
-  useEffect(() => {
-    if (user && (user.role === 'delivery' || user.role === 'admin' || user.role === 'shop_admin')) {
-      fetchJobs();
-    }
-  }, [user, fetchJobs]);
+  const { user, loading } = useAuthFetch(fetchJobs, {
+    requiredRole: ['delivery', 'admin'],
+    realtimeTable: 'delivery_assignments',
+  });
 
   const openJob = (job: AssignmentWithJoins) => {
     setSelectedJob(job);

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { Repair, User } from '@/lib/types';
 import { updateRepairStatus } from '@/lib/actions/repairs';
@@ -14,7 +14,7 @@ import { Footer } from '@/components/footer';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
-import { Wrench, CheckCircle, Timer } from 'lucide-react';
+import { Wrench, CheckCircle, Timer, Clock } from 'lucide-react';
 import JobDetailSheet from './_components/job-detail-sheet';
 
 type RepairWithJoins = Repair & {
@@ -30,8 +30,8 @@ const KANBAN_COLUMNS = [
   { label: 'Done', statuses: ['done'], color: '#00D084' },
 ];
 
-function getSlaTime(createdAt: string) {
-  const deadline = new Date(createdAt).getTime() + 48 * 60 * 60 * 1000;
+function getSlaTime(createdAt: string, slaDeadline: string | null) {
+  const deadline = slaDeadline ? new Date(slaDeadline).getTime() : new Date(createdAt).getTime() + 48 * 60 * 60 * 1000;
   const now = Date.now();
   const remaining = deadline - now;
   if (remaining <= 0) return { text: 'SLA EXPIRED', color: 'text-red-600 font-bold animate-pulse', expired: true };
@@ -42,9 +42,7 @@ function getSlaTime(createdAt: string) {
 }
 
 export default function TechnicianDashboard() {
-  const { user } = useAuth();
   const [repairs, setRepairs] = useState<RepairWithJoins[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedRepair, setSelectedRepair] = useState<RepairWithJoins | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [, setTick] = useState(0);
@@ -56,40 +54,20 @@ export default function TechnicianDashboard() {
   }, []);
 
   const fetchRepairs = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
     const { data, error } = await supabase
       .from('repairs')
       .select('*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone)')
-      .eq('technician_id', user.id)
       .in('status', ['booked', 'pickup_scheduled', 'device_received', 'diagnostic', 'repair_in_progress', 'qa_testing', 'done'])
       .order('created_at', { ascending: false });
       
     if (error) { toast.error('Failed to fetch repairs'); } 
     else { setRepairs((data as RepairWithJoins[]) || []); }
-    setLoading(false);
-  }, [user]);
+  }, []);
 
-  useEffect(() => {
-    if (user && (user.role === 'technician' || user.role === 'admin' || user.role === 'shop_admin')) {
-      fetchRepairs();
-      
-      // Realtime subscription
-      const channel = supabase
-        .channel('technician_repairs')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'repairs',
-          filter: `technician_id=eq.${user.id}`
-        }, (payload) => {
-          fetchRepairs(); // Refetch to get joins easily
-        })
-        .subscribe();
-        
-      return () => { supabase.removeChannel(channel); };
-    }
-  }, [user, fetchRepairs]);
+  const { user, loading } = useAuthFetch(fetchRepairs, {
+    requiredRole: ['technician', 'admin', 'shop_admin'],
+    realtimeTable: 'repairs',
+  });
 
   const handleStatusUpdate = async (repairId: string, newStatus: string) => {
     console.debug('[TECH:STATUS_UPDATE] Starting...', { repairId, newStatus, userId: user?.id });
@@ -158,7 +136,6 @@ export default function TechnicianDashboard() {
                 </div>
                 <div className="space-y-3 min-h-[200px]">
                   {colRepairs.map((repair, ri) => {
-                    const sla = getSlaTime(repair.created_at);
                     return (
                       <motion.div key={repair.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: ri * 0.05 }}
                         onClick={() => { setSelectedRepair(repair); setSheetOpen(true); }}
@@ -169,15 +146,28 @@ export default function TechnicianDashboard() {
                           <span className="text-sm font-semibold text-[#1A1A1A] truncate pr-2">
                             {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
                           </span>
-                          {repair.approval_status === 'pending' && <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] absolute right-2 top-2">Waiting Approval</Badge>}
+                          {repair.repair_type === 'custom' && <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] absolute right-2 top-2">Custom Repair</Badge>}
                         </div>
                         <div className="flex flex-col gap-1 mb-3">
                           <span className="text-xs text-[#1A1A1A]/70 truncate font-medium">{repair.customer?.full_name}</span>
                           <span className="text-xs text-[#1A1A1A]/50 truncate">{repair.repair_type === 'custom' ? repair.custom_repair_description : repair.repair_type?.replace(/_/g, ' ')}</span>
                         </div>
-                        <div className={`flex items-center gap-1.5 text-[11px] bg-[#F7F7F5] border border-[#E8E4DF] px-2 py-1 rounded w-fit ${sla.color}`}>
-                          <Timer className="w-3 h-3" /> {sla.text}
-                        </div>
+                        {['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(repair.status) ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-700 font-semibold text-xs border border-green-500/20">
+                            <CheckCircle className="w-3.5 h-3.5" /> Completed
+                          </div>
+                        ) : repair.status === 'wocr' ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-700 font-semibold text-xs border border-yellow-500/20">
+                            <Clock className="w-3.5 h-3.5" /> WOCR
+                          </div>
+                        ) : (() => {
+                          const sla = getSlaTime(repair.created_at, repair.sla_deadline);
+                          return (
+                            <div className={`flex items-center gap-1.5 text-[11px] bg-[#F7F7F5] border border-[#E8E4DF] px-2 py-1 rounded w-fit ${sla.color}`}>
+                              <Timer className="w-3 h-3" /> {sla.text}
+                            </div>
+                          );
+                        })()}
                       </motion.div>
                     );
                   })}

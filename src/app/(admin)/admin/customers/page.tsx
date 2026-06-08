@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { User, Repair, RepairStatus } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,7 +31,7 @@ const statusColor = (s: string) => {
 };
 
 export default function CustomersPage() {
-  const { user } = useAuth();
+  
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -61,7 +61,7 @@ export default function CustomersPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (user?.role === 'admin') fetchData(); }, [user, fetchData]);
+  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const openProfile = async (c: any) => {
     setSelectedCustomer(c);

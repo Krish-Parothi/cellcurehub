@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { useShopId } from '@/lib/use-shop-id';
 import type { User, Attendance, AttendanceStatus, SalaryConfig, Holiday } from '@/lib/types';
 import { useForm } from 'react-hook-form';
@@ -38,13 +38,11 @@ const addStaffSchema = z.object({
 type AddStaffForm = z.infer<typeof addStaffSchema>;
 
 export default function ShopStaffPage() {
-  const { user } = useAuth();
   const shopId = useShopId();
   const [staff, setStaff] = useState<User[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [salaryConfigs, setSalaryConfigs] = useState<SalaryConfig[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [addDialog, setAddDialog] = useState(false);
   const [addingStaff, setAddingStaff] = useState(false);
@@ -56,7 +54,6 @@ export default function ShopStaffPage() {
 
   const fetchData = useCallback(async () => {
     if (!shopId) return;
-    setLoading(true);
     const monthStr = currentMonth.toISOString().split('T')[0];
     const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0];
 
@@ -71,10 +68,13 @@ export default function ShopStaffPage() {
     setAttendance(attRes.data || []);
     setHolidays(holRes.data || []);
     setSalaryConfigs(salRes.data || []);
-    setLoading(false);
   }, [shopId, currentMonth]);
 
-  useEffect(() => { if ((user?.role === 'shop_admin' || user?.role === 'admin') && shopId) fetchData(); }, [user, shopId, fetchData]);
+  const { user, loading } = useAuthFetch(fetchData, {
+    requiredRole: ['shop_admin', 'admin'],
+    deps: [shopId],
+    realtimeTable: 'repairs',
+  });
 
   const toggleActive = async (s: User) => {
     await supabase.from('users').update({ is_active: !s.is_active }).eq('id', s.id);

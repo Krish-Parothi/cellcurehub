@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { useShopId } from '@/lib/use-shop-id';
 import { REPAIR_STATUS_LABELS, REPAIR_STATUS_ORDER } from '@/lib/types';
 import type { RepairStatus, User } from '@/lib/types';
@@ -35,10 +35,8 @@ const statusColor = (s: string) => {
 };
 
 export default function ShopRepairsPage() {
-  const { user } = useAuth();
   const shopId = useShopId();
   const [repairs, setRepairs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedRepair, setSelectedRepair] = useState<any | null>(null);
@@ -54,7 +52,6 @@ export default function ShopRepairsPage() {
 
   const fetchRepairs = useCallback(async () => {
     if (!shopId) return;
-    setLoading(true);
     const { data } = await supabase.from('repairs')
       .select('*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone), technician:users!repairs_technician_id_fkey(full_name)')
       .eq('shop_id', shopId).order('created_at', { ascending: false }).limit(200);
@@ -64,10 +61,13 @@ export default function ShopRepairsPage() {
       .select('*, repair:repairs!inner(id, shop_id, customer:users!repairs_customer_id_fkey(full_name), device:devices(brand, model_name), technician:users!repairs_technician_id_fkey(full_name))')
       .eq('repair.shop_id', shopId).eq('admin_confirmed', false);
     setPendingRcas(rcas || []);
-    setLoading(false);
   }, [shopId]);
 
-  useEffect(() => { if ((user?.role === 'shop_admin' || user?.role === 'admin') && shopId) fetchRepairs(); }, [user, shopId, fetchRepairs]);
+  const { user, loading } = useAuthFetch(fetchRepairs, {
+    requiredRole: ['shop_admin', 'admin'],
+    deps: [shopId],
+    realtimeTable: 'repairs',
+  });
 
   const openRepairSheet = async (repair: any) => {
     console.debug('[SHOP_OPEN_REPAIR]', { repairId: repair.id, status: repair.status });

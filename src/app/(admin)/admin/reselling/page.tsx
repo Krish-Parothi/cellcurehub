@@ -25,7 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
   credited: 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20',
 };
 
-export default function AdminEwastePage() {
+export default function AdminResellingPage() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -44,7 +44,7 @@ export default function AdminEwastePage() {
     let query = supabase
       .from('ewaste')
       .select('*, customer:users!ewaste_customer_id_fkey(full_name, phone)')
-      .eq('category', 'ewaste')
+      .eq('category', 'resell')
       .order('created_at', { ascending: false });
       
     if (statusFilter !== 'all') {
@@ -135,8 +135,8 @@ export default function AdminEwastePage() {
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1A1A1A]">E-Waste Submissions</h1>
-          <p className="text-[#1A1A1A]/50 text-sm mt-1">Manage customer device recycling and trade-ins</p>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Phone Reselling</h1>
+          <p className="text-[#1A1A1A]/50 text-sm mt-1">Manage customer phone reselling requests</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {['all', 'pending', 'valued', 'picked_up', 'credited'].map(filter => (
@@ -161,7 +161,7 @@ export default function AdminEwastePage() {
             <div className="p-12 flex flex-col items-center text-center">
               <Recycle className="w-12 h-12 text-[#1A1A1A]/20 mb-4" />
               <h3 className="text-xl font-semibold text-[#1A1A1A] mb-2">No submissions found</h3>
-              <p className="text-[#1A1A1A]/50 text-sm">There are no E-waste submissions matching this filter.</p>
+              <p className="text-[#1A1A1A]/50 text-sm">There are no Phone Reselling submissions matching this filter.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -171,7 +171,8 @@ export default function AdminEwastePage() {
                     <TableHead className="text-[#1A1A1A]/50 font-medium whitespace-nowrap">Date</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Customer</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Device</TableHead>
-                    <TableHead className="text-[#1A1A1A]/50 font-medium">Value</TableHead>
+                    <TableHead className="text-[#1A1A1A]/50 font-medium">Requested Price</TableHead>
+                    <TableHead className="text-[#1A1A1A]/50 font-medium">Admin Offer</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Status</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium text-right">Actions</TableHead>
                   </TableRow>
@@ -191,12 +192,17 @@ export default function AdminEwastePage() {
                         <p className="text-[#1A1A1A]/50 text-xs capitalize">Condition: {sub.condition?.replace('_', ' ')}</p>
                       </TableCell>
                       <TableCell>
+                        <span className="text-[#1A1A1A] font-semibold flex items-center">
+                          <IndianRupee className="w-3.5 h-3.5 mr-0.5" />{sub.requested_price ? fmt(sub.requested_price) : 'N/A'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
                         {sub.quoted_value ? (
                           <span className="text-[#FF5C00] font-semibold flex items-center">
                             <IndianRupee className="w-3.5 h-3.5 mr-0.5" />{fmt(sub.quoted_value)}
                           </span>
                         ) : (
-                          <span className="text-[#1A1A1A]/40 text-sm">Not valued</span>
+                          <span className="text-[#1A1A1A]/40 text-sm">Not offered yet</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -261,7 +267,12 @@ export default function AdminEwastePage() {
               {/* Valuation Section — show when pending */}
               {detailsDialog.item.status === 'pending' && (
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
-                  <h4 className="font-semibold text-blue-900">Set Device Valuation</h4>
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-semibold text-blue-900">Make an Offer</h4>
+                    <span className="text-sm text-blue-800 font-medium bg-blue-100 px-2 py-1 rounded">
+                      Customer Requested: <span className="font-bold">₹{detailsDialog.item.requested_price ? fmt(detailsDialog.item.requested_price) : 'N/A'}</span>
+                    </span>
+                  </div>
                   <div className="flex gap-2 items-center">
                     <Input type="number" value={valuationAmount} onChange={e => setValuationAmount(e.target.value)} placeholder="Enter value (₹)" className="bg-white text-[#1A1A1A]" />
                     <Button onClick={() => setValuation(detailsDialog.item)} disabled={updating === detailsDialog.item.id} className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap">Set Value</Button>
@@ -274,7 +285,7 @@ export default function AdminEwastePage() {
                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
                   <h4 className="font-semibold text-emerald-900">Assign Pickup</h4>
                   {detailsDialog.item.quoted_value && (
-                    <p className="text-sm text-emerald-800">Valued at: <span className="font-bold">₹{fmt(detailsDialog.item.quoted_value)}</span></p>
+                    <p className="text-sm text-emerald-800">Agreed Offer: <span className="font-bold">₹{fmt(detailsDialog.item.quoted_value)}</span></p>
                   )}
                   <div className="flex gap-2 items-center">
                     <Select value={selectedDeliveryBoy} onValueChange={setSelectedDeliveryBoy}>

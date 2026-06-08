@@ -9,19 +9,19 @@ export type RepairStatus =
   | 'qa_testing'
   | 'ready'
   | 'done'
-  | 'pending_approval'
   | 'out_for_delivery'
   | 'delivered'
-  | 'cancelled';
+  | 'cancelled'
+  | 'wocr';
 
 export type PickupType = 'home' | 'store';
 export type PaymentStatus = 'pending' | 'paid';
 export type PaymentMethod = 'cash' | 'upi' | 'card';
-export type EwasteStatus = 'pending' | 'admin_offered' | 'valued' | 'agreed' | 'rejected' | 'picked_up' | 'credited';
+export type EwasteStatus = 'pending' | 'valued' | 'picked_up' | 'credited';
+export type EwasteCategory = 'ewaste' | 'resell';
 export type DeviceCategory = 'smartphone' | 'laptop' | 'tablet';
 export type TimeSlot = 'morning' | 'afternoon' | 'evening';
 export type EwasteCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'dead' | 'powers_off';
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface User {
   id: string;
@@ -29,6 +29,7 @@ export interface User {
   full_name: string;
   email: string | null;
   phone: string | null;
+  phone_verified: boolean;
   role: UserRole;
   avatar_url: string | null;
   created_at: string;
@@ -65,11 +66,11 @@ export interface Repair {
   preferred_date: string | null;
   time_slot: TimeSlot | null;
   shop_id: string | null;
-  approval_status: ApprovalStatus | null;
-  approval_photo_url: string | null;
-  approval_note: string | null;
   delivered_at: string | null;
   follow_up_sent: boolean;
+  sla_deadline: string | null;
+  sla_extended: boolean;
+  sla_extension_reason: string | null;
   device?: Device;
   customer?: User;
   technician?: User;
@@ -135,10 +136,11 @@ export interface Ewaste {
   condition_description: string | null;
   quoted_value: number | null;
   payout_method: string | null;
+  address: string | null;
+  category: EwasteCategory;
   requested_price: number | null;
   admin_offer: number | null;
   customer_agreed: boolean | null;
-  address: string | null;
   customer?: User;
 }
 
@@ -172,6 +174,7 @@ export interface Pricing {
   repair_type: string;
   min_price: number;
   max_price: number;
+  estimated_cost: number;
   updated_at: string;
 }
 
@@ -194,10 +197,10 @@ export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
   qa_testing: 'QA Testing',
   ready: 'Ready for Delivery',
   done: 'Done',
-  pending_approval: 'Pending Approval',
   out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
+  wocr: 'Waiting on Customer',
 };
 
 export const REPAIR_STATUS_ORDER: RepairStatus[] = [
@@ -207,6 +210,7 @@ export const REPAIR_STATUS_ORDER: RepairStatus[] = [
   'diagnostic',
   'repair_in_progress',
   'qa_testing',
+  'wocr',
   'ready',
   'out_for_delivery',
   'delivered',
@@ -311,9 +315,7 @@ export interface DeliveryAssignment {
   status: DeliveryStatus;
   scheduled_date: string | null;
   special_instructions: string | null;
-  intake_photos: string[] | null;
-  intake_condition: Record<string, boolean | string> | null;
-  customer_signature_url: string | null;
+
   pickup_otp: string | null;
   delivery_otp: string | null;
   created_at: string;
@@ -334,14 +336,7 @@ export interface Notification {
   created_at: string;
 }
 
-export const INTAKE_CONDITION_CHECKS = [
-  { key: 'screen_intact', label: 'Screen is intact' },
-  { key: 'screen_cracked', label: 'Screen is cracked' },
-  { key: 'device_powers_on', label: 'Device powers on' },
-  { key: 'device_no_power', label: 'Device does not power on' },
-  { key: 'visible_damage', label: 'Visible physical damage' },
-  { key: 'accessories_included', label: 'Accessories included (charger/case)' },
-] as const;
+
 
 export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
   assigned: 'Assigned',

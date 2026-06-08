@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { RepairStatus } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,14 +27,11 @@ const statusColor = (s: string) => {
 };
 
 export default function CommandCenter() {
-  const { user } = useAuth();
-  const [stats, setStats] = useState({ openRepairs: 0, outForDelivery: 0, todayRevenue: 0, pendingPayments: 0, pendingApprovals: 0, pendingRca: 0 });
+  const [stats, setStats] = useState({ openRepairs: 0, outForDelivery: 0, todayRevenue: 0, pendingPayments: 0, pendingEwaste: 0, pendingRca: 0 });
   const [timeline, setTimeline] = useState<any[]>([]);
   const [followUps, setFollowUps] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchDashboardData = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0];
 
     const [openRes, ofdRes, revRes, pendRes, apprRes, rcaRes, tlRes, fuRes] = await Promise.all([
@@ -42,7 +39,7 @@ export default function CommandCenter() {
       supabase.from('repairs').select('id', { count: 'exact', head: true }).eq('status', 'out_for_delivery'),
       supabase.from('invoices').select('total').eq('payment_status', 'paid').gte('created_at', today),
       supabase.from('invoices').select('total').eq('payment_status', 'pending'),
-      supabase.from('repairs').select('id', { count: 'exact', head: true }).eq('approval_status', 'pending'),
+      supabase.from('ewaste').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('rca_reports').select('id', { count: 'exact', head: true }).eq('admin_confirmed', false),
       supabase.from('repair_timeline').select('*, repair:repairs(id, customer:users!repairs_customer_id_fkey(full_name), device:devices(brand, model_name))').order('created_at', { ascending: false }).limit(20),
       supabase.from('repairs').select('*, customer:users!repairs_customer_id_fkey(full_name, phone), device:devices(model_name)').eq('status', 'delivered').eq('follow_up_sent', false),
@@ -56,31 +53,23 @@ export default function CommandCenter() {
       outForDelivery: ofdRes.count || 0,
       todayRevenue: todayRev,
       pendingPayments: pendPay,
-      pendingApprovals: apprRes.count || 0,
+      pendingEwaste: apprRes.count || 0,
       pendingRca: rcaRes.count || 0,
     });
     setTimeline(tlRes.data || []);
 
-    // Filter 48h+ follow-ups client-side
     const now = Date.now();
     const fups = (fuRes.data || []).filter((r: any) => {
       const delivered = r.delivered_at ? new Date(r.delivered_at).getTime() : new Date(r.updated_at).getTime();
       return (now - delivered) > 48 * 60 * 60 * 1000;
     });
     setFollowUps(fups);
-    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      fetchData();
-      // Realtime subscriptions
-      const ch1 = supabase.channel('admin_repairs').on('postgres_changes', { event: '*', schema: 'public', table: 'repairs' }, () => fetchData()).subscribe();
-      const ch2 = supabase.channel('admin_timeline').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'repair_timeline' }, () => fetchData()).subscribe();
-      const ch3 = supabase.channel('admin_invoices').on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => fetchData()).subscribe();
-      return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); supabase.removeChannel(ch3); };
-    }
-  }, [user, fetchData]);
+  const { loading } = useAuthFetch(fetchDashboardData, {
+    requiredRole: 'admin',
+    realtimeTable: 'repairs',
+  });
 
   const sendFollowUp = async (repair: any) => {
     const phone = repair.customer?.phone?.replace(/\D/g, '');
@@ -96,7 +85,7 @@ export default function CommandCenter() {
     { icon: Truck, label: 'Out for Delivery', value: stats.outForDelivery, color: 'text-cyan-600' },
     { icon: IndianRupee, label: "Today's Revenue", value: `₹${fmt(stats.todayRevenue)}`, color: 'text-[#FF5C00]' },
     { icon: Clock, label: 'Pending Payments', value: `₹${fmt(stats.pendingPayments)}`, color: 'text-amber-600' },
-    { icon: AlertTriangle, label: 'Pending Approvals', value: stats.pendingApprovals, color: 'text-red-600' },
+    { icon: AlertTriangle, label: 'Pending E-waste Valuations', value: stats.pendingEwaste, color: 'text-red-600' },
     { icon: FileSearch, label: 'Pending RCA Reviews', value: stats.pendingRca, color: 'text-purple-600' },
   ];
 
@@ -107,7 +96,6 @@ export default function CommandCenter() {
         <p className="text-[#1A1A1A]/60 text-sm mt-1">Real-time overview of all operations</p>
       </motion.div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {statCards.map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
@@ -126,7 +114,6 @@ export default function CommandCenter() {
         ))}
       </div>
 
-      {/* Live Activity Feed */}
       <Card className="bg-white border-[#E8E4DF] shadow-sm">
         <CardHeader className="pb-3 border-b border-[#E8E4DF]">
           <CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><Activity className="w-4 h-4 text-[#FF5C00]" /> Live Activity Feed</CardTitle>

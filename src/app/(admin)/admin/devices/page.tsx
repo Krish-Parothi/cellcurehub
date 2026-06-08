@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { DEVICE_BRANDS } from '@/lib/types';
 import type { Device } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,7 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Smartphone, Plus, Trash2, ChevronDown } from 'lucide-react';
 
 export default function DevicesPage() {
-  const { user } = useAuth();
+  
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialog, setAddDialog] = useState(false);
@@ -34,7 +34,7 @@ export default function DevicesPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (user?.role === 'admin') fetchDevices(); }, [user, fetchDevices]);
+  const { user } = useAuthFetch(fetchDevices, { requiredRole: 'admin' });
 
   const brandGroups = devices.reduce((acc, d) => { (acc[d.brand] ??= []).push(d); return acc; }, {} as Record<string, Device[]>);
 

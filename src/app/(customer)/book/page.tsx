@@ -32,11 +32,6 @@ const REPAIR_TYPE_ICONS: Record<string, React.ElementType> = {
   water_damage: Droplets, software_issue: HardDrive, custom: Settings,
 };
 
-const TIME_SLOTS = [
-  { value: 'morning' as const, label: 'Morning 9–12' },
-  { value: 'afternoon' as const, label: 'Afternoon 12–4' },
-  { value: 'evening' as const, label: 'Evening 4–7' },
-];
 
 export default function BookPage() {
   const router = useRouter();
@@ -62,6 +57,7 @@ export default function BookPage() {
   const [area, setArea] = useState('');
   const [preferredDate, setPreferredDate] = useState<Date | undefined>(undefined);
   const [timeSlot, setTimeSlot] = useState('');
+  const [timeSlots, setTimeSlots] = useState<any[]>([]);
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
 
@@ -78,6 +74,12 @@ export default function BookPage() {
     if (saved) setAddress(saved);
     if (user?.phone) setPhone(user.phone.replace('+91', ''));
   }, [user]);
+
+  // Fetch active time slots
+  useEffect(() => {
+    supabase.from('time_slots').select('*').eq('is_active', true).order('sort_order', { ascending: true })
+      .then(({ data }) => setTimeSlots(data || []));
+  }, []);
 
   // OTP State
   const [showOtp, setShowOtp] = useState(false);
@@ -183,7 +185,7 @@ export default function BookPage() {
         coordinates: coordinates ? `(${coordinates.lng},${coordinates.lat})` : null,
         preferred_date: preferredDate ? preferredDate.toISOString().split('T')[0] : null,
         time_slot: pickupType === 'home' ? timeSlot : null,
-        estimated_cost: pricing?.min_price || null,
+        estimated_cost: pricing?.estimated_cost || null,
       });
 
       if (!result.success) {
@@ -300,10 +302,10 @@ export default function BookPage() {
                         <span className="text-sm text-[#1A1A1A]/70">Estimated Cost:</span>
                         {pricingLoading ? (
                           <span className="text-sm text-[#1A1A1A]/60">Loading...</span>
-                        ) : pricing ? (
-                          <span className="text-lg font-semibold text-[#FF5C00]">₹{pricing.min_price.toLocaleString('en-IN')} – ₹{pricing.max_price.toLocaleString('en-IN')}</span>
+                        ) : pricing && pricing.estimated_cost ? (
+                          <span className="text-lg font-semibold text-[#FF5C00]">₹{pricing.estimated_cost.toLocaleString('en-IN')}</span>
                         ) : (
-                          <span className="text-sm text-[#FF5C00] font-medium">Contact us for pricing</span>
+                          <span className="text-sm text-[#FF5C00] font-medium">Thanks, we will soon let you know the cost</span>
                         )}
                       </div>
                     )}
@@ -392,12 +394,13 @@ export default function BookPage() {
                         {/* Time Slot */}
                         <div className="space-y-2">
                           <Label className="text-[#1A1A1A]/80 text-sm">Time Slot</Label>
-                          <div className="grid grid-cols-3 gap-3">
-                            {TIME_SLOTS.map((slot) => (
-                              <motion.button key={slot.value} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setTimeSlot(slot.value)} className={`flex items-center justify-center gap-1 p-3 rounded-xl border text-sm transition-all ${timeSlot === slot.value ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]' : 'border-[#E8E4DF] bg-[#F7F7F5] text-[#1A1A1A]/60 hover:border-[#E8E4DF]/80'}`}>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {timeSlots.map((slot) => (
+                              <motion.button key={slot.slot_key} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setTimeSlot(slot.slot_key)} className={`flex items-center justify-center gap-1 p-3 rounded-xl border text-sm transition-all ${timeSlot === slot.slot_key ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]' : 'border-[#E8E4DF] bg-[#F7F7F5] text-[#1A1A1A]/60 hover:border-[#E8E4DF]/80'}`}>
                                 <Clock className="w-3.5 h-3.5" /> {slot.label}
                               </motion.button>
                             ))}
+                            {timeSlots.length === 0 && <p className="col-span-full text-xs text-[#1A1A1A]/50">Loading time slots...</p>}
                           </div>
                         </div>
                       </motion.div>

@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Mail, ArrowRight, User, Phone, MapPin, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { sendEmailOtp, verifyEmailOtp } from '@/lib/actions/email-otp';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -29,6 +30,13 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // OTP State
+  const [showOtp, setShowOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [formData, setFormData] = useState<SignupFormData | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -38,20 +46,49 @@ export default function SignupPage() {
   });
 
   const onSubmit = async (data: SignupFormData) => {
+    setFormData(data);
+    setSendingOtp(true);
+    const result = await sendEmailOtp(data.email);
+    setSendingOtp(false);
+    
+    if (!result.success) {
+      toast.error(result.error || 'Failed to send verification email');
+      return;
+    }
+    
+    toast.success('Verification code sent to your email');
+    setShowOtp(true);
+  };
+
+  const handleVerifyOtpAndCreateAccount = async () => {
+    if (!formData || otpCode.length !== 6) return;
+    
+    setVerifyingOtp(true);
+    const verifyResult = await verifyEmailOtp(formData.email, otpCode);
+    
+    if (!verifyResult.success) {
+      toast.error(verifyResult.error || 'Invalid OTP');
+      setVerifyingOtp(false);
+      return;
+    }
+
+    // OTP is valid, create account
     setLoading(true);
-    const { error } = await signUpWithPassword(data.email, data.password, data.fullName, 'customer');
+    const { error } = await signUpWithPassword(formData.email, formData.password, formData.fullName, 'customer');
     if (error) {
       toast.error(error);
       setLoading(false);
+      setVerifyingOtp(false);
       return;
     }
     // Store default address in localStorage
-    localStorage.setItem('cellcurehub_default_address', data.address);
+    localStorage.setItem('cellcurehub_default_address', formData.address);
     // Store phone - will be updated in profile after auth
-    localStorage.setItem('cellcurehub_signup_phone', data.phone);
+    localStorage.setItem('cellcurehub_signup_phone', formData.phone);
     toast.success('Account created successfully!');
     router.push('/dashboard');
     setLoading(false);
+    setVerifyingOtp(false);
   };
 
   const handleGoogleSignIn = async () => {
@@ -144,8 +181,8 @@ export default function SignupPage() {
               {errors.address && <p className="text-red-400 text-xs">{errors.address.message}</p>}
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-medium">
-              {loading ? 'Creating Account...' : (<span className="flex items-center justify-center gap-2">Sign Up <ArrowRight className="w-4 h-4" /></span>)}
+            <Button type="submit" disabled={sendingOtp || loading} className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-medium">
+              {sendingOtp ? 'Sending Code...' : loading ? 'Creating Account...' : (<span className="flex items-center justify-center gap-2">Sign Up <ArrowRight className="w-4 h-4" /></span>)}
             </Button>
           </form>
 
@@ -171,6 +208,39 @@ export default function SignupPage() {
           </p>
         </div>
       </motion.div>
+
+      {/* OTP Modal */}
+      {showOtp && formData && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white border border-[#E8E4DF] p-6 rounded-2xl w-full max-w-sm shadow-xl">
+            <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">Verify Email Address</h3>
+            <p className="text-sm text-[#1A1A1A]/60 mb-6">Enter the 6-digit code sent to {formData.email}</p>
+            
+            <div className="space-y-4">
+              <Input 
+                type="text" 
+                maxLength={6} 
+                value={otpCode} 
+                onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} 
+                placeholder="000000" 
+                className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" 
+              />
+              
+              <Button 
+                disabled={otpCode.length !== 6 || verifyingOtp || loading} 
+                onClick={handleVerifyOtpAndCreateAccount} 
+                className="w-full h-12 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold text-lg"
+              >
+                {verifyingOtp || loading ? 'Verifying...' : 'Verify & Create Account'}
+              </Button>
+              
+              <div className="flex justify-between items-center text-sm">
+                <button onClick={() => setShowOtp(false)} className="text-[#1A1A1A]/50 hover:text-[#1A1A1A]">Cancel</button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }

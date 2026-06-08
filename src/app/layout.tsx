@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-context';
 import { Toaster } from '@/components/ui/sonner';
-import  FloatingChatAssistant  from '@/components/floating-chatbot/floatchat';
+import FloatingChatAssistant from '@/components/floating-chatbot/floatchat';
+import PhoneVerificationModal from '@/components/phone-verification-modal';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,7 +30,8 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <Toaster />
-          < FloatingChatAssistant />
+          <FloatingChatAssistant />
+          <PhoneVerificationModal />
         </AuthProvider>
       </body>
     </html>

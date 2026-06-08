@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Phone, Hash, Clock, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Loader as Loader2, Image as ImageIcon } from 'lucide-react';
+import { Search, Phone, Hash, Clock, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Loader as Loader2 } from 'lucide-react';
 
 export default function TrackPage() {
   const [searchMode, setSearchMode] = useState<'id' | 'phone'>('id');
@@ -26,7 +26,6 @@ export default function TrackPage() {
   const [repair, setRepair] = useState<Repair | null>(null);
   const [timelines, setTimelines] = useState<RepairTimelineEntry[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
-  const [approvalLoading, setApprovalLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
   // Realtime subscription
@@ -81,26 +80,7 @@ export default function TrackPage() {
     }
   };
 
-  // Approval Gateway
-  const handleApprove = async () => {
-    if (!repair) return;
-    setApprovalLoading(true);
-    await supabase.from('repairs').update({ approval_status: 'approved' }).eq('id', repair.id);
-    await supabase.from('repair_timeline').insert({ repair_id: repair.id, status: repair.status, note: 'Customer approved revised quote' });
-    setRepair((prev) => prev ? { ...prev, approval_status: 'approved' } : prev);
-    toast.success('Quote approved! Repair will proceed.');
-    setApprovalLoading(false);
-  };
 
-  const handleReject = async () => {
-    if (!repair) return;
-    setApprovalLoading(true);
-    await supabase.from('repairs').update({ approval_status: 'rejected', status: 'cancelled' }).eq('id', repair.id);
-    await supabase.from('repair_timeline').insert({ repair_id: repair.id, status: 'cancelled', note: 'Customer rejected revised quote — repair cancelled' });
-    setRepair((prev) => prev ? { ...prev, approval_status: 'rejected', status: 'cancelled' } : prev);
-    toast('Repair cancelled.');
-    setApprovalLoading(false);
-  };
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -190,34 +170,6 @@ export default function TrackPage() {
                 </CardContent>
               </Card>
 
-              {/* Approval Gateway */}
-              {repair.approval_status === 'pending' && (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                  <Card className="bg-amber-50 border-amber-200 shadow-sm">
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-amber-600" /></div>
-                        <div>
-                          <CardTitle className="text-lg text-[#1A1A1A]">⚠️ Action Required</CardTitle>
-                          <CardDescription className="text-amber-800/80">Please review the revised quote</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {repair.approval_note && <div className="bg-white rounded-xl p-4 border border-[#E8E4DF] shadow-sm"><p className="text-xs text-gray-500 mb-1">Technician&apos;s Note</p><p className="text-sm text-[#1A1A1A] font-medium">{repair.approval_note}</p></div>}
-                      {repair.approval_photo_url && (
-                        <a href={repair.approval_photo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-[#FF5C00] hover:underline font-medium"><ImageIcon className="w-4 h-4" /> View diagnostic photo</a>
-                      )}
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <Button onClick={handleApprove} disabled={approvalLoading} className="flex-1 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold h-11">
-                          {approvalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4" /> ✓ Approve & Continue</span>}
-                        </Button>
-                        <Button onClick={handleReject} disabled={approvalLoading} variant="outline" className="flex-1 border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 font-semibold h-11">✗ Reject Repair</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
 
               {/* Timeline */}
               <Card className="bg-white border-gray-200 shadow-lg">

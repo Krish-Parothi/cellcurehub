@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { useShopId } from '@/lib/use-shop-id';
 import { REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { RepairStatus } from '@/lib/types';
@@ -33,10 +33,8 @@ const statusColor = (s: string) => {
 };
 
 export default function ShopCustomersPage() {
-  const { user } = useAuth();
   const shopId = useShopId();
   const [customers, setCustomers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -45,11 +43,10 @@ export default function ShopCustomersPage() {
 
   const fetchData = useCallback(async () => {
     if (!shopId) return;
-    setLoading(true);
     // Get distinct customer_ids from this shop's repairs
     const { data: repairData } = await supabase.from('repairs').select('customer_id, id, final_cost, created_at').eq('shop_id', shopId);
     const customerIds = [...new Set((repairData || []).map(r => r.customer_id))];
-    if (customerIds.length === 0) { setCustomers([]); setLoading(false); return; }
+    if (customerIds.length === 0) { setCustomers([]); return; }
 
     const { data: users } = await supabase.from('users').select('*').in('id', customerIds);
     const repairIds = (repairData || []).map((r: any) => r.id);
@@ -64,10 +61,13 @@ export default function ShopCustomersPage() {
       return { ...c, repairCount: cRepairs.length, totalSpent: spent, lastRepair: cRepairs.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())?.[0]?.created_at || null };
     });
     setCustomers(enriched);
-    setLoading(false);
   }, [shopId]);
 
-  useEffect(() => { if ((user?.role === 'shop_admin' || user?.role === 'admin') && shopId) fetchData(); }, [user, shopId, fetchData]);
+  const { user, loading } = useAuthFetch(fetchData, {
+    requiredRole: ['shop_admin', 'admin'],
+    deps: [shopId],
+    realtimeTable: 'repairs',
+  });
 
   const openProfile = async (c: any) => {
     setSelectedCustomer(c); setSheetOpen(true);

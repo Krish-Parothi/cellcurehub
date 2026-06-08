@@ -8,7 +8,7 @@ import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import {
   LayoutDashboard, Wrench, Users, Package, DollarSign, Smartphone,
-  BarChart3, UserCircle, Store, Menu, X, Truck, Activity, Recycle, ShoppingCart
+  BarChart3, UserCircle, Store, Menu, X, Truck, Activity, Recycle, ShoppingCart, Clock
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -17,12 +17,14 @@ const NAV_ITEMS = [
   { href: '/admin/inventory', icon: Package, label: 'Inventory' },
   { href: '/admin/shop', icon: ShoppingCart, label: 'Store' },
   { href: '/admin/ewaste', icon: Recycle, label: 'E-Waste' },
+  { href: '/admin/reselling', icon: Smartphone, label: 'Phone Reselling' },
   { href: '/admin/staff', icon: Users, label: 'Staff' },
   { href: '/admin/pricing', icon: DollarSign, label: 'Pricing' },
   { href: '/admin/devices', icon: Smartphone, label: 'Devices' },
   { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { href: '/admin/customers', icon: UserCircle, label: 'Customers' },
   { href: '/admin/shops', icon: Store, label: 'Shops' },
+  { href: '/admin/timeslots', icon: Clock, label: 'Time Slots' },
   { href: '/technician', icon: Activity, label: 'Tech Dashboard' },
   { href: '/delivery', icon: Truck, label: 'Delivery Dashboard' },
 ];

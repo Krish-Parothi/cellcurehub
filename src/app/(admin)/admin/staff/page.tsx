@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import type { User, Attendance, AttendanceStatus, SalaryConfig, Holiday } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,7 +35,7 @@ type AddStaffForm = z.infer<typeof addStaffSchema>;
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 export default function StaffPage() {
-  const { user } = useAuth();
+  
   const [staff, setStaff] = useState<User[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -76,7 +76,7 @@ export default function StaffPage() {
     setLoading(false);
   }, [currentMonth]);
 
-  useEffect(() => { if (user?.role === 'admin') fetchData(); }, [user, fetchData]);
+  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const toggleActive = async (staffMember: User) => {
     await supabase.from('users').update({ is_active: !staffMember.is_active }).eq('id', staffMember.id);

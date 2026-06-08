@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import type { Part, ShopItem, Shop } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,7 @@ import { Package, ShoppingBag, Plus, Pencil, Trash2, AlertTriangle, CheckCircle,
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 export default function InventoryPage() {
-  const { user } = useAuth();
+  
   const [parts, setParts] = useState<Part[]>([]);
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
@@ -56,7 +56,7 @@ export default function InventoryPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (user?.role === 'admin') fetchData(); }, [user, fetchData]);
+  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const savePart = async () => {
     const payload = { ...partForm, quantity_in_stock: Number(partForm.quantity_in_stock), cost_price: Number(partForm.cost_price), selling_price: Number(partForm.selling_price), low_stock_threshold: Number(partForm.low_stock_threshold), shop_id: partForm.shop_id || null };

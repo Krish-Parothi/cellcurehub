@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import type { ShopItem, Shop } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { Recycle, Plus, Pencil, Trash2, Loader2, Image as ImageIcon } from 'luci
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 export default function AdminShopPage() {
-  const { user } = useAuth();
+  
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,7 @@ export default function AdminShopPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (user?.role === 'admin') fetchData(); }, [user, fetchData]);
+  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const saveShopItem = async () => {
     setUploading(true);

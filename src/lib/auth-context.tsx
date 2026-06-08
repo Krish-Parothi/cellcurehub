@@ -15,6 +15,7 @@ interface AuthContextType {
   verifyOtp: (phone: string, token: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  needsPhoneVerification: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +25,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const initializedRef = useRef(false);
+
+  const needsPhoneVerification = !!user && (!user.phone || !user.phone_verified);
 
   const fetchProfile = useCallback(async (userId: string): Promise<User | null> => {
     try {
@@ -132,11 +135,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, s) => {
         setSession(s);
         if (s?.user) {
-          // If a user just signed in or their metadata updated, fetch the profile.
-          // (We don't do this on TOKEN_REFRESHED to avoid unnecessary DB calls)
           if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            // Full profile sync on sign-in or metadata change
             const profile = await ensureProfile(s.user);
             setUser(profile);
+            setLoading(false);
+          } else if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+            // On token refresh or initial load, re-fetch the profile from DB
+            // to keep user state fresh. This prevents the "null user" flash
+            // that causes pages to appear empty until manual refresh.
+            const profile = await fetchProfile(s.user.id);
+            if (profile) setUser(profile);
             setLoading(false);
           }
         } else {
@@ -147,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => subscription.unsubscribe();
-  }, [ensureProfile]);
+  }, [ensureProfile, fetchProfile]);
 
   const signInWithPassword = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -174,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         full_name: fullName,
         email,
         role,
+        phone_verified: false,
       });
     }
     return { error: null };
@@ -195,7 +205,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: phone,
           phone,
           role: 'customer',
+          phone_verified: true,
         });
+      } else {
+        await supabase.from('users').update({ phone_verified: true }).eq('id', data.user.id);
       }
     }
     return { error: null };
@@ -230,6 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyOtp,
         signInWithGoogle,
         signOut,
+        needsPhoneVerification,
       }}
     >
       {children}

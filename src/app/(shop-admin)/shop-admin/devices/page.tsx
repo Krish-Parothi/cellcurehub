@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import type { Device } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,19 +12,18 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Smartphone, ChevronDown, Info } from 'lucide-react';
 
 export default function ShopDevicesPage() {
-  const { user } = useAuth();
   const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
 
   const fetchDevices = useCallback(async () => {
-    setLoading(true);
     const { data } = await supabase.from('devices').select('*').order('brand').order('model_name');
     setDevices(data || []);
-    setLoading(false);
   }, []);
 
-  useEffect(() => { if (user?.role === 'shop_admin') fetchDevices(); }, [user, fetchDevices]);
+  const { user, loading } = useAuthFetch(fetchDevices, {
+    requiredRole: ['shop_admin', 'admin'],
+    realtimeTable: 'devices',
+  });
 
   const brandGroups = devices.reduce((acc, d) => { (acc[d.brand] ??= []).push(d); return acc; }, {} as Record<string, Device[]>);
 

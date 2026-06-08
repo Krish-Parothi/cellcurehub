@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { useShopId } from '@/lib/use-shop-id';
 import { REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { RepairStatus } from '@/lib/types';
@@ -28,16 +28,13 @@ const statusColor = (s: string) => {
 };
 
 export default function ShopAdminDashboard() {
-  const { user } = useAuth();
   const shopId = useShopId();
   const [stats, setStats] = useState({ openRepairs: 0, outForDelivery: 0, todayRevenue: 0, pendingPayments: 0, pendingRca: 0 });
   const [timeline, setTimeline] = useState<any[]>([]);
   const [followUps, setFollowUps] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     if (!shopId) return;
-    setLoading(true);
     const today = new Date().toISOString().split('T')[0];
 
     const [openRes, ofdRes, revRes, pendRes, rcaRes, tlRes, fuRes] = await Promise.all([
@@ -68,17 +65,13 @@ export default function ShopAdminDashboard() {
       return (now - delivered) > 48 * 60 * 60 * 1000;
     });
     setFollowUps(fups);
-    setLoading(false);
   }, [shopId]);
 
-  useEffect(() => {
-    if ((user?.role === 'shop_admin' || user?.role === 'admin') && shopId) {
-      fetchData();
-      const ch1 = supabase.channel('sa_repairs').on('postgres_changes', { event: '*', schema: 'public', table: 'repairs', filter: `shop_id=eq.${shopId}` }, () => fetchData()).subscribe();
-      const ch2 = supabase.channel('sa_timeline').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'repair_timeline' }, () => fetchData()).subscribe();
-      return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); };
-    }
-  }, [user, shopId, fetchData]);
+  const { user, loading } = useAuthFetch(fetchData, {
+    requiredRole: ['shop_admin', 'admin'],
+    deps: [shopId],
+    realtimeTable: 'repairs',
+  });
 
   const sendFollowUp = async (repair: any) => {
     const phone = repair.customer?.phone?.replace(/\D/g, '');

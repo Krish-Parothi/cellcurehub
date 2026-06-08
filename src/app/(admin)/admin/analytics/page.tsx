@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { NAGPUR_AREAS } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ const COLORS = ['#FF5C00', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 type DateRange = 'today' | 'week' | 'month' | 'all';
 
 export default function AnalyticsPage() {
-  const { user } = useAuth();
+  
   const [range, setRange] = useState<DateRange>('month');
   const [repairs, setRepairs] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
     setLoading(false);
   }, [range]);
 
-  useEffect(() => { if (user?.role === 'admin') fetchData(); }, [user, fetchData]);
+  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   // 1. Revenue by brand
   const brandRevenue: Record<string, number> = {};

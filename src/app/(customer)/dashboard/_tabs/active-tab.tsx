@@ -12,7 +12,7 @@ import RcaModal from '@/components/rca-modal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wrench, Calendar, IndianRupee, CircleCheck as CheckCircle, ChevronDown, ChevronUp, ClipboardCheck, AlertTriangle, Loader as Loader2 } from 'lucide-react';
+import { Wrench, Calendar, IndianRupee, CircleCheck as CheckCircle, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react';
 
 export default function ActiveTab({ userId }: { userId: string }) {
   const [repairs, setRepairs] = useState<Repair[]>([]);
@@ -21,7 +21,7 @@ export default function ActiveTab({ userId }: { userId: string }) {
   const [timelines, setTimelines] = useState<Record<string, RepairTimelineEntry[]>>({});
   const [rcaReport, setRcaReport] = useState<RcaReport | null>(null);
   const [rcaOpen, setRcaOpen] = useState(false);
-  const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+
   const [confirmedRcaIds, setConfirmedRcaIds] = useState<Set<string>>(new Set());
 
   const fetchRepairs = useCallback(async () => {
@@ -61,23 +61,7 @@ export default function ActiveTab({ userId }: { userId: string }) {
     else toast.error('No confirmed RCA report found');
   };
 
-  const handleApprove = async (repairId: string) => {
-    setApprovalLoading(repairId);
-    await supabase.from('repairs').update({ approval_status: 'approved' }).eq('id', repairId);
-    await supabase.from('repair_timeline').insert({ repair_id: repairId, status: 'diagnostic', note: 'Customer approved revised quote', updated_by: userId });
-    toast.success('Quote approved!');
-    setApprovalLoading(null);
-    fetchRepairs();
-  };
 
-  const handleReject = async (repairId: string) => {
-    setApprovalLoading(repairId);
-    await supabase.from('repairs').update({ approval_status: 'rejected', status: 'cancelled' }).eq('id', repairId);
-    await supabase.from('repair_timeline').insert({ repair_id: repairId, status: 'cancelled', note: 'Customer rejected revised quote', updated_by: userId });
-    toast('Repair cancelled.');
-    setApprovalLoading(null);
-    fetchRepairs();
-  };
 
   if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-40 rounded-2xl bg-[#1A1A1A]/5" />)}</div>;
 
@@ -99,17 +83,6 @@ export default function ActiveTab({ userId }: { userId: string }) {
         <div className="space-y-4">
           {repairs.map((r, idx) => (
             <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }} className="bg-white border border-[#E8E4DF] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-              {/* Approval Gateway */}
-              {r.approval_status === 'pending' && (
-                <div className="mb-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                  <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-4 h-4 text-amber-600" /><span className="text-sm font-semibold text-amber-600">⚠️ Action Required</span></div>
-                  {r.approval_note && <p className="text-sm text-[#1A1A1A]/60 mb-3">{r.approval_note}</p>}
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleApprove(r.id)} disabled={approvalLoading === r.id} className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white text-xs">{approvalLoading === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Approve'}</Button>
-                    <Button size="sm" variant="outline" onClick={() => handleReject(r.id)} disabled={approvalLoading === r.id} className="border-red-500/20 text-red-500 hover:bg-red-500/5 text-xs">✗ Reject</Button>
-                  </div>
-                </div>
-              )}
 
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
                 <div>

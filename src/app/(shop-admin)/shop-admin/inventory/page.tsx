@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { useShopId } from '@/lib/use-shop-id';
 import type { Part, ShopItem } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,12 +21,10 @@ import { Package, ShoppingBag, Plus, Pencil, Trash2, AlertTriangle, CheckCircle,
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 export default function ShopInventoryPage() {
-  const { user } = useAuth();
   const shopId = useShopId();
   const [parts, setParts] = useState<Part[]>([]);
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [burnRates, setBurnRates] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
 
   const [partDialog, setPartDialog] = useState<{ open: boolean; part: Part | null }>({ open: false, part: null });
   const [partForm, setPartForm] = useState({ name: '', brand: '', model_compatible: '', quantity_in_stock: 0, cost_price: 0, selling_price: 0, low_stock_threshold: 5 });
@@ -36,7 +34,6 @@ export default function ShopInventoryPage() {
 
   const fetchData = useCallback(async () => {
     if (!shopId) return;
-    setLoading(true);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const [pRes, siRes, buRes] = await Promise.all([
       supabase.from('parts').select('*').eq('shop_id', shopId).order('name'),
@@ -48,10 +45,13 @@ export default function ShopInventoryPage() {
     const rates: Record<string, number> = {};
     (buRes.data || []).forEach((pu: any) => { rates[pu.part_id] = (rates[pu.part_id] || 0) + pu.quantity; });
     setBurnRates(rates);
-    setLoading(false);
   }, [shopId]);
 
-  useEffect(() => { if ((user?.role === 'shop_admin' || user?.role === 'admin') && shopId) fetchData(); }, [user, shopId, fetchData]);
+  const { user, loading } = useAuthFetch(fetchData, {
+    requiredRole: ['shop_admin', 'admin'],
+    deps: [shopId],
+    realtimeTable: 'repairs',
+  });
 
   const savePart = async () => {
     const payload = { ...partForm, quantity_in_stock: Number(partForm.quantity_in_stock), cost_price: Number(partForm.cost_price), selling_price: Number(partForm.selling_price), low_stock_threshold: Number(partForm.low_stock_threshold), shop_id: shopId };

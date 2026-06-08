@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth-context';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { useShopId } from '@/lib/use-shop-id';
 import { NAGPUR_AREAS } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,13 +19,11 @@ const COLORS = ['#FF5C00', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 type DateRange = 'today' | 'week' | 'month' | 'all';
 
 export default function ShopAnalyticsPage() {
-  const { user } = useAuth();
   const shopId = useShopId();
   const [range, setRange] = useState<DateRange>('month');
   const [repairs, setRepairs] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const getDateFilter = () => {
     const now = new Date();
@@ -37,7 +35,6 @@ export default function ShopAnalyticsPage() {
 
   const fetchData = useCallback(async () => {
     if (!shopId) return;
-    setLoading(true);
     const since = getDateFilter();
     const [rRes, iRes, revRes] = await Promise.all([
       supabase.from('repairs').select('*, device:devices(brand, model_name), technician:users!repairs_technician_id_fkey(full_name)').eq('shop_id', shopId).gte('created_at', since),
@@ -45,10 +42,13 @@ export default function ShopAnalyticsPage() {
       supabase.from('reviews').select('*, repair:repairs!inner(technician_id, shop_id)').eq('repair.shop_id', shopId).gte('created_at', since),
     ]);
     setRepairs(rRes.data || []); setInvoices(iRes.data || []); setReviews(revRes.data || []);
-    setLoading(false);
   }, [range, shopId]);
 
-  useEffect(() => { if ((user?.role === 'shop_admin' || user?.role === 'admin') && shopId) fetchData(); }, [user, shopId, fetchData]);
+  const { user, loading } = useAuthFetch(fetchData, {
+    requiredRole: ['shop_admin', 'admin'],
+    deps: [shopId],
+    realtimeTable: 'repairs',
+  });
 
   // Charts data — same calculations as admin
   const brandRevenue: Record<string, number> = {};
