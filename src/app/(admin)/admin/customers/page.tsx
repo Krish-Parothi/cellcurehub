@@ -33,7 +33,7 @@ const statusColor = (s: string) => {
 export default function CustomersPage() {
   
   const [customers, setCustomers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   const [search, setSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -41,7 +41,7 @@ export default function CustomersPage() {
   const [customerReviews, setCustomerReviews] = useState<any[]>([]);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    
     const { data } = await supabase.from('users').select('*').eq('role', 'customer').order('created_at', { ascending: false });
     // Fetch repair counts and spend
     const enriched = await Promise.all((data || []).map(async (c: any) => {
@@ -58,10 +58,10 @@ export default function CustomersPage() {
       };
     }));
     setCustomers(enriched);
-    setLoading(false);
+    
   }, []);
 
-  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
+  const { user, loading } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const openProfile = async (c: any) => {
     setSelectedCustomer(c);

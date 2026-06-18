@@ -27,7 +27,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AdminResellingPage() {
   const [submissions, setSubmissions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
   // Dialog state
@@ -40,7 +40,7 @@ export default function AdminResellingPage() {
   const [selectedDeliveryBoy, setSelectedDeliveryBoy] = useState<string>('');
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    
     let query = supabase
       .from('ewaste')
       .select('*, customer:users!ewaste_customer_id_fkey(full_name, phone)')
@@ -62,10 +62,10 @@ export default function AdminResellingPage() {
     // Also fetch delivery boys
     const { data: dboys } = await supabase.from('users').select('id, full_name, role').in('role', ['admin', 'delivery']);
     setDeliveryBoys(dboys || []);
-    setLoading(false);
+    
   }, [statusFilter]);
 
-  const { user } = useAuthFetch(fetchData, {
+  const { user, loading } = useAuthFetch(fetchData, {
     requiredRole: 'admin',
     deps: [statusFilter],
     realtimeTable: 'ewaste',

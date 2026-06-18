@@ -7,16 +7,18 @@ import RoleGuard from '@/components/role-guard';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import {
-  LayoutDashboard, Wrench, Users, Package, DollarSign, Smartphone,
-  BarChart3, UserCircle, Store, Menu, X, Truck, Activity, Recycle, ShoppingCart, Clock
+  LayoutDashboard, Wrench, Users, Package, DollarSign, Smartphone, Ticket,
+  BarChart3, UserCircle, Store, Menu, X, Truck, Activity, Recycle, ShoppingCart, Clock, Tags, History as HistoryIcon
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/admin', icon: LayoutDashboard, label: 'Command Center' },
+  { href: '/admin/tickets', icon: Ticket, label: 'Tickets' },
   { href: '/admin/repairs', icon: Wrench, label: 'Repairs' },
-  { href: '/admin/inventory', icon: Package, label: 'Inventory' },
+  { href: '/admin/history', icon: HistoryIcon, label: 'History' },
   { href: '/admin/shop', icon: ShoppingCart, label: 'Store' },
   { href: '/admin/ewaste', icon: Recycle, label: 'E-Waste' },
+  { href: '/admin/ewaste-categories', icon: Tags, label: 'E-Waste Categories' },
   { href: '/admin/reselling', icon: Smartphone, label: 'Phone Reselling' },
   { href: '/admin/staff', icon: Users, label: 'Staff' },
   { href: '/admin/pricing', icon: DollarSign, label: 'Pricing' },

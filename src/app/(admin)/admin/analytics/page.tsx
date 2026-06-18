@@ -24,7 +24,7 @@ export default function AnalyticsPage() {
   const [repairs, setRepairs] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  
 
   const getDateFilter = () => {
     const now = new Date();
@@ -35,7 +35,7 @@ export default function AnalyticsPage() {
   };
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    
     const since = getDateFilter();
     const [rRes, iRes, revRes] = await Promise.all([
       supabase.from('repairs').select('*, device:devices(*), technician:users!repairs_technician_id_fkey(full_name)').gte('created_at', since),
@@ -45,10 +45,10 @@ export default function AnalyticsPage() {
     setRepairs(rRes.data || []);
     setInvoices(iRes.data || []);
     setReviews(revRes.data || []);
-    setLoading(false);
+    
   }, [range]);
 
-  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
+  const { user, loading } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   // 1. Revenue by brand
   const brandRevenue: Record<string, number> = {};

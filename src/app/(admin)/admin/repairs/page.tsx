@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +25,7 @@ const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const shortId = (id: string) => id.slice(0, 8);
 const statusColor = (s: string) => {
   const m: Record<string, string> = {
+    ticket_raised: 'bg-rose-500/10 text-rose-600',
     booked: 'bg-blue-500/10 text-blue-600', pickup_scheduled: 'bg-cyan-500/10 text-cyan-600',
     device_received: 'bg-indigo-500/10 text-indigo-600', diagnostic: 'bg-yellow-500/15 text-yellow-600',
     repair_in_progress: 'bg-orange-500/10 text-orange-600', qa_testing: 'bg-purple-500/10 text-purple-600',
@@ -35,6 +37,8 @@ const statusColor = (s: string) => {
 };
 
 export default function RepairsPage() {
+  const pathname = usePathname();
+  const isTicketsView = pathname?.includes('/tickets') || false;
 
   const [repairs, setRepairs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +47,7 @@ export default function RepairsPage() {
   const [selectedRepair, setSelectedRepair] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [timeline, setTimeline] = useState<any[]>([]);
-  
+
   // SLA Extension
   const [extendSlaDialog, setExtendSlaDialog] = useState(false);
   const [slaExtensionHours, setSlaExtensionHours] = useState('24');
@@ -70,10 +74,18 @@ export default function RepairsPage() {
     try {
       setLoading(true);
       console.debug('[fetchRepairs] querying repairs...');
-      const { data, error: err1 } = await supabase.from('repairs')
+      let query = supabase.from('repairs')
         .select('*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone), technician:users!repairs_technician_id_fkey(full_name), shop:shops(name)')
         .order('created_at', { ascending: false }).limit(200);
-      
+
+      if (isTicketsView) {
+        query = query.eq('status', 'ticket_raised');
+      } else {
+        query = query.neq('status', 'ticket_raised');
+      }
+
+      const { data, error: err1 } = await query;
+
       if (err1) {
         console.error('[fetchRepairs] repairs query error:', err1);
       }
@@ -199,7 +211,7 @@ export default function RepairsPage() {
     console.debug('[ADMIN_ASSIGN_DELIVERY]', { repairId: selectedRepair.id, boyId, userId: user?.id });
     setAssigning(true);
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Clear any existing dropoff assignment for this device
     await supabase.from('delivery_assignments')
       .delete()
@@ -221,7 +233,7 @@ export default function RepairsPage() {
     console.debug('[ADMIN_ASSIGN_PICKUP]', { repairId: selectedRepair.id, boyId, userId: user?.id });
     setAssigning(true);
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Clear any existing pickup assignment for this device
     await supabase.from('delivery_assignments')
       .delete()
@@ -232,9 +244,9 @@ export default function RepairsPage() {
       repair_id: selectedRepair.id, delivery_boy_id: boyId, shop_id: selectedRepair.shop_id,
       job_type: 'pickup', status: 'assigned', scheduled_date: today,
     });
-    
+
     if (error) { console.debug('[ADMIN_ASSIGN_PICKUP_ERROR]', error); toast.error('Failed: ' + error.message); setAssigning(false); return; }
-    
+
     // Also update repair status to pickup_scheduled
     await supabase.from('repairs').update({ status: 'pickup_scheduled' }).eq('id', selectedRepair.id);
     await supabase.from('repair_timeline').insert({
@@ -277,13 +289,30 @@ export default function RepairsPage() {
     fetchRepairs();
   };
 
+  const cancelRequest = async () => {
+    if (!selectedRepair) return;
+    if (!confirm('Are you sure you want to cancel this customer request?')) return;
+    console.debug('[ADMIN_CANCEL_REQUEST]', { repairId: selectedRepair.id, userId: user?.id });
+    setAssigning(true);
+    await supabase.from('repairs').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', selectedRepair.id);
+    await supabase.from('repair_timeline').insert({
+      repair_id: selectedRepair.id, status: 'cancelled',
+      note: 'Order Cancelled', updated_by: user?.id,
+    });
+    toast.success('Request Cancelled');
+    setSelectedRepair({ ...selectedRepair, status: 'cancelled' });
+    setAssigning(false);
+    fetchRepairs();
+    setSheetOpen(false);
+  };
+
   const extendSla = async () => {
     if (!selectedRepair || !slaExtensionReason.trim()) {
       toast.error('Please provide a reason for SLA extension');
       return;
     }
     setExtendingSla(true);
-    
+
     // Calculate new deadline based on current deadline (or created_at + 48h if null)
     const baseDate = selectedRepair.sla_deadline ? new Date(selectedRepair.sla_deadline) : new Date(new Date(selectedRepair.created_at).getTime() + 48 * 60 * 60 * 1000);
     const newDeadline = new Date(baseDate.getTime() + Number(slaExtensionHours) * 60 * 60 * 1000);
@@ -357,9 +386,9 @@ export default function RepairsPage() {
 
   return (
     <div className="space-y-8">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">Repairs Management</h1>
-        <p className="text-[#1A1A1A]/60 text-sm mt-1">View, assign, and manage all repairs</p>
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <h1 className="text-3xl font-bold text-[#1A1A1A] tracking-tight">{isTicketsView ? 'Raised Tickets' : 'Repairs Dashboard'}</h1>
+        <p className="text-[#1A1A1A]/60 text-sm mt-1">{isTicketsView ? 'Review and approve customer tickets' : 'View, assign, and manage all repairs'}</p>
       </motion.div>
 
       {/* Filters */}
@@ -372,7 +401,7 @@ export default function RepairsPage() {
           <SelectTrigger className="w-44 bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
             <SelectItem value="all" className="hover:bg-[#F7F7F5] cursor-pointer">All Status</SelectItem>
-            {REPAIR_STATUS_ORDER.map(s => <SelectItem key={s} value={s} className="hover:bg-[#F7F7F5] cursor-pointer">{REPAIR_STATUS_LABELS[s]}</SelectItem>)}
+            {REPAIR_STATUS_ORDER.filter(s => isTicketsView ? s === 'ticket_raised' : s !== 'ticket_raised').map(s => <SelectItem key={s} value={s} className="hover:bg-[#F7F7F5] cursor-pointer">{REPAIR_STATUS_LABELS[s]}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -395,26 +424,27 @@ export default function RepairsPage() {
                 {filtered.slice(0, 50).map(r => {
                   const slaDeadline = r.sla_deadline ? new Date(r.sla_deadline).getTime() : new Date(r.created_at).getTime() + 48 * 60 * 60 * 1000;
                   const isSlaExpired = Date.now() > slaDeadline && !['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(r.status);
-                  
+
                   return (
-                  <TableRow key={r.id} className={`border-[#E8E4DF]/40 hover:bg-[#F7F7F5] transition-colors ${isSlaExpired ? 'bg-red-50/50' : ''}`}>
-                    <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(r.id)}</TableCell>
-                    <TableCell className="text-[#1A1A1A] font-medium">{r.customer?.full_name}</TableCell>
-                    <TableCell className="text-[#1A1A1A]/70">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</TableCell>
-                    <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
-                    <TableCell className="text-[#1A1A1A]/70">{r.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</TableCell>
-                    <TableCell>
-                      {['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(r.status) ? (
-                        <span className="text-xs text-green-600 font-medium">Completed</span>
-                      ) : isSlaExpired ? (
-                        <span className="text-xs text-red-600 font-bold animate-pulse">EXPIRED</span>
-                      ) : (
-                        <span className="text-xs text-[#1A1A1A]/60">{Math.floor((slaDeadline - Date.now()) / (1000 * 60 * 60))}h left</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right"><Button size="sm" variant="ghost" onClick={() => openRepairSheet(r)} className="text-[#FF5C00] hover:bg-[#FF5C00]/10 text-xs font-semibold"><Eye className="w-3.5 h-3.5 mr-1" /> View</Button></TableCell>
-                  </TableRow>
-                )})}
+                    <TableRow key={r.id} className={`border-[#E8E4DF]/40 hover:bg-[#F7F7F5] transition-colors ${isSlaExpired ? 'bg-red-50/50' : ''}`}>
+                      <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(r.id)}</TableCell>
+                      <TableCell className="text-[#1A1A1A] font-medium">{r.customer?.full_name}</TableCell>
+                      <TableCell className="text-[#1A1A1A]/70">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</TableCell>
+                      <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
+                      <TableCell className="text-[#1A1A1A]/70">{r.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</TableCell>
+                      <TableCell>
+                        {['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(r.status) ? (
+                          <span className="text-xs text-green-600 font-medium">Completed</span>
+                        ) : isSlaExpired ? (
+                          <span className="text-xs text-red-600 font-bold animate-pulse">EXPIRED</span>
+                        ) : (
+                          <span className="text-xs text-[#1A1A1A]/60">{Math.floor((slaDeadline - Date.now()) / (1000 * 60 * 60))}h left</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right"><Button size="sm" variant="ghost" onClick={() => openRepairSheet(r)} className="text-[#FF5C00] hover:bg-[#FF5C00]/10 text-xs font-semibold"><Eye className="w-3.5 h-3.5 mr-1" /> View</Button></TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           )}
@@ -422,7 +452,7 @@ export default function RepairsPage() {
       </Card>
 
       {/* Pending RCA Reviews */}
-      {pendingRcas.length > 0 && (
+      {!isTicketsView && pendingRcas.length > 0 && (
         <Card className="bg-white border-[#E8E4DF] shadow-sm">
           <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><FileSearch className="w-4 h-4 text-purple-600" /> Pending RCA Reviews ({pendingRcas.length})</CardTitle></CardHeader>
           <CardContent className="p-0">
@@ -478,7 +508,7 @@ export default function RepairsPage() {
                 {(() => {
                   const slaDeadline = selectedRepair.sla_deadline ? new Date(selectedRepair.sla_deadline).getTime() : new Date(selectedRepair.created_at).getTime() + 48 * 60 * 60 * 1000;
                   const isSlaExpired = Date.now() > slaDeadline && !['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(selectedRepair.status);
-                  
+
                   if (isSlaExpired) {
                     return (
                       <div className="bg-red-50 border border-red-200 p-4 rounded-xl flex items-start justify-between">
@@ -496,6 +526,13 @@ export default function RepairsPage() {
                 })()}
 
                 <Separator className="bg-[#E8E4DF]" />
+
+                {/* Accept Ticket */}
+                {selectedRepair.status === 'ticket_raised' && (
+                  <Button onClick={() => changeStatus('booked')} disabled={assigning} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold mb-4">
+                    {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />} Accept Ticket (Move to Booked)
+                  </Button>
+                )}
 
                 {/* Status Change — Admin can set ANY status */}
                 <div>
@@ -569,6 +606,13 @@ export default function RepairsPage() {
                 {selectedRepair.status !== 'wocr' && !['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(selectedRepair.status) && (
                   <Button onClick={setWocr} disabled={assigning} variant="outline" className="w-full border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/10 font-bold">
                     Set "Waiting on Customer Response" (WOCR)
+                  </Button>
+                )}
+
+                {/* Cancel Request */}
+                {!['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(selectedRepair.status) && (
+                  <Button onClick={cancelRequest} disabled={assigning} variant="outline" className="w-full border-red-500/30 text-red-600 hover:bg-red-500/10 font-bold mt-2">
+                    {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />} Cancel Customer Request
                   </Button>
                 )}
 
@@ -666,9 +710,9 @@ export default function RepairsPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-[#1A1A1A]/70">Reason for Extension (Required)</label>
-              <Textarea 
-                value={slaExtensionReason} 
-                onChange={e => setSlaExtensionReason(e.target.value)} 
+              <Textarea
+                value={slaExtensionReason}
+                onChange={e => setSlaExtensionReason(e.target.value)}
                 placeholder="e.g. Waiting for specific parts to arrive..."
                 className="bg-white border-[#E8E4DF] text-[#1A1A1A] min-h-[100px]"
               />

@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Package, ShoppingBag, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { compressImage } from '@/lib/compress-image';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
@@ -50,7 +51,7 @@ export default function ShopInventoryPage() {
   const { user, loading } = useAuthFetch(fetchData, {
     requiredRole: ['shop_admin', 'admin'],
     deps: [shopId],
-    realtimeTable: 'repairs',
+    realtimeTable: 'shop_items',
   });
 
   const savePart = async () => {
@@ -66,8 +67,9 @@ export default function ShopInventoryPage() {
     setUploading(true);
     let imageUrl = itemDialog.item?.image_url || null;
     if (itemForm.image) {
-      const path = `shop-items/${shopId}/${Date.now()}_${itemForm.image.name}`;
-      await supabase.storage.from('shop-items').upload(path, itemForm.image);
+      const compressed = await compressImage(itemForm.image);
+      const path = `shop-items/${shopId}/${Date.now()}_${compressed.name}`;
+      await supabase.storage.from('shop-items').upload(path, compressed);
       const { data: { publicUrl } } = supabase.storage.from('shop-items').getPublicUrl(path);
       imageUrl = publicUrl;
     }

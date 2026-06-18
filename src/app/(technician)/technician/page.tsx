@@ -54,14 +54,20 @@ export default function TechnicianDashboard() {
   }, []);
 
   const fetchRepairs = useCallback(async () => {
+    console.log('[TECH_DASHBOARD] fetchRepairs started', new Date().toISOString());
     const { data, error } = await supabase
       .from('repairs')
       .select('*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone)')
       .in('status', ['booked', 'pickup_scheduled', 'device_received', 'diagnostic', 'repair_in_progress', 'qa_testing', 'done'])
       .order('created_at', { ascending: false });
       
-    if (error) { toast.error('Failed to fetch repairs'); } 
-    else { setRepairs((data as RepairWithJoins[]) || []); }
+    if (error) { 
+      console.error('[TECH_DASHBOARD] fetchRepairs error:', error);
+      toast.error('Failed to fetch repairs'); 
+    } else { 
+      console.log('[TECH_DASHBOARD] fetchRepairs success, data length:', data?.length, 'data:', data);
+      setRepairs((data as RepairWithJoins[]) || []); 
+    }
   }, []);
 
   const { user, loading } = useAuthFetch(fetchRepairs, {

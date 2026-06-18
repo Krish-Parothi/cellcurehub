@@ -1,6 +1,7 @@
 export type UserRole = 'customer' | 'technician' | 'delivery' | 'admin' | 'shop_admin';
 
 export type RepairStatus =
+  | 'ticket_raised'
   | 'booked'
   | 'pickup_scheduled'
   | 'device_received'
@@ -12,13 +13,14 @@ export type RepairStatus =
   | 'out_for_delivery'
   | 'delivered'
   | 'cancelled'
-  | 'wocr';
+  | 'wocr'
+  | 'pending_approval';
 
 export type PickupType = 'home' | 'store';
 export type PaymentStatus = 'pending' | 'paid';
 export type PaymentMethod = 'cash' | 'upi' | 'card';
-export type EwasteStatus = 'pending' | 'valued' | 'picked_up' | 'credited';
-export type EwasteCategory = 'ewaste' | 'resell';
+export type EwasteStatus = 'pending' | 'admin_offered' | 'valued' | 'agreed' | 'rejected' | 'pickup_assigned' | 'picked_up' | 'credited';
+export type EwasteSubmissionCategory = 'ewaste' | 'resell';
 export type DeviceCategory = 'smartphone' | 'laptop' | 'tablet';
 export type TimeSlot = 'morning' | 'afternoon' | 'evening';
 export type EwasteCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'dead' | 'powers_off';
@@ -137,11 +139,31 @@ export interface Ewaste {
   quoted_value: number | null;
   payout_method: string | null;
   address: string | null;
-  category: EwasteCategory;
+  category: EwasteSubmissionCategory;
   requested_price: number | null;
   admin_offer: number | null;
   customer_agreed: boolean | null;
+  ewaste_category_id: string | null;
+  ewaste_category?: EwasteItemCategory;
   customer?: User;
+}
+
+export interface EwasteItemCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface CartItem {
+  id: string;
+  customer_id: string;
+  shop_item_id: string;
+  quantity: number;
+  created_at: string;
+  shop_item?: ShopItem;
 }
 
 export interface Review {
@@ -174,7 +196,6 @@ export interface Pricing {
   repair_type: string;
   min_price: number;
   max_price: number;
-  estimated_cost: number;
   updated_at: string;
 }
 
@@ -189,6 +210,7 @@ export interface EwastePayoutRate {
 }
 
 export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
+  ticket_raised: 'Ticket Raised',
   booked: 'Booked',
   pickup_scheduled: 'Pickup Scheduled',
   device_received: 'Device Received',
@@ -196,14 +218,16 @@ export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
   repair_in_progress: 'Repair In Progress',
   qa_testing: 'QA Testing',
   ready: 'Ready for Delivery',
-  done: 'Done',
+  done: 'Repaired Done',
   out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
   wocr: 'Waiting on Customer',
+  pending_approval: 'Pending Approval',
 };
 
 export const REPAIR_STATUS_ORDER: RepairStatus[] = [
+  'ticket_raised',
   'booked',
   'pickup_scheduled',
   'device_received',

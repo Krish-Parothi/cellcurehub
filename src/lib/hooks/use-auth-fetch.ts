@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import type { UserRole } from '@/lib/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+const DEBUG = process.env.NODE_ENV === 'development';
+
 /**
  * useAuthReady — blocks data fetching until auth is resolved.
  * 
@@ -53,6 +55,7 @@ export function useAuthFetch(
   const { user, loading: authLoading } = useAuth();
   const { requiredRole, deps = [], realtimeTable, realtimeFilter } = options;
   const [dataLoading, setDataLoading] = useState(true);
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
   const hasFetchedRef = useRef(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -63,33 +66,56 @@ export function useAuthFetch(
       ? requiredRole.includes(user?.role as UserRole)
       : user?.role === requiredRole;
 
+  const fetchFnRef = useRef(fetchFn);
+  // Keep the ref up-to-date with the latest function without triggering re-renders
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
+
   const triggerFetch = useCallback(async () => {
+    if (DEBUG) console.log('[useAuthFetch] triggerFetch called. dataLoading -> true');
     try {
       setDataLoading(true);
-      await fetchFn();
+      await fetchFnRef.current();
+      if (DEBUG) console.log('[useAuthFetch] fetchFn completed successfully.');
+    } catch (e) {
+      if (DEBUG) console.error('[useAuthFetch] fetchFn threw an error:', e);
     } finally {
       hasFetchedRef.current = true;
       setDataLoading(false);
+      setInitialFetchDone(true);
+      if (DEBUG) console.log('[useAuthFetch] triggerFetch finally block. dataLoading -> false');
     }
-  }, [fetchFn]);
+  }, []); // Empty dependencies, so triggerFetch never changes identity
 
   // Main fetch effect — fires when auth is ready and deps change
   useEffect(() => {
-    if (!isReady || !hasRole) return;
+    if (DEBUG) console.log('[useAuthFetch] useEffect triggered. isReady:', isReady, 'hasRole:', hasRole);
+    if (!isReady || !hasRole) {
+      if (DEBUG) console.log('[useAuthFetch] Conditions not met, aborting fetch effect.');
+      return;
+    }
 
     // Small debounce to batch rapid dep changes (e.g. filter + user arriving at once)
+    if (DEBUG) console.log('[useAuthFetch] Setting 50ms timer for triggerFetch.');
     const timer = setTimeout(() => {
+      if (DEBUG) console.log('[useAuthFetch] 50ms timer fired, calling triggerFetch.');
       triggerFetch();
     }, 50);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (DEBUG) console.log('[useAuthFetch] useEffect cleanup, clearing timer.');
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReady, hasRole, ...deps]);
 
   // Realtime subscription — auto-refetch on DB changes
   useEffect(() => {
-    if (!isReady || !hasRole || !realtimeTable) return;
+    // Wait until the initial fetch is completely done before establishing a WebSocket connection
+    if (!isReady || !hasRole || !realtimeTable || !initialFetchDone) return;
 
+    if (DEBUG) console.log('[useAuthFetch] Subscribing to realtime for:', realtimeTable);
     const channelName = `realtime_${realtimeTable}_${Date.now()}`;
     const channelConfig: any = {
       event: '*',
@@ -103,21 +129,20 @@ export function useAuthFetch(
     channelRef.current = supabase
       .channel(channelName)
       .on('postgres_changes', channelConfig, () => {
-        // Only refetch if we've already done the initial fetch
-        if (hasFetchedRef.current) {
-          triggerFetch();
-        }
+        // Refetch immediately when an update happens
+        triggerFetch();
       })
       .subscribe();
 
     return () => {
       if (channelRef.current) {
+        if (DEBUG) console.log('[useAuthFetch] Unsubscribing realtime channel');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady, hasRole, realtimeTable, realtimeFilter]);
+  }, [isReady, hasRole, realtimeTable, realtimeFilter, initialFetchDone]);
 
   // Overall loading is true if auth is loading OR data is loading (and we have the right role)
   // If user doesn't have the role, we stop loading so the RoleGuard can kick them out

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
+import { useCart } from '@/lib/cart-context';
 import { REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { Repair, RepairTimelineEntry, Ewaste, Review, RcaReport, Invoice } from '@/lib/types';
 import RoleGuard from '@/components/role-guard';
@@ -18,26 +19,32 @@ import ActiveTab from './_tabs/active-tab';
 import HistoryTab from './_tabs/history-tab';
 import AnalyticsTab from './_tabs/analytics-tab';
 import EwasteTab from './_tabs/ewaste-tab';
+import ResellingTab from './_tabs/reselling-tab';
 import ProfileTab from './_tabs/profile-tab';
 import ShopTab from './_tabs/shop-tab';
+import CheckoutTab from './_tabs/checkout-tab';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Wrench, History, Recycle, ChartBar as BarChart3, User, LogOut, Settings, ShoppingBag } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Wrench, History, Recycle, ChartBar as BarChart3, User, LogOut, Settings, ShoppingBag, ShoppingCart, Smartphone } from 'lucide-react';
 
-type Tab = 'active' | 'history' | 'analytics' | 'ewaste' | 'shop' | 'profile';
+type Tab = 'active' | 'history' | 'analytics' | 'ewaste' | 'reselling' | 'shop' | 'cart' | 'profile';
 const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'active', label: 'Active Repairs', icon: Wrench },
   { key: 'history', label: 'Repair History', icon: History },
   { key: 'analytics', label: 'Spend Analytics', icon: BarChart3 },
-  { key: 'ewaste', label: 'E-Waste Portal', icon: Recycle },
+  { key: 'ewaste', label: 'Sell E-Waste', icon: Recycle },
+  { key: 'reselling', label: 'Resell Phone', icon: Smartphone },
   { key: 'shop', label: 'Store', icon: ShoppingBag },
+  { key: 'cart', label: 'Cart', icon: ShoppingCart },
   { key: 'profile', label: 'Profile', icon: User },
 ];
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
+  const { cartCount } = useCart();
   const [tab, setTab] = useState<Tab>('active');
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -63,7 +70,11 @@ export default function DashboardPage() {
       <nav className="flex-1 p-3 space-y-1">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => { setTab(key); setDrawerOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${tab === key ? 'bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20' : 'text-[#1A1A1A]/60 hover:text-[#1A1A1A] hover:bg-[#1A1A1A]/5 border border-transparent'}`}>
-            <Icon className="w-4 h-4" />{label}
+            <Icon className="w-4 h-4" />
+            {label}
+            {key === 'cart' && cartCount > 0 && (
+              <Badge className="ml-auto bg-[#FF5C00] text-white text-[10px] px-1.5 py-0.5 h-auto min-w-[20px] flex items-center justify-center">{cartCount}</Badge>
+            )}
           </button>
         ))}
       </nav>
@@ -97,9 +108,10 @@ export default function DashboardPage() {
             </div>
             {tab === 'active' && user && <ActiveTab userId={user.id} />}
             {tab === 'history' && user && <HistoryTab userId={user.id} />}
-            {tab === 'analytics' && user && <AnalyticsTab userId={user.id} />}
             {tab === 'ewaste' && user && <EwasteTab userId={user.id} />}
+            {tab === 'reselling' && user && <ResellingTab userId={user.id} />}
             {tab === 'shop' && user && <ShopTab />}
+            {tab === 'cart' && user && <CheckoutTab />}
             {tab === 'profile' && user && <ProfileTab user={user} />}
           </main>
         </div>

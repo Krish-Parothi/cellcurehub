@@ -20,24 +20,24 @@ const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const repairTypes = REPAIR_TYPE_OPTIONS.map(r => r.value);
 
 export default function PricingPage() {
-  
+
   const [devices, setDevices] = useState<Device[]>([]);
   const [pricing, setPricing] = useState<Pricing[]>([]);
   const [payoutRates, setPayoutRates] = useState<EwastePayoutRate[]>([]);
-  const [loading, setLoading] = useState(true);
-  
+
+
   // Repair Pricing State
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [brandFilter, setBrandFilter] = useState('All');
-  const [devicePrices, setDevicePrices] = useState<Record<string, { estimated_cost: number, min: number, max: number }>>({});
-  
+  const [devicePrices, setDevicePrices] = useState<Record<string, { min: number, max: number }>>({});
+
   // Ewaste State
   const [editedPayouts, setEditedPayouts] = useState<Record<string, { cash_min: number; cash_max: number; credit_min: number; credit_max: number }>>({});
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+
     const [dRes, pRes, eRes] = await Promise.all([
       supabase.from('devices').select('*').eq('is_active', true).order('brand').order('model_name'),
       supabase.from('pricing').select('*'),
@@ -46,10 +46,10 @@ export default function PricingPage() {
     setDevices(dRes.data || []);
     setPricing(pRes.data || []);
     setPayoutRates(eRes.data || []);
-    setLoading(false);
+
   }, []);
 
-  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
+  const { user, loading } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   // Filter devices list
   const filteredDevices = useMemo(() => {
@@ -67,46 +67,67 @@ export default function PricingPage() {
   useEffect(() => {
     if (!selectedDevice) return;
     const initialPrices: Record<string, any> = {};
-    
+
     // Initialize with existing data or defaults
     repairTypes.forEach(rt => {
       const p = pricing.find(pr => pr.device_id === selectedDevice.id && pr.repair_type === rt);
-      initialPrices[rt] = p ? { 
-        estimated_cost: p.estimated_cost || 0,
-        min: p.min_price || 0, 
-        max: p.max_price || 0 
-      } : { estimated_cost: 0, min: 0, max: 0 };
+      initialPrices[rt] = p ? {
+        min: p.min_price || 0,
+        max: p.max_price || 0
+      } : { min: 0, max: 0 };
     });
-    
+
     setDevicePrices(initialPrices);
   }, [selectedDevice, pricing]);
 
-  const setPrice = (repairType: string, field: 'estimated_cost' | 'min' | 'max', value: number) => {
-    setDevicePrices(prev => ({ 
-      ...prev, 
-      [repairType]: { ...prev[repairType], [field]: value } 
+  const setPrice = (repairType: string, field: 'min' | 'max', value: number) => {
+    setDevicePrices(prev => ({
+      ...prev,
+      [repairType]: { ...prev[repairType], [field]: value }
     }));
   };
 
   const savePricing = async () => {
     if (!selectedDevice) return;
     setSaving(true);
-    
-    const upserts = Object.entries(devicePrices).map(([rt, val]) => ({
-      device_id: selectedDevice.id,
-      repair_type: rt,
-      estimated_cost: val.estimated_cost,
-      min_price: val.min,
-      max_price: val.max
-    }));
+    let hasError = false;
 
-    if (upserts.length > 0) {
-      for (const u of upserts) {
-        await supabase.from('pricing').upsert(u, { onConflict: 'device_id,repair_type' as any });
+    for (const [rt, val] of Object.entries(devicePrices)) {
+      // Find if it exists first
+      const { data: existing } = await supabase
+        .from('pricing')
+        .select('id')
+        .eq('device_id', selectedDevice.id)
+        .eq('repair_type', rt)
+        .maybeSingle();
+
+      const payload: Record<string, unknown> = {
+        device_id: selectedDevice.id,
+        repair_type: rt,
+        min_price: val.min,
+        max_price: val.max,
+      };
+
+      let error;
+      if (existing) {
+        const { error: err } = await supabase.from('pricing').update(payload).eq('id', existing.id);
+        error = err;
+      } else {
+        const { error: err } = await supabase.from('pricing').insert(payload);
+        error = err;
+      }
+
+      if (error) {
+        hasError = true;
+        console.error('Pricing save error:', error);
       }
     }
-    
-    toast.success(`Pricing saved for ${selectedDevice.brand} ${selectedDevice.model_name}`);
+
+    if (hasError) {
+      toast.error('Some prices failed to save. Check the console.');
+    } else {
+      toast.success(`Pricing saved for ${selectedDevice.brand} ${selectedDevice.model_name}`);
+    }
     setSaving(false);
     fetchData(); // refresh the master list
   };
@@ -137,7 +158,7 @@ export default function PricingPage() {
 
         <TabsContent value="repair" className="m-0">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
+
             {/* Left Col: Device List */}
             <div className="lg:col-span-4 space-y-4">
               <Card className="bg-white border-[#E8E4DF] shadow-sm h-[calc(100vh-220px)] flex flex-col">
@@ -145,8 +166,8 @@ export default function PricingPage() {
                   <div className="space-y-3">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#1A1A1A]/40" />
-                      <Input 
-                        placeholder="Search devices..." 
+                      <Input
+                        placeholder="Search devices..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         className="pl-9 bg-[#F7F7F5] border-[#E8E4DF] focus-visible:ring-[#FF5C00]"
@@ -157,9 +178,8 @@ export default function PricingPage() {
                         <button
                           key={brand}
                           onClick={() => setBrandFilter(brand)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                            brandFilter === brand ? 'bg-[#1A1A1A] text-white' : 'bg-[#F7F7F5] text-[#1A1A1A]/60 hover:bg-[#E8E4DF]'
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${brandFilter === brand ? 'bg-[#1A1A1A] text-white' : 'bg-[#F7F7F5] text-[#1A1A1A]/60 hover:bg-[#E8E4DF]'
+                            }`}
                         >
                           {brand}
                         </button>
@@ -167,11 +187,11 @@ export default function PricingPage() {
                     </div>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="p-0 overflow-y-auto flex-1">
                   {loading ? (
                     <div className="p-4 space-y-2">
-                      {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-14 w-full rounded-xl bg-[#1A1A1A]/5" />)}
+                      {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14 w-full rounded-xl bg-[#1A1A1A]/5" />)}
                     </div>
                   ) : filteredDevices.length === 0 ? (
                     <div className="p-8 text-center text-[#1A1A1A]/40 text-sm">No devices found.</div>
@@ -181,9 +201,8 @@ export default function PricingPage() {
                         <button
                           key={d.id}
                           onClick={() => setSelectedDevice(d)}
-                          className={`w-full flex items-center justify-between p-4 transition-colors text-left ${
-                            selectedDevice?.id === d.id ? 'bg-[#FF5C00]/5 border-l-4 border-l-[#FF5C00]' : 'hover:bg-[#F7F7F5] border-l-4 border-l-transparent'
-                          }`}
+                          className={`w-full flex items-center justify-between p-4 transition-colors text-left ${selectedDevice?.id === d.id ? 'bg-[#FF5C00]/5 border-l-4 border-l-[#FF5C00]' : 'hover:bg-[#F7F7F5] border-l-4 border-l-transparent'
+                            }`}
                         >
                           <div>
                             <p className={`font-semibold ${selectedDevice?.id === d.id ? 'text-[#FF5C00]' : 'text-[#1A1A1A]'}`}>{d.model_name}</p>
@@ -226,41 +245,32 @@ export default function PricingPage() {
                           <CardTitle className="text-sm font-semibold text-[#1A1A1A]">{rt.label}</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
-                          <div className="space-y-1.5">
-                            <Label className="text-[#1A1A1A]/70 text-xs font-medium">Customer Facing Estimated Cost (₹)</Label>
-                            <div className="relative">
-                              <IndianRupeeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#1A1A1A]/40" />
-                              <Input 
-                                type="number" 
-                                value={devicePrices[rt.value]?.estimated_cost || ''} 
-                                onChange={e => setPrice(rt.value, 'estimated_cost', +e.target.value)} 
-                                className="pl-9 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] font-semibold text-lg h-12 focus-visible:ring-[#FF5C00]" 
-                                placeholder="0" 
-                              />
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-[#1A1A1A]/70 text-xs font-medium">Min Price (₹)</Label>
+                              <div className="relative">
+                                <IndianRupeeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#1A1A1A]/40" />
+                                <Input
+                                  type="number"
+                                  value={devicePrices[rt.value]?.min || ''}
+                                  onChange={e => setPrice(rt.value, 'min', +e.target.value)}
+                                  className="pl-9 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] font-semibold h-10 focus-visible:ring-[#FF5C00]"
+                                  placeholder="0"
+                                />
+                              </div>
                             </div>
-                            <p className="text-[10px] text-[#1A1A1A]/40 leading-tight">This is the single price shown to the customer. Leave 0 to say "Thanks, we will soon let you know the cost".</p>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#E8E4DF]/40">
-                            <div className="space-y-1">
-                              <Label className="text-[#1A1A1A]/40 text-[10px] font-semibold uppercase tracking-wider">Internal Min (₹)</Label>
-                              <Input 
-                                type="number" 
-                                value={devicePrices[rt.value]?.min || ''} 
-                                onChange={e => setPrice(rt.value, 'min', +e.target.value)} 
-                                className="bg-white border-[#E8E4DF] text-[#1A1A1A] h-8 text-xs focus-visible:ring-[#FF5C00]" 
-                                placeholder="0" 
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[#1A1A1A]/40 text-[10px] font-semibold uppercase tracking-wider">Internal Max (₹)</Label>
-                              <Input 
-                                type="number" 
-                                value={devicePrices[rt.value]?.max || ''} 
-                                onChange={e => setPrice(rt.value, 'max', +e.target.value)} 
-                                className="bg-white border-[#E8E4DF] text-[#1A1A1A] h-8 text-xs focus-visible:ring-[#FF5C00]" 
-                                placeholder="0" 
-                              />
+                            <div className="space-y-1.5">
+                              <Label className="text-[#1A1A1A]/70 text-xs font-medium">Max Price (₹)</Label>
+                              <div className="relative">
+                                <IndianRupeeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#1A1A1A]/40" />
+                                <Input
+                                  type="number"
+                                  value={devicePrices[rt.value]?.max || ''}
+                                  onChange={e => setPrice(rt.value, 'max', +e.target.value)}
+                                  className="pl-9 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] font-semibold h-10 focus-visible:ring-[#FF5C00]"
+                                  placeholder="0"
+                                />
+                              </div>
                             </div>
                           </div>
                         </CardContent>
@@ -284,18 +294,18 @@ export default function PricingPage() {
                 <TableHead className="text-[#1A1A1A]/50">Cash Min</TableHead><TableHead className="text-[#1A1A1A]/50">Cash Max</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Credit Min</TableHead><TableHead className="text-[#1A1A1A]/50">Credit Max</TableHead>
               </TableRow></TableHeader>
-              <TableBody>{payoutRates.map(pr => {
-                const edited = editedPayouts[pr.id] || pr;
-                return (
-                  <TableRow key={pr.id} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5] transition-colors">
-                    <TableCell className="text-[#1A1A1A] font-semibold">{pr.brand}</TableCell>
-                    <TableCell><Input type="number" value={edited.cash_min} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), cash_min: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
-                    <TableCell><Input type="number" value={edited.cash_max} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), cash_max: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
-                    <TableCell><Input type="number" value={edited.credit_min} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), credit_min: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
-                    <TableCell><Input type="number" value={edited.credit_max} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), credit_max: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
-                  </TableRow>
-                );
-              })}</TableBody></Table>
+                <TableBody>{payoutRates.map(pr => {
+                  const edited = editedPayouts[pr.id] || pr;
+                  return (
+                    <TableRow key={pr.id} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5] transition-colors">
+                      <TableCell className="text-[#1A1A1A] font-semibold">{pr.brand}</TableCell>
+                      <TableCell><Input type="number" value={edited.cash_min} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), cash_min: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
+                      <TableCell><Input type="number" value={edited.cash_max} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), cash_max: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
+                      <TableCell><Input type="number" value={edited.credit_min} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), credit_min: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
+                      <TableCell><Input type="number" value={edited.credit_max} onChange={e => setEditedPayouts(p => ({ ...p, [pr.id]: { ...(p[pr.id] || pr), credit_max: +e.target.value } }))} className="w-24 h-8 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" /></TableCell>
+                    </TableRow>
+                  );
+                })}</TableBody></Table>
             )}
           </CardContent></Card>
         </TabsContent>

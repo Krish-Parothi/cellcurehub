@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Recycle, Plus, Pencil, Trash2, Loader2, Image as ImageIcon } from 'lucide-react';
+import { compressImage } from '@/lib/compress-image';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
@@ -22,7 +23,7 @@ export default function AdminShopPage() {
   
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
-  const [loading, setLoading] = useState(true);
+  
 
   // Shop item form
   const [itemDialog, setItemDialog] = useState<{ open: boolean; item: ShopItem | null }>({ open: false, item: null });
@@ -30,25 +31,34 @@ export default function AdminShopPage() {
   const [uploading, setUploading] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    console.log('[SHOP_PAGE] fetchData started');
     const [siRes, shRes] = await Promise.all([
       supabase.from('shop_items').select('*').eq('category', 'shop').order('name'),
       supabase.from('shops').select('*').order('name'),
     ]);
+    
+    if (siRes.error) {
+      console.error('[SHOP_PAGE] Error fetching shop_items:', siRes.error);
+    }
+    if (shRes.error) {
+      console.error('[SHOP_PAGE] Error fetching shops:', shRes.error);
+    }
+    
     setShopItems(siRes.data || []);
     setShops(shRes.data || []);
-    setLoading(false);
+    console.log('[SHOP_PAGE] fetchData completed', { shopItemsCount: siRes.data?.length, shopsCount: shRes.data?.length });
   }, []);
 
-  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
+  const { user, loading } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const saveShopItem = async () => {
     setUploading(true);
     try {
       let imageUrl = itemDialog.item?.image_url || null;
       if (itemForm.image) {
-        const path = `shop/${itemForm.shop_id}/${Date.now()}_${itemForm.image.name}`;
-        const { error: uploadError } = await supabase.storage.from('shop-items').upload(path, itemForm.image);
+        const compressed = await compressImage(itemForm.image);
+        const path = `shop/${itemForm.shop_id}/${Date.now()}_${compressed.name}`;
+        const { error: uploadError } = await supabase.storage.from('shop-items').upload(path, compressed);
         if (uploadError) {
           console.error('[SHOP] Image upload error:', uploadError);
           toast.error(`Image upload failed: ${uploadError.message}`);

@@ -185,7 +185,7 @@ export default function BookPage() {
         coordinates: coordinates ? `(${coordinates.lng},${coordinates.lat})` : null,
         preferred_date: preferredDate ? preferredDate.toISOString().split('T')[0] : null,
         time_slot: pickupType === 'home' ? timeSlot : null,
-        estimated_cost: pricing?.estimated_cost || null,
+        estimated_cost: pricing?.min_price || null,
       });
 
       if (!result.success) {
@@ -215,8 +215,8 @@ export default function BookPage() {
   }
   if (!user) return null;
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   return (
     <div className="min-h-screen bg-[#F7F7F5] flex flex-col">
@@ -302,8 +302,13 @@ export default function BookPage() {
                         <span className="text-sm text-[#1A1A1A]/70">Estimated Cost:</span>
                         {pricingLoading ? (
                           <span className="text-sm text-[#1A1A1A]/60">Loading...</span>
-                        ) : pricing && pricing.estimated_cost ? (
-                          <span className="text-lg font-semibold text-[#FF5C00]">₹{pricing.estimated_cost.toLocaleString('en-IN')}</span>
+                        ) : pricing && (pricing.min_price > 0 || pricing.max_price > 0) ? (
+                          <span className="text-lg font-semibold text-[#FF5C00]">
+                            {pricing.min_price > 0 && pricing.max_price > 0 && pricing.min_price !== pricing.max_price
+                              ? `₹${pricing.min_price.toLocaleString('en-IN')} – ₹${pricing.max_price.toLocaleString('en-IN')}`
+                              : `₹${(pricing.min_price || pricing.max_price).toLocaleString('en-IN')}`
+                            }
+                          </span>
                         ) : (
                           <span className="text-sm text-[#FF5C00] font-medium">Thanks, we will soon let you know the cost</span>
                         )}
@@ -386,7 +391,7 @@ export default function BookPage() {
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0 bg-white border-[#E8E4DF]" align="start">
-                              <Calendar mode="single" selected={preferredDate} onSelect={setPreferredDate} disabled={(date) => date < tomorrow} className="bg-white text-[#1A1A1A]" />
+                              <Calendar mode="single" selected={preferredDate} onSelect={setPreferredDate} disabled={(date) => date < today} className="bg-white text-[#1A1A1A]" />
                             </PopoverContent>
                           </Popover>
                         </div>

@@ -53,7 +53,7 @@ export default function SignupPage() {
     }
 
     setLoading(true);
-    const { error } = await signUpWithPassword(email, password, fullName, role);
+    const { error } = await signUpWithPassword(email, password, fullName, role, '');
     setLoading(false);
     if (error) {
       toast.error(error);

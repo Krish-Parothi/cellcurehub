@@ -41,10 +41,18 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
   const [paymentDone, setPaymentDone] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setOtpSent(false); setOtpInput(''); setOtpVerified(false);
-      setAttempts(0); setCashAmount(''); setPaymentDone(false); setResendTimer(0);
+    if (open && assignment) {
+      if (assignment.status === 'delivered') {
+        setOtpVerified(true);
+        if (assignment.repair?.invoices?.[0]?.payment_status === 'paid') {
+          setPaymentDone(true);
+        }
+      } else {
+        setOtpSent(false); setOtpInput(''); setOtpVerified(false);
+        setAttempts(0); setCashAmount(''); setPaymentDone(false); setResendTimer(0);
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -169,10 +177,10 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
               </Badge>
             </div>
           )}
-          <Button 
+          <Button
             onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(repair.address || '')}`, '_blank')}
-            variant="outline" 
-            size="sm" 
+            variant="outline"
+            size="sm"
             className="absolute top-4 right-4 bg-white border-[#FF5C00]/20 text-[#FF5C00] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00]"
           >
             <Navigation className="w-3.5 h-3.5 mr-1.5" /> Navigate

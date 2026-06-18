@@ -325,7 +325,7 @@ export async function verifyDeliveryTwilioOtp(
     // Fetch assignment + customer phone
     const { data: assignment, error } = await supabase
       .from('delivery_assignments')
-      .select('id, delivery_boy_id, repair_id, repair:repairs(customer:users!repairs_customer_id_fkey(phone))')
+      .select('id, delivery_boy_id, repair_id, ewaste_id, repair:repairs(customer:users!repairs_customer_id_fkey(phone)), ewaste:ewaste(customer:users!ewaste_customer_id_fkey(phone))')
       .eq('id', assignmentId)
       .single();
 
@@ -337,7 +337,7 @@ export async function verifyDeliveryTwilioOtp(
       return { success: false, error: 'This assignment is not assigned to you.' };
     }
 
-    const customerPhone = (assignment as any).repair?.customer?.phone;
+    const customerPhone = (assignment as any).repair?.customer?.phone || (assignment as any).ewaste?.customer?.phone;
     if (!customerPhone) {
       return { success: false, error: 'Customer phone number not found.' };
     }

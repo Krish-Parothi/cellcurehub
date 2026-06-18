@@ -26,7 +26,7 @@ export default function ShopsPage() {
   const router = useRouter();
   const [shops, setShops] = useState<Shop[]>([]);
   const [shopAdmins, setShopAdmins] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   const [addDialog, setAddDialog] = useState(false);
   const [inviteDialog, setInviteDialog] = useState<Shop | null>(null);
   const [shopForm, setShopForm] = useState({ name: '', address: '', area: '', phone: '' });
@@ -34,17 +34,21 @@ export default function ShopsPage() {
   const [inviting, setInviting] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [shRes, saRes] = await Promise.all([
-      supabase.from('shops').select('*').order('name'),
-      supabase.from('users').select('*').eq('role', 'shop_admin'),
+    console.log('[ADMIN_SHOPS] fetchData started', new Date().toISOString());
+    const [shopsRes, adminsRes] = await Promise.all([
+      supabase.from('shops').select('*').order('created_at', { ascending: false }),
+      supabase.from('users').select('*').eq('role', 'shop_admin')
     ]);
-    setShops(shRes.data || []);
-    setShopAdmins(saRes.data || []);
-    setLoading(false);
+    
+    if (shopsRes.error) console.error('[ADMIN_SHOPS] error fetching shops:', shopsRes.error);
+    if (adminsRes.error) console.error('[ADMIN_SHOPS] error fetching admins:', adminsRes.error);
+
+    console.log('[ADMIN_SHOPS] fetchData success, shops:', shopsRes.data?.length, 'admins:', adminsRes.data?.length, 'shopsData:', shopsRes.data);
+    setShops(shopsRes.data || []);
+    setShopAdmins(adminsRes.data || []);
   }, []);
 
-  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
+  const { user, loading } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const getShopAdmin = (shopId: string) => shopAdmins.find(sa => sa.shop_id === shopId);
 
@@ -58,14 +62,44 @@ export default function ShopsPage() {
   };
 
   const deleteShop = async (shop: Shop) => {
-    const { count } = await supabase.from('repairs').select('id', { count: 'exact', head: true }).eq('shop_id', shop.id).not('status', 'in', '("delivered","cancelled")');
-    if (count && count > 0) {
-      toast.error(`Cannot delete — ${count} active repair(s) exist`);
+    const { count, error: countErr } = await supabase.from('repairs')
+      .select('id', { count: 'exact', head: true })
+      .eq('shop_id', shop.id)
+      .neq('status', 'delivered')
+      .neq('status', 'cancelled');
+      
+    if (countErr) {
+      toast.error('Failed to check repairs');
       return;
     }
-    if (!confirm(`Delete "${shop.name}"?`)) return;
-    await supabase.from('shops').delete().eq('id', shop.id);
-    toast.success('Shop deleted');
+      
+    if (count && count > 0) {
+      toast.error(`Cannot delete — ${count} active repair(s) exist. Reassign them first.`);
+      return;
+    }
+    if (!confirm(`Delete "${shop.name}"? This will unassign all staff and preserve historical data.`)) return;
+    
+    toast.loading('Deleting shop and updating records...', { id: 'deleteShop' });
+
+    // Sever foreign keys manually to bypass constraint errors and preserve history
+    await Promise.all([
+      supabase.from('users').update({ shop_id: null }).eq('shop_id', shop.id),
+      supabase.from('repairs').update({ shop_id: null }).eq('shop_id', shop.id),
+      supabase.from('delivery_assignments').update({ shop_id: null }).eq('shop_id', shop.id),
+      supabase.from('attendance').update({ shop_id: null }).eq('shop_id', shop.id),
+      supabase.from('salary_config').update({ shop_id: null }).eq('shop_id', shop.id),
+      supabase.from('parts').update({ shop_id: null }).eq('shop_id', shop.id),
+      supabase.from('shop_items').update({ shop_id: null }).eq('shop_id', shop.id)
+    ]);
+
+    const { error } = await supabase.from('shops').delete().eq('id', shop.id);
+    
+    if (error) {
+      toast.error(`Cannot delete shop: ${error.message}`, { id: 'deleteShop' });
+      return;
+    }
+    
+    toast.success('Shop deleted successfully', { id: 'deleteShop' });
     fetchData();
   };
 
@@ -79,46 +113,23 @@ export default function ShopsPage() {
     if (!inviteDialog || !inviteForm.full_name || !inviteForm.email) { toast.error('Name and email required'); return; }
     setInviting(true);
     try {
-      const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+      const { inviteStaff } = await import('@/lib/actions/admin');
+      const result = await inviteStaff({
         email: inviteForm.email,
-        email_confirm: true,
-        user_metadata: { full_name: inviteForm.full_name },
+        fullName: inviteForm.full_name,
+        phone: inviteForm.phone || undefined,
+        role: 'shop_admin',
+        shopId: inviteDialog.id,
       });
-      if (authErr) {
-        // Fallback: use signUp
-        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-          email: inviteForm.email,
-          password: Math.random().toString(36).slice(2) + 'Aa1!',
-        });
-        if (signUpErr) throw signUpErr;
-        if (signUpData.user) {
-          await supabase.from('users').upsert({
-            id: signUpData.user.id,
-            email: inviteForm.email,
-            full_name: inviteForm.full_name,
-            phone: inviteForm.phone,
-            role: 'shop_admin',
-            shop_id: inviteDialog.id,
-            is_active: true,
-          });
-        }
-      } else if (authData.user) {
-        await supabase.from('users').upsert({
-          id: authData.user.id,
-          email: inviteForm.email,
-          full_name: inviteForm.full_name,
-          phone: inviteForm.phone,
-          role: 'shop_admin',
-          shop_id: inviteDialog.id,
-          is_active: true,
-        });
-      }
-      toast.success('Shop admin invited — they will receive an email');
+      
+      if (!result.success) throw new Error(result.error);
+
+      toast.success('Shop admin invited successfully via email');
       setInviteDialog(null);
       setInviteForm({ full_name: '', email: '', phone: '' });
       fetchData();
     } catch (e: any) {
-      toast.error(e.message || 'Failed to invite');
+      toast.error(e.message || 'Failed to add shop admin');
     }
     setInviting(false);
   };
@@ -159,7 +170,7 @@ export default function ShopsPage() {
                         {shopAdmins.filter(sa => !sa.shop_id).map(sa => <SelectItem key={sa.id} value={sa.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{sa.full_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button size="sm" variant="ghost" onClick={() => setInviteDialog(shop)} className="text-amber-600 hover:bg-amber-500/10 text-xs h-7 font-semibold"><UserPlus className="w-3 h-3 mr-1" />Invite</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setInviteDialog(shop)} className="text-amber-600 hover:bg-amber-500/10 text-xs h-7 font-semibold"><UserPlus className="w-3 h-3 mr-1" />Add</Button>
                   </div>
                 )}</TableCell>
                 <TableCell><Switch checked={shop.is_active} onCheckedChange={async () => { await supabase.from('shops').update({ is_active: !shop.is_active }).eq('id', shop.id); fetchData(); }} /></TableCell>
@@ -192,16 +203,16 @@ export default function ShopsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invite Shop Admin Dialog */}
+      {/* Add Shop Admin Dialog */}
       <Dialog open={!!inviteDialog} onOpenChange={() => setInviteDialog(null)}>
         <DialogContent className="bg-white border-[#E8E4DF] max-w-sm">
-          <DialogHeader><DialogTitle className="text-[#1A1A1A]">Invite Shop Admin</DialogTitle><DialogDescription className="text-[#1A1A1A]/60">For: {inviteDialog?.name}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle className="text-[#1A1A1A]">Add Shop Admin</DialogTitle><DialogDescription className="text-[#1A1A1A]/60">For: {inviteDialog?.name}</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <div><Label className="text-[#1A1A1A]/70">Full Name *</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.full_name} onChange={e => setInviteForm(f => ({ ...f, full_name: e.target.value }))} /></div>
             <div><Label className="text-[#1A1A1A]/70">Email *</Label><Input type="email" className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.email} onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))} /></div>
             <div><Label className="text-[#1A1A1A]/70">Phone</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.phone} onChange={e => setInviteForm(f => ({ ...f, phone: e.target.value }))} /></div>
           </div>
-          <DialogFooter><Button onClick={inviteShopAdmin} disabled={inviting} className="bg-[#FF5C00] text-white hover:bg-[#e05200]">{inviting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}Invite</Button></DialogFooter>
+          <DialogFooter><Button onClick={inviteShopAdmin} disabled={inviting} className="bg-[#FF5C00] text-white hover:bg-[#e05200]">{inviting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}Add</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

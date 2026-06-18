@@ -45,6 +45,7 @@ const PUBLIC_ROUTES = [
   '/signup',
   '/track',
   '/coming-soon',
+  '/complete-profile',
 ];
 
 export async function middleware(request: NextRequest) {
@@ -108,31 +109,37 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Fetch the user's role from the public.users table
-    // We use the service-level query since the user is authenticated
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role, is_active')
-      .eq('id', user.id)
-      .single();
+    // Try JWT claims first, fall back to DB query
+    let role: string = user.app_metadata?.role || '';
+    let hasPhone = !!user.app_metadata?.phone || !!user.phone;
 
-    if (!profile) {
-      console.warn(`[MIDDLEWARE:AUTH] No profile found for user ${user.id}`);
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
+    if (!role) {
+      // JWT claims hook didn't populate — fetch from DB (server-side, no deadlock risk)
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role, is_active, phone')
+        .eq('id', user.id)
+        .single();
 
-    // Check if user is active
-    if (!profile.is_active) {
-      console.warn(`[MIDDLEWARE:AUTH] Inactive user ${user.id} blocked from ${pathname}`);
-      return NextResponse.redirect(new URL('/login', request.url));
+      if (!profile) {
+        console.warn(`[MIDDLEWARE:AUTH] No profile found for user ${user.id}`);
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      if (!profile.is_active) {
+        console.warn(`[MIDDLEWARE:AUTH] Inactive user ${user.id} blocked from ${pathname}`);
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      role = profile.role;
+      hasPhone = !!profile.phone;
     }
 
     // Check role authorization
-    if (!matchedRoute.allowedRoles.includes(profile.role)) {
+    if (!matchedRoute.allowedRoles.includes(role)) {
       console.warn(
-        `[MIDDLEWARE:ROLE] User ${user.id} (role: ${profile.role}) blocked from ${pathname} (requires: ${matchedRoute.allowedRoles.join(', ')})`
+        `[MIDDLEWARE:ROLE] User ${user.id} (role: ${role}) blocked from ${pathname} (requires: ${matchedRoute.allowedRoles.join(', ')})`
       );
-      // Return 403 page or redirect to appropriate dashboard
       const redirectMap: Record<string, string> = {
         admin: '/admin',
         shop_admin: '/shop-admin',
@@ -140,8 +147,13 @@ export async function middleware(request: NextRequest) {
         delivery: '/delivery',
         customer: '/dashboard',
       };
-      const redirectTo = redirectMap[profile.role] || '/';
+      const redirectTo = redirectMap[role] || '/';
       return NextResponse.redirect(new URL(redirectTo, request.url));
+    }
+
+    // Check if customer needs to complete their profile (add phone)
+    if (role === 'customer' && !hasPhone) {
+      return NextResponse.redirect(new URL('/complete-profile', request.url));
     }
   }
 
@@ -157,12 +169,22 @@ export async function middleware(request: NextRequest) {
 
   // ── Redirect authenticated users away from login/signup ──────────
   if (user && (pathname === '/login' || pathname === '/signup')) {
-    // Fetch role to redirect to appropriate dashboard
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    let role: string = user.app_metadata?.role || '';
+    let hasPhone = !!user.app_metadata?.phone || !!user.phone;
+
+    if (!role) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role, phone')
+        .eq('id', user.id)
+        .single();
+      role = profile?.role || 'customer';
+      hasPhone = !!profile?.phone;
+    }
+
+    if (role === 'customer' && !hasPhone) {
+      return NextResponse.redirect(new URL('/complete-profile', request.url));
+    }
 
     const redirectMap: Record<string, string> = {
       admin: '/admin',
@@ -171,7 +193,7 @@ export async function middleware(request: NextRequest) {
       delivery: '/delivery',
       customer: '/dashboard',
     };
-    const redirectTo = redirectMap[profile?.role || 'customer'] || '/dashboard';
+    const redirectTo = redirectMap[role] || '/dashboard';
     return NextResponse.redirect(new URL(redirectTo, request.url));
   }
 

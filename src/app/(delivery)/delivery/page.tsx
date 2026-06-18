@@ -79,7 +79,7 @@ export default function DeliveryDashboard() {
   }, [authUser]);
 
   const { user, loading } = useAuthFetch(fetchJobs, {
-    requiredRole: ['delivery', 'admin'],
+    requiredRole: ['delivery', 'admin', 'shop_admin'],
     realtimeTable: 'delivery_assignments',
   });
 

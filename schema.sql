@@ -30,7 +30,7 @@ CREATE TABLE public.repairs (
   device_id uuid NOT NULL,
   technician_id uuid,
   issue_description text NOT NULL,
-  status text NOT NULL DEFAULT 'booked'::text CHECK (status = ANY (ARRAY['booked'::text, 'pickup_scheduled'::text, 'device_received'::text, 'diagnostic'::text, 'repair_in_progress'::text, 'qa_testing'::text, 'ready'::text, 'done'::text, 'pending_approval'::text, 'out_for_delivery'::text, 'delivered'::text, 'cancelled'::text])),
+  status text NOT NULL DEFAULT 'booked'::text CHECK (status = ANY (ARRAY['ticket_raised'::text, 'booked'::text, 'pickup_scheduled'::text, 'device_received'::text, 'diagnostic'::text, 'repair_in_progress'::text, 'qa_testing'::text, 'ready'::text, 'done'::text, 'pending_approval'::text, 'out_for_delivery'::text, 'delivered'::text, 'cancelled'::text, 'wocr'::text])),
   estimated_cost numeric,
   final_cost numeric,
   pickup_type text NOT NULL DEFAULT 'store'::text CHECK (pickup_type = ANY (ARRAY['home'::text, 'store'::text])),
@@ -50,6 +50,9 @@ CREATE TABLE public.repairs (
   approval_note text,
   delivered_at timestamp with time zone,
   follow_up_sent boolean DEFAULT false,
+  sla_deadline timestamp with time zone,
+  sla_extended boolean DEFAULT false,
+  sla_extension_reason text,
   CONSTRAINT repairs_pkey PRIMARY KEY (id),
   CONSTRAINT repairs_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.users(id),
   CONSTRAINT repairs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id),
@@ -113,7 +116,7 @@ CREATE TABLE public.ewaste (
   device_description text NOT NULL,
   photos_url text,
   estimated_value numeric,
-  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'admin_offered'::text, 'valued'::text, 'agreed'::text, 'rejected'::text, 'picked_up'::text, 'credited'::text])),
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'admin_offered'::text, 'valued'::text, 'agreed'::text, 'rejected'::text, 'pickup_assigned'::text, 'picked_up'::text, 'credited'::text])),
   created_at timestamp with time zone DEFAULT now(),
   device_id uuid,
   imei_number text,
@@ -125,9 +128,12 @@ CREATE TABLE public.ewaste (
   admin_offer numeric,
   customer_agreed boolean,
   address text,
+  ewaste_category_id uuid,
+  category text DEFAULT 'ewaste'::text CHECK (category = ANY (ARRAY['ewaste'::text, 'resell'::text])),
   CONSTRAINT ewaste_pkey PRIMARY KEY (id),
   CONSTRAINT ewaste_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.users(id),
-  CONSTRAINT ewaste_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id)
+  CONSTRAINT ewaste_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id),
+  CONSTRAINT ewaste_ewaste_category_id_fkey FOREIGN KEY (ewaste_category_id) REFERENCES public.ewaste_categories(id)
 );
 CREATE TABLE public.reviews (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -309,4 +315,23 @@ CREATE TABLE public.email_otps (
   verified boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT email_otps_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.cart_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  customer_id uuid NOT NULL,
+  shop_item_id uuid NOT NULL,
+  quantity integer NOT NULL DEFAULT 1,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT cart_items_pkey PRIMARY KEY (id),
+  CONSTRAINT cart_items_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.users(id),
+  CONSTRAINT cart_items_shop_item_id_fkey FOREIGN KEY (shop_item_id) REFERENCES public.shop_items(id)
+);
+CREATE TABLE public.ewaste_categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  is_active boolean DEFAULT true,
+  sort_order integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ewaste_categories_pkey PRIMARY KEY (id)
 );

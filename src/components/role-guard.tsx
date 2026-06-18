@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -62,61 +62,9 @@ export default function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
     return null;
   }
 
-  // Wrong role: show access denied
+  // Wrong role: return 404 to completely hide the page
   if (!allowedRoles.includes(user.role)) {
-    return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="w-full max-w-sm text-center"
-        >
-          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
-            {/* Icon */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
-              className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20"
-            >
-              <ShieldAlert className="h-8 w-8 text-red-400" />
-            </motion.div>
-
-            {/* Title */}
-            <h1 className="text-xl font-bold text-white mb-2">
-              Access Denied
-            </h1>
-
-            {/* Message */}
-            <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
-              You don&apos;t have permission to access this page. This area is restricted to{' '}
-              <span className="text-[#00D084] font-medium">
-                {allowedRoles.join(', ')}
-              </span>{' '}
-              roles.
-            </p>
-
-            {/* Actions */}
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => router.back()}
-                variant="outline"
-                className="border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10"
-              >
-                Go Back
-              </Button>
-              <Button
-                onClick={() => router.replace('/')}
-                className="bg-[#00D084] hover:bg-[#00B872] text-black font-semibold"
-              >
-                Go Home
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
+    notFound();
   }
 
   // Authorized: render children

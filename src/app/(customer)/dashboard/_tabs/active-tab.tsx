@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -16,16 +17,13 @@ import { Wrench, Calendar, IndianRupee, CircleCheck as CheckCircle, ChevronDown,
 
 export default function ActiveTab({ userId }: { userId: string }) {
   const [repairs, setRepairs] = useState<Repair[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [timelines, setTimelines] = useState<Record<string, RepairTimelineEntry[]>>({});
   const [rcaReport, setRcaReport] = useState<RcaReport | null>(null);
   const [rcaOpen, setRcaOpen] = useState(false);
-
   const [confirmedRcaIds, setConfirmedRcaIds] = useState<Set<string>>(new Set());
 
   const fetchRepairs = useCallback(async () => {
-    setLoading(true);
     const { data } = await supabase.from('repairs').select('*, device:devices(*)').eq('customer_id', userId).not('status', 'in', '("delivered","cancelled","done")').order('created_at', { ascending: false });
     const reps = (data as Repair[]) || [];
     setRepairs(reps);
@@ -34,11 +32,15 @@ export default function ActiveTab({ userId }: { userId: string }) {
       const { data: rcas } = await supabase.from('rca_reports').select('repair_id').eq('admin_confirmed', true).in('repair_id', reps.map(r => r.id));
       console.debug('[ACTIVE_TAB_RCAS]', rcas);
       setConfirmedRcaIds(new Set((rcas || []).map((r: any) => r.repair_id)));
+    } else {
+      setConfirmedRcaIds(new Set());
     }
-    setLoading(false);
   }, [userId]);
 
-  useEffect(() => { fetchRepairs(); }, [fetchRepairs]);
+  const { loading } = useAuthFetch(fetchRepairs, {
+    realtimeTable: 'repairs',
+    realtimeFilter: `customer_id=eq.${userId}`
+  });
 
   const fetchTimeline = async (repairId: string) => {
     if (timelines[repairId]) return;

@@ -14,12 +14,14 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { DIAGNOSTIC_CHECKLIST_ITEMS, QA_CHECKLIST_ITEMS, REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { Part, PartUsed, RcaReport, RepairStatus } from '@/lib/types';
-import { Camera, Mic, Plus, Search, Timer, Smartphone, CheckCircle, AlertTriangle, Package, Loader2, IndianRupee } from 'lucide-react';
-import { addPartToRepair, submitRcaReport, markRepairComplete } from '@/lib/actions/technician';
+import { Camera, Mic, Plus, Search, Timer, Smartphone, CheckCircle, AlertTriangle, Package, Loader2, IndianRupee, Sparkles } from 'lucide-react';
+import { submitRcaReport, markRepairComplete } from '@/lib/actions/technician';
+import { enhanceTechnicianNotes } from '@/lib/actions/ai';
 import { updateRepairStatus } from '@/lib/actions/repairs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { compressImage } from '@/lib/compress-image';
 
 // Types passed from parent
 type RepairWithJoins = any; // Will use the one from page.tsx
@@ -32,11 +34,6 @@ interface JobDetailSheetProps {
   fetchRepairs: () => void;
 }
 
-const approvalSchema = z.object({
-  revised_estimate: z.number().positive('Must be positive'),
-  note: z.string().min(5, 'Note required'),
-});
-
 const rcaSchema = z.object({
   technician_notes: z.string().min(5, 'Notes required'),
 });
@@ -44,18 +41,7 @@ const rcaSchema = z.object({
 export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpdate, fetchRepairs }: JobDetailSheetProps) {
   const { user } = useAuth();
   
-  // Section B - Parts
-  const [partSearch, setPartSearch] = useState('');
-  const [partResults, setPartResults] = useState<Part[]>([]);
-  const [selectedPart, setSelectedPart] = useState<Part | null>(null);
-  const [partQty, setPartQty] = useState(1);
-  const [partsUsed, setPartsUsed] = useState<PartUsed[]>([]);
-  const [partsLoading, setPartsLoading] = useState(false);
 
-  // Section C - Approval
-  const [approvalPhoto, setApprovalPhoto] = useState<File | null>(null);
-  const [submittingApproval, setSubmittingApproval] = useState(false);
-  const approvalForm = useForm({ resolver: zodResolver(approvalSchema), defaultValues: { revised_estimate: 0, note: '' } });
 
   // Section D - RCA
   const [rcaReport, setRcaReport] = useState<RcaReport | null>(null);
@@ -64,6 +50,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
   const [prePhotos, setPrePhotos] = useState<File[]>([]);
   const [postPhotos, setPostPhotos] = useState<File[]>([]);
   const [submittingRca, setSubmittingRca] = useState(false);
+  const [enhancingAi, setEnhancingAi] = useState(false);
   const rcaForm = useForm({ resolver: zodResolver(rcaSchema), defaultValues: { technician_notes: '' } });
   const isRecording = useRef(false);
 
@@ -72,21 +59,11 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
 
   useEffect(() => {
     if (repair && open) {
-      loadPartsUsed();
       loadRcaReport();
-      setPartSearch(''); setSelectedPart(null); setPartQty(1);
       setDiagnosticChecks({}); setQaChecks({}); setPrePhotos([]); setPostPhotos([]);
-      approvalForm.reset(); rcaForm.reset();
+      rcaForm.reset();
     }
   }, [repair, open]);
-
-  const loadPartsUsed = async () => {
-    if (!repair) return;
-    setPartsLoading(true);
-    const { data } = await supabase.from('parts_used').select('*, part:parts(*)').eq('repair_id', repair.id);
-    setPartsUsed((data as PartUsed[]) || []);
-    setPartsLoading(false);
-  };
 
   const loadRcaReport = async () => {
     if (!repair) return;
@@ -96,79 +73,8 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
     setRcaLoading(false);
   };
 
-  // --- Parts Logic ---
-  const searchParts = async (query: string) => {
-    setPartSearch(query);
-    if (query.length < 2) { setPartResults([]); return; }
-    const { data } = await supabase.from('parts').select('*').eq('shop_id', repair?.shop_id).ilike('name', `%${query}%`).limit(10);
-    setPartResults((data as Part[]) || []);
-  };
 
-  const addPart = async () => {
-    if (!repair || !selectedPart) return;
-    if (partQty > selectedPart.quantity_in_stock) { toast.error('Not enough stock'); return; }
-    
-    console.debug('[TECH:ADD_PART]', { repairId: repair.id, partId: selectedPart.id, qty: partQty });
-    const result = await addPartToRepair({
-      repairId: repair.id,
-      partId: selectedPart.id,
-      quantity: partQty,
-      costAtTime: selectedPart.cost_price,
-      currentStock: selectedPart.quantity_in_stock,
-    });
-    
-    if (!result.success) {
-      console.error('[TECH:ADD_PART_ERROR]', result.error);
-      toast.error(result.error || 'Failed to add part');
-      return;
-    }
-    
-    console.debug('[TECH:ADD_PART_OK]');
-    toast.success('Part added');
-    setPartSearch(''); setSelectedPart(null); setPartQty(1); setPartResults([]);
-    loadPartsUsed();
-  };
 
-  // --- Approval Logic ---
-  const submitApproval = async (data: any) => {
-    if (!repair || !approvalPhoto) { toast.error('Photo is required'); return; }
-    setSubmittingApproval(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', approvalPhoto);
-      formData.append('folder', `approval/${repair.id}`);
-
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error('Photo upload failed');
-      }
-
-      const uploadData = await uploadRes.json();
-      const publicUrl = uploadData.urls[0];
-
-      const noteJson = JSON.stringify({ revised_estimate: data.revised_estimate, note: data.note });
-      
-      await supabase.from('repairs').update({
-        status: 'pending_approval',
-        approval_status: 'pending',
-        approval_photo_url: publicUrl,
-        approval_note: noteJson
-      }).eq('id', repair.id);
-
-      await supabase.from('repair_timeline').insert({
-        repair_id: repair.id, status: 'pending_approval', note: 'Awaiting customer approval for revised quote', updated_by: user?.id
-      });
-      
-      toast.success('Approval requested');
-      fetchRepairs();
-      onOpenChange(false);
-    } catch (e) { toast.error('Error requesting approval'); }
-    setSubmittingApproval(false);
-  };
 
   // --- RCA Logic ---
   const toggleSpeech = () => {
@@ -193,6 +99,23 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
     recognition.start();
   };
 
+  const enhanceWithAi = async () => {
+    const currentNotes = rcaForm.getValues('technician_notes');
+    if (!currentNotes || currentNotes.trim().length < 5) {
+      toast.error('Please write some notes first before enhancing');
+      return;
+    }
+    setEnhancingAi(true);
+    const result = await enhanceTechnicianNotes(currentNotes);
+    if (result.success && result.text) {
+      rcaForm.setValue('technician_notes', result.text);
+      toast.success('Notes enhanced with AI!');
+    } else {
+      toast.error(result.error || 'Failed to enhance notes');
+    }
+    setEnhancingAi(false);
+  };
+
   const submitRca = async (data: any) => {
     if (!repair || !user) return;
     const checkedCount = Object.values(diagnosticChecks).filter(Boolean).length;
@@ -208,7 +131,11 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
         if (files.length === 0) return [];
         const formData = new FormData();
         formData.append('folder', `${folder}/${repair.id}`);
-        files.forEach(file => formData.append('file', file));
+        
+        for (const file of files) {
+          const compressed = await compressImage(file);
+          formData.append('file', compressed);
+        }
 
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',
@@ -269,8 +196,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
 
   if (!repair) return null;
 
-  const isPendingApproval = repair.approval_status === 'pending';
-  const disableStatusChange = isPendingApproval || repair.status === 'done';
+  const disableStatusChange = repair.status === 'done';
 
   const nextStatus = repair.status === 'booked' || repair.status === 'pickup_scheduled' ? 'device_received'
                    : repair.status === 'device_received' ? 'diagnostic'
@@ -322,101 +248,6 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
 
           <Separator className="bg-[#E8E4DF]" />
 
-          {/* SECTION B: Parts Used */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2"><Package className="w-4 h-4 text-[#FF5C00]"/> Parts Used</h3>
-            
-            {partsLoading ? <Skeleton className="h-10 bg-[#1A1A1A]/5" /> : (
-              partsUsed.length > 0 && (
-                <div className="space-y-2">
-                  {partsUsed.map(pu => (
-                    <div key={pu.id} className="flex justify-between items-center bg-[#F7F7F5] border border-[#E8E4DF] p-2 rounded text-sm">
-                      <span className="text-[#1A1A1A] font-medium">{pu.part?.name} <span className="text-[#1A1A1A]/40">x{pu.quantity}</span></span>
-                      <span className="text-[#FF5C00] font-semibold">₹{(pu.quantity * pu.cost_at_time).toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between items-center p-2 text-sm font-bold border-t border-[#E8E4DF] mt-2">
-                    <span className="text-[#1A1A1A]">Total Parts Cost</span>
-                    <span className="text-[#FF5C00]">₹{partsUsed.reduce((s, p) => s + (p.quantity * p.cost_at_time), 0).toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-              )
-            )}
-
-            {!disableStatusChange && (
-              <div className="flex gap-2 items-end">
-                <div className="flex-1 relative">
-                  <Label className="text-xs text-[#1A1A1A]/60 mb-1 block">Search Part</Label>
-                  <Search className="w-4 h-4 absolute left-3 top-7 text-[#1A1A1A]/40" />
-                  <Input value={partSearch} onChange={e => searchParts(e.target.value)} placeholder="Type to search..." className="pl-9 bg-white border-[#E8E4DF] text-[#1A1A1A]" />
-                  {partResults.length > 0 && (
-                    <div className="absolute top-full mt-1 w-full bg-white border border-[#E8E4DF] rounded-lg p-1 z-50 shadow-md max-h-40 overflow-y-auto">
-                      {partResults.map(p => (
-                        <div key={p.id} onClick={() => { setSelectedPart(p); setPartSearch(p.name); setPartResults([]); }} className="p-2 hover:bg-[#F7F7F5] cursor-pointer rounded text-sm text-[#1A1A1A]">
-                          {p.name} <span className="text-[#1A1A1A]/50 block text-xs">Stock: {p.quantity_in_stock} | Cost: ₹{p.cost_price}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="w-20">
-                  <Label className="text-xs text-[#1A1A1A]/60 mb-1 block">Qty</Label>
-                  <Input type="number" min={1} value={partQty} onChange={e => setPartQty(Number(e.target.value))} className="bg-white border-[#E8E4DF] text-[#1A1A1A]" />
-                </div>
-                <Button onClick={addPart} disabled={!selectedPart} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-semibold"><Plus className="w-4 h-4" /></Button>
-              </div>
-            )}
-          </section>
-
-          <Separator className="bg-[#E8E4DF]" />
-
-          {/* SECTION C: Approval Gateway */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500"/> Approval Gateway</h3>
-            
-            {repair.approval_status ? (
-              <div className={`p-4 rounded-lg border ${repair.approval_status === 'pending' ? 'bg-amber-500/10 border-amber-500/20' : repair.approval_status === 'approved' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                <p className={`font-semibold ${repair.approval_status === 'pending' ? 'text-amber-600' : repair.approval_status === 'approved' ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {repair.approval_status === 'pending' ? 'Waiting for customer...' : repair.approval_status === 'approved' ? 'Customer approved — you can continue' : 'Customer rejected — repair cancelled'}
-                </p>
-                {repair.approval_note && (
-                  <p className="text-sm text-[#1A1A1A]/60 mt-2">Note: {JSON.parse(repair.approval_note).note}</p>
-                )}
-              </div>
-            ) : (
-              !disableStatusChange && (
-                <div className="bg-[#F7F7F5] p-4 rounded-lg border border-[#E8E4DF]">
-                  <p className="text-xs text-[#1A1A1A]/60 mb-4">Request approval for additional damage not covered by original estimate.</p>
-                  <form onSubmit={approvalForm.handleSubmit(submitApproval)} className="space-y-3">
-                    <div>
-                      <Label className="text-[#1A1A1A]/80 text-xs">Damage Photo *</Label>
-                      <Input type="file" accept="image/*" onChange={e => setApprovalPhoto(e.target.files?.[0] || null)} className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1 text-sm file:bg-[#F7F7F5] file:text-[#1A1A1A]" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-[#1A1A1A]/80 text-xs">Original Est.</Label>
-                        <Input readOnly value={`₹${repair.estimated_cost || 0}`} className="bg-[#E8E4DF]/50 border-transparent text-[#1A1A1A]/60 mt-1 cursor-not-allowed font-medium" />
-                      </div>
-                      <div>
-                        <Label className="text-[#1A1A1A]/80 text-xs">Revised Est. *</Label>
-                        <Input type="number" {...approvalForm.register('revised_estimate', { valueAsNumber: true })} className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-[#1A1A1A]/80 text-xs">Note to Customer *</Label>
-                      <Textarea {...approvalForm.register('note')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1 min-h-[60px]" placeholder="Explain the additional damage..." />
-                    </div>
-                    <Button type="submit" disabled={submittingApproval} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold">
-                      {submittingApproval ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <AlertTriangle className="w-4 h-4 mr-2" />} Request Customer Approval
-                    </Button>
-                  </form>
-                </div>
-              )
-            )}
-          </section>
-
-          <Separator className="bg-[#E8E4DF]" />
-
           {/* SECTION D: RCA Report */}
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2"><Search className="w-4 h-4 text-[#FF5C00]"/> RCA Report</h3>
@@ -456,9 +287,14 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <Label className="text-[#1A1A1A]/80 text-xs">Technician Notes *</Label>
-                      <Button type="button" variant="ghost" size="sm" onClick={toggleSpeech} className="h-6 text-xs text-[#FF5C00] hover:text-[#e05200] hover:bg-[#FF5C00]/10 px-2 font-semibold">
-                        <Mic className="w-3 h-3 mr-1" /> Dictate
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="ghost" size="sm" onClick={enhanceWithAi} disabled={enhancingAi} className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-600/10 px-2 font-semibold">
+                          {enhancingAi ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />} AI Enhance
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={toggleSpeech} className="h-6 text-xs text-[#FF5C00] hover:text-[#e05200] hover:bg-[#FF5C00]/10 px-2 font-semibold">
+                          <Mic className="w-3 h-3 mr-1" /> Dictate
+                        </Button>
+                      </div>
                     </div>
                     <Textarea {...rcaForm.register('technician_notes')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] min-h-[80px]" placeholder="Add your diagnostic notes here..." />
                   </div>

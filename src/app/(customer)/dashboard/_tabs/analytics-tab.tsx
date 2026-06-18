@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import type { Invoice } from '@/lib/types';
@@ -17,16 +18,14 @@ interface RepairWithInvoice {
 
 export default function AnalyticsTab({ userId }: { userId: string }) {
   const [data, setData] = useState<RepairWithInvoice[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const { data: repairs } = await supabase.from('repairs').select('id, created_at, device:devices(brand, model_name), invoices(*)').eq('customer_id', userId);
-      setData((repairs as unknown as RepairWithInvoice[]) || []);
-      setLoading(false);
-    })();
+  const fetchData = useCallback(async () => {
+    const { data: repairs } = await supabase.from('repairs').select('id, created_at, device:devices(brand, model_name), invoices(*)').eq('customer_id', userId);
+    setData((repairs as unknown as RepairWithInvoice[]) || []);
   }, [userId]);
+
+  const { loading } = useAuthFetch(fetchData, {
+    realtimeTable: 'invoices' // we mostly care about invoices updates for analytics
+  });
 
   if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-2xl bg-[#1A1A1A]/5" />)}</div>;
 

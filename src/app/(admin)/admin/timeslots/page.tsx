@@ -136,7 +136,7 @@ export default function TimeSlotsPage() {
         </Button>
       </motion.div>
 
-      <Card className="border-[#E8E4DF] shadow-sm">
+      <Card className="bg-white border-[#E8E4DF] shadow-sm">
         <Table>
           <TableHeader className="bg-[#F7F7F5]">
             <TableRow>

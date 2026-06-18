@@ -12,13 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function PhoneVerificationModal() {
-  const { user, needsPhoneVerification } = useAuth();
+  const { user, needsPhone } = useAuth();
   const [phone, setPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [showOtp, setShowOtp] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  if (!needsPhoneVerification || !user) return null;
+  if (!needsPhone || !user) return null;
 
   const handleSendOtp = async () => {
     if (!phone.match(/^[6-9]\d{9}$/)) {

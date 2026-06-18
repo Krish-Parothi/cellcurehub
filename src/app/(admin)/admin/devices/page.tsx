@@ -22,21 +22,23 @@ import { Smartphone, Plus, Trash2, ChevronDown } from 'lucide-react';
 export default function DevicesPage() {
   
   const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   const [addDialog, setAddDialog] = useState(false);
   const [form, setForm] = useState({ brand: '', model_name: '', category: 'smartphone' as string });
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
+  const [isCustomBrand, setIsCustomBrand] = useState(false);
 
   const fetchDevices = useCallback(async () => {
-    setLoading(true);
+    
     const { data } = await supabase.from('devices').select('*').order('brand').order('model_name');
     setDevices(data || []);
-    setLoading(false);
+    
   }, []);
 
-  const { user } = useAuthFetch(fetchDevices, { requiredRole: 'admin' });
+  const { user, loading } = useAuthFetch(fetchDevices, { requiredRole: 'admin' });
 
   const brandGroups = devices.reduce((acc, d) => { (acc[d.brand] ??= []).push(d); return acc; }, {} as Record<string, Device[]>);
+  const dynamicBrands = Array.from(new Set([...DEVICE_BRANDS, ...devices.map(d => d.brand)])).sort();
 
   const toggleBrand = (brand: string) => {
     setExpandedBrands(prev => { const n = new Set(prev); n.has(brand) ? n.delete(brand) : n.add(brand); return n; });
@@ -44,11 +46,18 @@ export default function DevicesPage() {
 
   const addDevice = async () => {
     if (!form.brand || !form.model_name) { toast.error('Brand and model required'); return; }
-    await supabase.from('devices').insert({ brand: form.brand, model_name: form.model_name, category: form.category, is_active: true });
+    await supabase.from('devices').insert({ brand: form.brand.trim(), model_name: form.model_name.trim(), category: form.category, is_active: true });
     toast.success('Model added');
     setAddDialog(false);
     setForm({ brand: '', model_name: '', category: 'smartphone' });
+    setIsCustomBrand(false);
     fetchDevices();
+  };
+
+  const openAddDialog = () => {
+    setForm({ brand: '', model_name: '', category: 'smartphone' });
+    setIsCustomBrand(false);
+    setAddDialog(true);
   };
 
   const toggleActive = async (d: Device) => {
@@ -76,7 +85,7 @@ export default function DevicesPage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A]">Device Models</h1>
           <p className="text-[#1A1A1A]/60 text-sm mt-1">Manage supported devices</p>
         </div>
-        <Button onClick={() => setAddDialog(true)} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-bold"><Plus className="w-4 h-4 mr-1" />Add Model</Button>
+        <Button onClick={openAddDialog} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-bold"><Plus className="w-4 h-4 mr-1" />Add Model</Button>
       </motion.div>
 
       {loading ? <div className="space-y-4">{[0,1,2].map(i => <Skeleton key={i} className="h-16 w-full bg-[#1A1A1A]/5 rounded-xl" />)}</div> : (
@@ -120,13 +129,23 @@ export default function DevicesPage() {
         <DialogContent className="bg-white border-[#E8E4DF] max-w-sm text-[#1A1A1A]">
           <DialogHeader><DialogTitle className="text-[#1A1A1A]">Add Device Model</DialogTitle><DialogDescription className="text-[#1A1A1A]/60">Add a new device to the catalog</DialogDescription></DialogHeader>
           <div className="space-y-3">
-            <div><Label className="text-[#1A1A1A]/70 font-semibold">Brand</Label>
-              <Select value={form.brand} onValueChange={v => setForm(f => ({ ...f, brand: v }))}>
-                <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1"><SelectValue placeholder="Select brand" /></SelectTrigger>
-                <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                  {DEVICE_BRANDS.map(b => <SelectItem key={b} value={b} className="hover:bg-[#F7F7F5] cursor-pointer">{b}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-[#1A1A1A]/70 font-semibold">Brand</Label>
+                <Button type="button" variant="link" className="h-auto p-0 text-xs text-[#FF5C00] hover:text-[#e05200]" onClick={() => { setIsCustomBrand(!isCustomBrand); setForm(f => ({ ...f, brand: '' })); }}>
+                  {isCustomBrand ? 'Select existing' : '+ Add Custom Brand'}
+                </Button>
+              </div>
+              {isCustomBrand ? (
+                <Input autoFocus className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1 placeholder:text-[#1A1A1A]/30" value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} placeholder="e.g. Nothing" />
+              ) : (
+                <Select value={form.brand} onValueChange={v => setForm(f => ({ ...f, brand: v }))}>
+                  <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1"><SelectValue placeholder="Select brand" /></SelectTrigger>
+                  <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+                    {dynamicBrands.map(b => <SelectItem key={b} value={b} className="hover:bg-[#F7F7F5] cursor-pointer">{b}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div><Label className="text-[#1A1A1A]/70 font-semibold">Model Name</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1 placeholder:text-[#1A1A1A]/30" value={form.model_name} onChange={e => setForm(f => ({ ...f, model_name: e.target.value }))} placeholder="e.g. iPhone 15 Pro" /></div>
             <div><Label className="text-[#1A1A1A]/70 font-semibold">Category</Label>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -27,7 +28,6 @@ function getWarrantyInfo(deliveredAt: string | null) {
 export default function HistoryTab({ userId }: { userId: string }) {
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [reviews, setReviews] = useState<Record<string, Review>>({});
-  const [loading, setLoading] = useState(true);
   const [rcaReport, setRcaReport] = useState<RcaReport | null>(null);
   const [rcaOpen, setRcaOpen] = useState(false);
   const [confirmedRcaIds, setConfirmedRcaIds] = useState<Set<string>>(new Set());
@@ -38,8 +38,7 @@ export default function HistoryTab({ userId }: { userId: string }) {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    const { data: repairData } = await supabase.from('repairs').select('*, device:devices(*)').eq('customer_id', userId).in('status', ['delivered', 'done']).order('created_at', { ascending: false });
+    const { data: repairData } = await supabase.from('repairs').select('*, device:devices(*)').eq('customer_id', userId).in('status', ['delivered', 'done', 'cancelled']).order('created_at', { ascending: false });
     const reps = (repairData as Repair[]) || [];
     setRepairs(reps);
     if (reps.length > 0) {
@@ -51,11 +50,16 @@ export default function HistoryTab({ userId }: { userId: string }) {
       const { data: rcas } = await supabase.from('rca_reports').select('repair_id').eq('admin_confirmed', true).in('repair_id', reps.map(r => r.id));
       console.debug('[HISTORY_TAB_RCAS]', rcas);
       setConfirmedRcaIds(new Set((rcas || []).map((r: any) => r.repair_id)));
+    } else {
+      setReviews({});
+      setConfirmedRcaIds(new Set());
     }
-    setLoading(false);
   }, [userId]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const { loading } = useAuthFetch(fetchData, {
+    realtimeTable: 'repairs',
+    realtimeFilter: `customer_id=eq.${userId}`
+  });
 
   const handleViewRca = async (repairId: string) => {
     console.debug('[CUSTOMER_VIEW_RCA_HISTORY]', { repairId, userId });

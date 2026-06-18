@@ -1,162 +1,156 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, UserRole } from '@/lib/types';
-import type { Session } from '@supabase/supabase-js';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUpWithPassword: (email: string, password: string, fullName: string, role: UserRole) => Promise<{ error: string | null }>;
+  signUpWithPassword: (email: string, password: string, fullName: string, role: UserRole, phone: string) => Promise<{ error: string | null }>;
   signInWithPhone: (phone: string) => Promise<{ error: string | null }>;
   verifyOtp: (phone: string, token: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  needsPhoneVerification: boolean;
+  needsPhone: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// ── Helper: build a User object from various sources ─────────────────
+function buildProfile(
+  authUser: SupabaseUser,
+  role: UserRole,
+  extras?: { shop_id?: string | null; full_name?: string | null; phone?: string | null }
+): User {
+  return {
+    id: authUser.id,
+    email: authUser.email || null,
+    phone: extras?.phone || authUser.app_metadata?.phone || authUser.phone || null,
+    full_name: extras?.full_name || authUser.app_metadata?.full_name || authUser.user_metadata?.full_name || authUser.email || 'User',
+    avatar_url: authUser.user_metadata?.avatar_url || null,
+    role,
+    shop_id: extras?.shop_id || authUser.app_metadata?.shop_id || null,
+    created_at: authUser.created_at || new Date().toISOString(),
+    is_active: true,
+    phone_verified: !!authUser.phone,
+    firebase_uid: null,
+  };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const initializedRef = useRef(false);
 
-  const needsPhoneVerification = !!user && (!user.phone || !user.phone_verified);
+  const DEBUG = process.env.NODE_ENV === 'development';
+  const needsPhone = !!user && !user.phone;
 
-  const fetchProfile = useCallback(async (userId: string): Promise<User | null> => {
-    try {
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-      return data as User | null;
-    } catch {
-      return null;
-    }
-  }, []);
+  // ── Cache: prevents infinite loops and redundant DB calls ────────
+  // Once we resolve a user's role via DB, we cache it here keyed by user ID.
+  // Subsequent TOKEN_REFRESHED events with stale JWTs will use this cache
+  // instead of re-fetching and re-triggering refreshSession().
+  const resolvedCacheRef = useRef<{ userId: string; profile: User } | null>(null);
 
-  /** Ensure a users row exists for the given auth user */
-  const ensureProfile = useCallback(async (authUser: { id: string; email?: string; user_metadata?: Record<string, any> }): Promise<User | null> => {
-    let profile = await fetchProfile(authUser.id);
-
-    // If the profile doesn't exist, or if it exists but is a customer (to catch Google login merge issues)
-    if (!profile || (profile.role === 'customer' && authUser.email)) {
-      if (authUser.email) {
-        // Find if there is an administrative/staff profile created with the same email but a different ID
-        const { data: existingEmailProfile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', authUser.email)
-          .neq('id', authUser.id)
-          .in('role', ['admin', 'shop_admin', 'technician', 'delivery'])
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        if (existingEmailProfile) {
-          // If we already have a customer profile for this Google ID, delete it first to avoid conflicts
-          if (profile) {
-            await supabase.from('users').delete().eq('id', authUser.id);
-          }
-
-          // Try to update the existing record's ID directly (preferred to keep all history/relationships)
-          const { error: updateIdError } = await supabase
-            .from('users')
-            .update({ id: authUser.id })
-            .eq('id', existingEmailProfile.id);
-
-          if (!updateIdError) {
-            profile = await fetchProfile(authUser.id);
-            if (profile) return profile;
-          }
-
-          // Fallback if ID update failed (e.g. due to foreign keys)
-          await supabase.from('users').upsert({
-            id: authUser.id,
-            full_name: authUser.user_metadata?.full_name || existingEmailProfile.full_name || authUser.email || 'User',
-            email: authUser.email || null,
-            phone: existingEmailProfile.phone || authUser.user_metadata?.phone || null,
-            avatar_url: authUser.user_metadata?.avatar_url || null,
-            role: existingEmailProfile.role as UserRole,
-            shop_id: existingEmailProfile.shop_id,
-            is_active: existingEmailProfile.is_active ?? true,
-          }, { onConflict: 'id', ignoreDuplicates: true });
-
-          // De-duplicate: mark the old email to avoid future conflicts
-          await supabase
-            .from('users')
-            .update({ email: `${existingEmailProfile.email}_merged_${Date.now()}` })
-            .eq('id', existingEmailProfile.id);
-
-          profile = await fetchProfile(authUser.id);
-          return profile;
-        }
-      }
-    }
-
-    // Default profile creation if nothing exists and no merge candidate is found
-    if (!profile) {
-      await supabase.from('users').upsert({
-        id: authUser.id,
-        full_name: authUser.user_metadata?.full_name || authUser.email || 'User',
-        email: authUser.email || null,
-        avatar_url: authUser.user_metadata?.avatar_url || null,
-        role: authUser.user_metadata?.role || 'customer',
-      }, { onConflict: 'id', ignoreDuplicates: true });
-      profile = await fetchProfile(authUser.id);
-    }
-    return profile;
-  }, [fetchProfile]);
+  // Tracks whether a DB fallback fetch is already in flight (prevents races)
+  const fetchInFlightRef = useRef(false);
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
-    // 1. Bootstrap from existing session (fast, synchronous-ish)
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      setSession(s);
-      if (s?.user) {
-        const profile = await ensureProfile(s.user);
-        setUser(profile);
-      }
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
-
-    // 2. Listen for future auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, s) => {
+      (event, s) => {
+        if (DEBUG) console.log(`[Auth] ${event} hasUser=${!!s?.user}`);
+
         setSession(s);
-        if (s?.user) {
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            // Full profile sync on sign-in or metadata change
-            const profile = await ensureProfile(s.user);
-            setUser(profile);
-            setLoading(false);
-          } else if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-            // On token refresh or initial load, re-fetch the profile from DB
-            // to keep user state fresh. This prevents the "null user" flash
-            // that causes pages to appear empty until manual refresh.
-            const profile = await fetchProfile(s.user.id);
-            if (profile) setUser(profile);
-            setLoading(false);
-          }
-        } else {
+
+        if (!s?.user) {
+          // Signed out — clear everything
           setUser(null);
           setLoading(false);
+          resolvedCacheRef.current = null;
+          fetchInFlightRef.current = false;
+          return;
         }
+
+        const authUser = s.user;
+
+        // ── Path 1: JWT has role from Custom Claims hook (ideal) ──
+        const jwtRole = authUser.app_metadata?.role as UserRole | undefined;
+        if (jwtRole) {
+          if (DEBUG) console.log('[Auth] JWT has role:', jwtRole);
+          const profile = buildProfile(authUser, jwtRole);
+          resolvedCacheRef.current = { userId: authUser.id, profile };
+          setUser(profile);
+          setLoading(false);
+          return;
+        }
+
+        // ── Path 2: Cache hit — we already resolved this user via DB ──
+        if (resolvedCacheRef.current?.userId === authUser.id) {
+          if (DEBUG) console.log('[Auth] Using cached profile (role:', resolvedCacheRef.current.profile.role, ')');
+          setUser(resolvedCacheRef.current.profile);
+          setLoading(false);
+          return;
+        }
+
+        // ── Path 3: No JWT role, no cache — need DB fallback (runs once) ──
+        if (fetchInFlightRef.current) {
+          if (DEBUG) console.log('[Auth] DB fetch already in flight, skipping');
+          return; // Don't double-fetch
+        }
+
+        fetchInFlightRef.current = true;
+        if (DEBUG) console.log('[Auth] DB fallback: fetching profile for', authUser.id);
+
+        // IMPORTANT: We do NOT await this inside onAuthStateChange.
+        // We fire-and-forget to avoid Web Locks deadlock, but we track
+        // completion via the ref so it only runs once.
+        const fetchProfileWithRetry = async (retries = 3) => {
+          for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+              const { data: dbProfile, error } = await supabase
+                .from('users')
+                .select('role, shop_id, full_name, phone')
+                .eq('id', authUser.id)
+                .maybeSingle();
+
+              if (error) throw error;
+
+              const role = (dbProfile?.role as UserRole) || 'customer';
+              if (DEBUG) console.log(`[Auth] DB fallback resolved role: ${role} (attempt ${attempt})`);
+
+              const profile = buildProfile(authUser, role, {
+                shop_id: dbProfile?.shop_id,
+                full_name: dbProfile?.full_name,
+                phone: dbProfile?.phone,
+              });
+
+              resolvedCacheRef.current = { userId: authUser.id, profile };
+              setUser(profile);
+              setLoading(false);
+              fetchInFlightRef.current = false;
+              return; // success — exit
+            } catch (err) {
+              console.warn(`[Auth] DB fallback attempt ${attempt}/${retries} failed:`, err);
+              if (attempt < retries) {
+                await new Promise((r) => setTimeout(r, 1000)); // wait 1s before retry
+              }
+            }
+          }
+
+          // All retries exhausted — keep loading state so RoleGuard shows spinner, not 404
+          console.error('[Auth] DB fallback failed after all retries. User will see loading state.');
+          fetchInFlightRef.current = false;
+        };
+
+        fetchProfileWithRetry();
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [ensureProfile, fetchProfile]);
+  }, [DEBUG]);
 
   const signInWithPassword = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -167,7 +161,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     fullName: string,
-    role: UserRole
+    role: UserRole,
+    phone: string
   ) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -182,6 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: data.user.id,
         full_name: fullName,
         email,
+        phone: `+91${phone.replace(/^\+91/, '')}`,
         role,
         phone_verified: false,
       });
@@ -198,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
     if (error) return { error: error.message };
     if (data.user) {
-      const existing = await fetchProfile(data.user.id);
+      const { data: existing } = await supabase.from('users').select('id').eq('id', data.user.id).maybeSingle();
       if (!existing) {
         await supabase.from('users').insert({
           id: data.user.id,
@@ -215,16 +211,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google' });
+    // Clear cache so re-login fetches fresh data
+    resolvedCacheRef.current = null;
+    fetchInFlightRef.current = false;
+    await supabase.auth.signInWithOAuth({ 
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback`
+      }
+    });
   };
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
-      if (error) { /* sign out error — handled by finally block */ }
-    } catch (e) {
-      // sign out exception — handled by finally block
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch {
+      // handled by finally
     } finally {
+      resolvedCacheRef.current = null;
+      fetchInFlightRef.current = false;
       setUser(null);
       setSession(null);
       window.location.href = '/';
@@ -243,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyOtp,
         signInWithGoogle,
         signOut,
-        needsPhoneVerification,
+        needsPhone,
       }}
     >
       {children}

@@ -2,9 +2,10 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth-context';
+import { CartProvider } from '@/lib/cart-context';
 import { Toaster } from '@/components/ui/sonner';
 import FloatingChatAssistant from '@/components/floating-chatbot/floatchat';
-import PhoneVerificationModal from '@/components/phone-verification-modal';
+
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,10 +29,12 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${inter.className} bg-[#0A0A0A] text-white antialiased`}>
         <AuthProvider>
-          {children}
+          <CartProvider>
+            {children}
+          </CartProvider>
           <Toaster />
           <FloatingChatAssistant />
-          <PhoneVerificationModal />
+
         </AuthProvider>
       </body>
     </html>

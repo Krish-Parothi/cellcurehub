@@ -27,7 +27,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 export default function SignupPage() {
   const router = useRouter();
   const { signUpWithPassword, signInWithGoogle } = useAuth();
-  const [loading, setLoading] = useState(false);
+  
   const [googleLoading, setGoogleLoading] = useState(false);
 
   // OTP State
@@ -73,21 +73,19 @@ export default function SignupPage() {
     }
 
     // OTP is valid, create account
-    setLoading(true);
-    const { error } = await signUpWithPassword(formData.email, formData.password, formData.fullName, 'customer');
+    
+    const { error } = await signUpWithPassword(formData.email, formData.password, formData.fullName, 'customer', formData.phone);
     if (error) {
       toast.error(error);
-      setLoading(false);
+      
       setVerifyingOtp(false);
       return;
     }
     // Store default address in localStorage
     localStorage.setItem('cellcurehub_default_address', formData.address);
-    // Store phone - will be updated in profile after auth
-    localStorage.setItem('cellcurehub_signup_phone', formData.phone);
     toast.success('Account created successfully!');
     router.push('/dashboard');
-    setLoading(false);
+    
     setVerifyingOtp(false);
   };
 
@@ -181,8 +179,8 @@ export default function SignupPage() {
               {errors.address && <p className="text-red-400 text-xs">{errors.address.message}</p>}
             </div>
 
-            <Button type="submit" disabled={sendingOtp || loading} className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-medium">
-              {sendingOtp ? 'Sending Code...' : loading ? 'Creating Account...' : (<span className="flex items-center justify-center gap-2">Sign Up <ArrowRight className="w-4 h-4" /></span>)}
+            <Button type="submit" disabled={sendingOtp} className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-medium">
+              {sendingOtp ? 'Sending Code...' : (<span className="flex items-center justify-center gap-2">Sign Up <ArrowRight className="w-4 h-4" /></span>)}
             </Button>
           </form>
 
@@ -227,11 +225,11 @@ export default function SignupPage() {
               />
               
               <Button 
-                disabled={otpCode.length !== 6 || verifyingOtp || loading} 
+                disabled={otpCode.length !== 6 || verifyingOtp} 
                 onClick={handleVerifyOtpAndCreateAccount} 
                 className="w-full h-12 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold text-lg"
               >
-                {verifyingOtp || loading ? 'Verifying...' : 'Verify & Create Account'}
+                {verifyingOtp ? 'Verifying...' : 'Verify & Create Account'}
               </Button>
               
               <div className="flex justify-between items-center text-sm">

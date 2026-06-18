@@ -80,7 +80,7 @@ export async function bookRepair(input: BookRepairInput): Promise<ActionResult> 
         repair_type: input.repair_type,
         custom_repair_description: input.custom_repair_description,
         issue_description: input.issue_description,
-        status: 'booked',
+        status: 'ticket_raised',
         pickup_type: input.pickup_type,
         address: input.address,
         coordinates: input.coordinates,
@@ -101,8 +101,8 @@ export async function bookRepair(input: BookRepairInput): Promise<ActionResult> 
     // 4. Create timeline entry
     const { error: timelineError } = await supabase.from('repair_timeline').insert({
       repair_id: repair.id,
-      status: 'booked',
-      note: `Repair request confirmed (Contact: ${input.phone})`,
+      status: 'ticket_raised',
+      note: 'Your ticket has been raised! We will contact you soon',
       updated_by: profile.id,
     });
 
@@ -142,8 +142,8 @@ export async function updateRepairStatus(
     });
 
     // Validate status transitions based on role
-    const TECHNICIAN_STATUSES = ['diagnostic', 'repair_in_progress', 'qa_testing', 'done', 'pending_approval'];
-    const ADMIN_STATUSES = ['device_received', 'out_for_delivery', 'cancelled', 'booked', 'pickup_scheduled'];
+    const TECHNICIAN_STATUSES = ['device_received', 'diagnostic', 'repair_in_progress', 'qa_testing', 'done', 'pending_approval'];
+    const ADMIN_STATUSES = ['device_received', 'out_for_delivery', 'cancelled', 'booked', 'pickup_scheduled', 'done'];
 
     if (profile.role === 'technician' && !TECHNICIAN_STATUSES.includes(newStatus)) {
       logger.warn('REPAIR', 'Technician tried forbidden status', { newStatus, userId: profile.id });
@@ -176,7 +176,7 @@ export async function updateRepairStatus(
         technicianId: profile.id,
         assignedTo: repair.technician_id,
       });
-      return { success: false, error: 'You can only update repairs assigned to you.' };
+      return { success: false, error: `You can only update repairs assigned to you. (You: ${profile.id}, Assigned: ${repair.technician_id})` };
     }
 
     // Shop admins can only update repairs in their shop

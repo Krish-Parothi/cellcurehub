@@ -22,9 +22,10 @@ export default function TrackPage() {
   const [searchMode, setSearchMode] = useState<'id' | 'phone'>('id');
   const [repairId, setRepairId] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [loading, setLoading] = useState(false);
+  
   const [repair, setRepair] = useState<Repair | null>(null);
   const [timelines, setTimelines] = useState<RepairTimelineEntry[]>([]);
+  const [loading, setLoading] = useState(false);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
@@ -55,8 +56,9 @@ export default function TrackPage() {
     setLoading(true); setNotFound(false); setRepair(null); setTimelines([]);
     const { data, error } = await supabase.from('repairs').select('*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone)').eq('id', id).single();
     if (error || !data) { setNotFound(true); setLoading(false); return; }
-    setRepair(data as Repair); setLoading(false);
+    setRepair(data as Repair); 
     await fetchTimeline(id);
+    setLoading(false);
   }, [fetchTimeline]);
 
   const searchByPhone = useCallback(async (phone: string) => {
@@ -66,8 +68,9 @@ export default function TrackPage() {
     if (!userData) { setNotFound(true); setLoading(false); return; }
     const { data } = await supabase.from('repairs').select('*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone)').eq('customer_id', userData.id).order('created_at', { ascending: false }).limit(1).single();
     if (!data) { setNotFound(true); setLoading(false); return; }
-    setRepair(data as Repair); setLoading(false);
+    setRepair(data as Repair); 
     await fetchTimeline(data.id);
+    setLoading(false);
   }, [fetchTimeline]);
 
   const handleSearch = () => {

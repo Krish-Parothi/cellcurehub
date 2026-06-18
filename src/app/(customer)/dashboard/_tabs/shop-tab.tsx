@@ -1,21 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
+import { useCart } from '@/lib/cart-context';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import type { ShopItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Store, Image as ImageIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Store, Image as ImageIcon, ShoppingCart, Plus, Check } from 'lucide-react';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 export default function ShopTab() {
   const [items, setItems] = useState<ShopItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const { addToCart, cartCount, items: cartItems } = useCart();
 
   const fetchItems = useCallback(async () => {
-    setLoading(true);
-    // Optimized query: select only required columns
     const { data } = await supabase
       .from('shop_items')
       .select('id, name, price, stock_qty, image_url, shop_id, category, created_at')
@@ -23,16 +26,31 @@ export default function ShopTab() {
       .order('created_at', { ascending: false });
     
     setItems((data as ShopItem[]) || []);
-    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+  const { loading } = useAuthFetch(fetchItems, {
+    realtimeTable: 'shop_items'
+  });
+
+  const handleAddToCart = async (itemId: string) => {
+    setAddingId(itemId);
+    await addToCart(itemId);
+    setTimeout(() => setAddingId(null), 800);
+  };
+
+  const isInCart = (itemId: string) => cartItems.some(ci => ci.shop_item_id === itemId);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <h1 className="text-2xl font-bold text-[#1A1A1A] mb-6 hidden lg:block">Cellcurehub store</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-[#1A1A1A] hidden lg:block">CellCureHub Store</h1>
+        {cartCount > 0 && (
+          <Badge className="bg-[#FF5C00] text-white px-3 py-1.5 text-sm font-semibold">
+            <ShoppingCart className="w-4 h-4 mr-1.5" />
+            {cartCount} {cartCount === 1 ? 'item' : 'items'} in cart
+          </Badge>
+        )}
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -80,11 +98,33 @@ export default function ShopTab() {
               </div>
               <div className="p-5">
                 <h3 className="text-[#1A1A1A] font-bold text-lg mb-1 truncate">{item.name}</h3>
-                <div className="flex items-end justify-between mt-4">
-                  <p className="text-[#FF5C00] font-black text-xl">₹{fmt(item.price)}</p>
-                  <p className="text-[#1A1A1A]/40 text-xs font-medium">
-                    {item.stock_qty > 0 ? `${item.stock_qty} in stock` : 'Sold out'}
-                  </p>
+                <div className="flex items-end justify-between mt-3">
+                  <div>
+                    <p className="text-[#FF5C00] font-black text-xl">₹{fmt(item.price)}</p>
+                    <p className="text-[#1A1A1A]/40 text-xs font-medium mt-0.5">
+                      {item.stock_qty > 0 ? `${item.stock_qty} in stock` : 'Sold out'}
+                    </p>
+                  </div>
+                  {item.stock_qty > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddToCart(item.id)}
+                      disabled={addingId === item.id}
+                      className={`transition-all duration-300 ${
+                        isInCart(item.id)
+                          ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                          : 'bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white'
+                      }`}
+                    >
+                      {addingId === item.id ? (
+                        <Check className="w-4 h-4 animate-bounce" />
+                      ) : isInCart(item.id) ? (
+                        <><Plus className="w-4 h-4 mr-1" />Add More</>
+                      ) : (
+                        <><ShoppingCart className="w-4 h-4 mr-1" />Add to Cart</>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </motion.div>

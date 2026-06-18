@@ -27,6 +27,7 @@ import { Users, Calendar, DollarSign, ChevronLeft, ChevronRight, Plus, Loader2, 
 const addStaffSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Valid 10-digit Indian mobile required'),
   aadhar: z.string().optional(),
 });
@@ -40,7 +41,7 @@ export default function StaffPage() {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [salaryConfigs, setSalaryConfigs] = useState<SalaryConfig[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [shops, setShops] = useState<any[]>([]);
 
@@ -56,7 +57,7 @@ export default function StaffPage() {
   const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    
     const monthStr = currentMonth.toISOString().split('T')[0];
     const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0];
 
@@ -73,10 +74,10 @@ export default function StaffPage() {
     setHolidays(holRes.data || []);
     setSalaryConfigs(salRes.data || []);
     setShops(shopRes.data || []);
-    setLoading(false);
+    
   }, [currentMonth]);
 
-  const { user } = useAuthFetch(fetchData, { requiredRole: 'admin' });
+  const { user, loading } = useAuthFetch(fetchData, { requiredRole: 'admin' });
 
   const toggleActive = async (staffMember: User) => {
     await supabase.from('users').update({ is_active: !staffMember.is_active }).eq('id', staffMember.id);
@@ -108,23 +109,19 @@ export default function StaffPage() {
     }
     setAddingStaff(true);
     try {
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+      const { inviteStaff } = await import('@/lib/actions/admin');
+      const result = await inviteStaff({
         email: data.email,
-        password: Math.random().toString(36).slice(2) + 'Aa1!',
+        fullName: data.full_name,
+        role: staffRole,
+        phone: data.phone,
+        shopId: selectedShop,
+        aadharNumber: data.aadhar,
       });
-      if (signUpErr) throw signUpErr;
-      if (signUpData.user) {
-        await supabase.from('users').upsert({
-          id: signUpData.user.id, email: data.email, full_name: data.full_name,
-          phone: data.phone, role: staffRole, shop_id: selectedShop, is_active: true,
-        });
-        if (staffRole === 'technician' && data.aadhar) {
-          await supabase.from('technician_details').insert({
-            user_id: signUpData.user.id, aadhar_number: data.aadhar, verified: false,
-          });
-        }
-      }
-      toast.success(`${staffRole === 'technician' ? 'Technician' : 'Delivery staff'} added. Invite sent to ${data.email}.`);
+
+      if (!result.success) throw new Error(result.error);
+
+      toast.success(`${staffRole === 'technician' ? 'Technician' : 'Delivery staff'} invited. They will receive an email to login.`);
       setAddDialog(false); reset(); setStaffRole('technician'); setSelectedShop(''); fetchData();
     } catch (e: any) {
       toast.error(e.message || 'Failed to add staff');
@@ -392,6 +389,7 @@ export default function StaffPage() {
             </div>
             <div><Label className="text-[#1A1A1A]/70">Full Name *</Label><Input {...register('full_name')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" />{errors.full_name && <p className="text-red-600 text-xs mt-0.5">{errors.full_name.message}</p>}</div>
             <div><Label className="text-[#1A1A1A]/70">Email *</Label><Input {...register('email')} type="email" className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" />{errors.email && <p className="text-red-600 text-xs mt-0.5">{errors.email.message}</p>}</div>
+            <div><Label className="text-[#1A1A1A]/70">Password *</Label><Input {...register('password')} type="text" className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" placeholder="Min 6 characters" />{errors.password && <p className="text-red-600 text-xs mt-0.5">{errors.password.message}</p>}</div>
             <div><Label className="text-[#1A1A1A]/70">Phone *</Label><Input {...register('phone')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" placeholder="10-digit mobile" />{errors.phone && <p className="text-red-600 text-xs mt-0.5">{errors.phone.message}</p>}</div>
             {staffRole === 'technician' && (
               <div><Label className="text-[#1A1A1A]/70">Aadhar Number *</Label><Input {...register('aadhar')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" placeholder="12-digit Aadhar" maxLength={12} />{errors.aadhar && <p className="text-red-600 text-xs mt-0.5">{errors.aadhar.message}</p>}</div>

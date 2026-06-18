@@ -21,7 +21,7 @@ interface PickupFlowProps {
 
 export default function PickupFlow({ assignment, open, onOpenChange, onComplete }: PickupFlowProps) {
   const { user } = useAuth();
-  
+
   // OTP State
   const [otpSending, setOtpSending] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -36,10 +36,16 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
   const [markingStore, setMarkingStore] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setOtpSent(false); setOtpInput(''); setOtpVerified(false);
-      setAttempts(0); setShowReachedStore(false); setResendTimer(0);
+    if (open && assignment) {
+      if (['picked_up', 'at_store', 'delivered'].includes(assignment.status)) {
+        setOtpVerified(true);
+        setShowReachedStore(true);
+      } else {
+        setOtpSent(false); setOtpInput(''); setOtpVerified(false);
+        setAttempts(0); setShowReachedStore(false); setResendTimer(0);
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -75,7 +81,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
     if (result.success) {
       // Update models
       await supabase.from('delivery_assignments').update({ status: 'picked_up' }).eq('id', assignment.id);
-      
+
       if (isEwaste) {
         await supabase.from('ewaste').update({ status: 'picked_up' }).eq('id', assignment.ewaste_id);
       } else {
@@ -144,8 +150,8 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
                 </div>
                 <div>
                   <h3 className="font-semibold text-[#1A1A1A] text-lg">
-                    {isEwaste 
-                      ? assignment.ewaste?.device_description 
+                    {isEwaste
+                      ? assignment.ewaste?.device_description
                       : (assignment.repair?.device ? `${assignment.repair.device.brand} ${assignment.repair.device.model_name}` : assignment.repair?.manual_model)}
                   </h3>
                   <div className="space-y-1.5 mt-3">
@@ -192,7 +198,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
                       />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <Button onClick={verifyOtp} disabled={otpInput.length !== 6 || otpVerifying || attempts >= 3} className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white h-11">
                       {otpVerifying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
@@ -218,10 +224,17 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
               <p className="text-[#1A1A1A]/60">The device has been successfully picked up.</p>
             </div>
             <div className="pt-8 w-full">
-              <Button onClick={markAtStore} disabled={markingStore} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg">
-                {markingStore ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Truck className="w-5 h-5 mr-2" />}
-                Mark as 'Dropped at Store'
-              </Button>
+              {assignment.status === 'at_store' || assignment.status === 'delivered' ? (
+                <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 text-center">
+                  <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-emerald-700 font-medium">Device is already at the store.</p>
+                </div>
+              ) : (
+                <Button onClick={markAtStore} disabled={markingStore} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg">
+                  {markingStore ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Truck className="w-5 h-5 mr-2" />}
+                  Mark as 'Dropped at Store'
+                </Button>
+              )}
               <Button variant="ghost" onClick={onComplete} className="w-full mt-2 text-[#1A1A1A]/60">
                 Close & do this later
               </Button>
