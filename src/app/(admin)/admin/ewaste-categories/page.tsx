@@ -128,7 +128,7 @@ export default function EwasteCategoriesPage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A]">E-Waste Categories</h1>
           <p className="text-[#1A1A1A]/50 text-sm mt-1">Manage the types of e-waste items customers can sell</p>
         </div>
-        <Button onClick={openAdd} className="bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold">
+        <Button onClick={openAdd} className="bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-1.5" /> Add Category
         </Button>
       </motion.div>
@@ -193,7 +193,7 @@ export default function EwasteCategoriesPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={editDialog.open} onOpenChange={o => setEditDialog({ open: o, category: o ? editDialog.category : null })}>
-        <DialogContent className="bg-white border-[#E8E4DF] max-w-sm">
+        <DialogContent className="bg-white border-[#E8E4DF] max-w-sm w-[95vw] sm:w-full rounded-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-[#1A1A1A]">{editDialog.category ? 'Edit Category' : 'Add Category'}</DialogTitle>
             <DialogDescription className="text-[#1A1A1A]/50">
@@ -221,7 +221,7 @@ export default function EwasteCategoriesPage() {
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={open => !open && setDeleteConfirm(null)}>
-        <AlertDialogContent className="bg-white border-[#E8E4DF]">
+        <AlertDialogContent className="bg-white border-[#E8E4DF] w-[95vw] sm:w-full rounded-2xl max-w-sm p-6">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[#1A1A1A]">Delete Category?</AlertDialogTitle>
             <AlertDialogDescription className="text-[#1A1A1A]/60">

@@ -114,11 +114,11 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A]">Analytics</h1>
           <p className="text-[#1A1A1A]/60 text-sm mt-1">Business intelligence & insights</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           {ranges.map(r => (
             <Button key={r.key} size="sm" variant={range === r.key ? 'default' : 'outline'}
               onClick={() => setRange(r.key)}
-              className={range === r.key ? 'bg-[#FF5C00] text-white hover:bg-[#e05200]' : 'border-[#E8E4DF] text-[#1A1A1A]/60 hover:text-[#1A1A1A] hover:bg-[#1A1A1A]/5'}>
+              className={range === r.key ? 'bg-[#FF5C00] text-white hover:bg-[#e05200]' : 'bg-white border-[#E8E4DF] text-[#1A1A1A]/60 hover:text-[#1A1A1A] hover:bg-[#F7F7F5]'}>
               {r.label}
             </Button>
           ))}
@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
             <Card className="bg-white border-[#E8E4DF] shadow-sm">
               <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#FF5C00]" />Revenue by Brand</CardTitle></CardHeader>
               <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
-                <BarChart data={brandRevenueData}><CartesianGrid strokeDasharray="3 3" stroke="#E8E4DF" /><XAxis dataKey="name" tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><YAxis tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /><Bar dataKey="value" fill="#FF5C00" radius={[4, 4, 0, 0]} /></BarChart>
+                <BarChart data={brandRevenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#E8E4DF" /><XAxis dataKey="name" tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><YAxis tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /><Bar dataKey="value" fill="#FF5C00" radius={[4, 4, 0, 0]} /></BarChart>
               </ResponsiveContainer></CardContent>
             </Card>
 
@@ -142,7 +142,7 @@ export default function AnalyticsPage() {
             <Card className="bg-white border-[#E8E4DF] shadow-sm">
               <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4 text-[#FF5C00]" />Daily Revenue Trend</CardTitle></CardHeader>
               <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
-                <LineChart data={dailyTrend}><CartesianGrid strokeDasharray="3 3" stroke="#E8E4DF" /><XAxis dataKey="date" tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><YAxis tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /><Line type="monotone" dataKey="revenue" stroke="#FF5C00" strokeWidth={2} dot={{ fill: '#FF5C00', r: 3 }} /></LineChart>
+                <LineChart data={dailyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#E8E4DF" /><XAxis dataKey="date" tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><YAxis tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /><Line type="monotone" dataKey="revenue" stroke="#FF5C00" strokeWidth={2} dot={{ fill: '#FF5C00', r: 3 }} /></LineChart>
               </ResponsiveContainer></CardContent>
             </Card>
 
@@ -150,7 +150,7 @@ export default function AnalyticsPage() {
             <Card className="bg-white border-[#E8E4DF] shadow-sm">
               <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm">Repair Types Distribution</CardTitle></CardHeader>
               <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
-                <PieChart><Pie data={typePie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A40' }}>{typePie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart>
+                <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}><Pie data={typePie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A40' }}>{typePie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart>
               </ResponsiveContainer></CardContent>
             </Card>
 
@@ -158,7 +158,7 @@ export default function AnalyticsPage() {
             <Card className="bg-white border-[#E8E4DF] shadow-sm">
               <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm">Payment Methods</CardTitle></CardHeader>
               <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
-                <PieChart><Pie data={pmPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A40' }}>{pmPie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart>
+                <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}><Pie data={pmPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={65} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A40' }}>{pmPie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart>
               </ResponsiveContainer></CardContent>
             </Card>
           </div>
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
           {/* Technician Performance */}
           <Card className="bg-white border-[#E8E4DF] shadow-sm">
             <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm">Technician Performance</CardTitle></CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table><TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent">
                 <TableHead className="text-[#1A1A1A]/50">Technician</TableHead><TableHead className="text-[#1A1A1A]/50">Completed</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Avg Turnaround (hrs)</TableHead><TableHead className="text-[#1A1A1A]/50">QA Pass Rate</TableHead>
@@ -187,7 +187,7 @@ export default function AnalyticsPage() {
           {/* Area Heatmap */}
           <Card className="bg-white border-[#E8E4DF] shadow-sm">
             <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-[#FF5C00]" />Area Heatmap — Repairs by Location</CardTitle></CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table><TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent">
                 <TableHead className="text-[#1A1A1A]/50">Area</TableHead><TableHead className="text-[#1A1A1A]/50">Repairs</TableHead><TableHead className="text-[#1A1A1A]/50">Share</TableHead>
               </TableRow></TableHeader>

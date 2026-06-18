@@ -151,9 +151,9 @@ export default function PricingPage() {
       </motion.div>
 
       <Tabs defaultValue="repair" className="w-full">
-        <TabsList className="bg-white border border-[#E8E4DF] shadow-sm mb-6 p-1">
-          <TabsTrigger value="repair" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] font-semibold"><DollarSign className="w-3.5 h-3.5 mr-1.5" />Repair Pricing</TabsTrigger>
-          <TabsTrigger value="ewaste" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] font-semibold"><Recycle className="w-3.5 h-3.5 mr-1.5" />E-Waste Payouts</TabsTrigger>
+        <TabsList className="bg-white border border-[#E8E4DF] shadow-sm mb-6 p-1 flex flex-wrap h-auto justify-start sm:justify-center w-full gap-1">
+          <TabsTrigger value="repair" className="flex-1 sm:flex-none data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] font-semibold text-xs sm:text-sm py-2"><DollarSign className="w-3.5 h-3.5 mr-1.5" />Repair Pricing</TabsTrigger>
+          <TabsTrigger value="ewaste" className="flex-1 sm:flex-none data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] font-semibold text-xs sm:text-sm py-2"><Recycle className="w-3.5 h-3.5 mr-1.5" />E-Waste Payouts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="repair" className="m-0">
@@ -161,7 +161,7 @@ export default function PricingPage() {
 
             {/* Left Col: Device List */}
             <div className="lg:col-span-4 space-y-4">
-              <Card className="bg-white border-[#E8E4DF] shadow-sm h-[calc(100vh-220px)] flex flex-col">
+              <Card className="bg-white border-[#E8E4DF] shadow-sm h-[350px] lg:h-[calc(100vh-220px)] flex flex-col">
                 <CardHeader className="border-b border-[#E8E4DF] pb-4 shrink-0">
                   <div className="space-y-3">
                     <div className="relative">
@@ -227,7 +227,7 @@ export default function PricingPage() {
                 </div>
               ) : (
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} key={selectedDevice.id} className="space-y-4">
-                  <div className="bg-white border border-[#E8E4DF] rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="bg-white border border-[#E8E4DF] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold text-[#FF5C00] uppercase tracking-wider mb-1">{selectedDevice.brand}</p>
                       <h2 className="text-2xl font-bold text-[#1A1A1A]">{selectedDevice.model_name}</h2>
@@ -287,7 +287,7 @@ export default function PricingPage() {
           <div className="flex justify-end mb-4">
             <Button onClick={savePayouts} disabled={saving || Object.keys(editedPayouts).length === 0} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-bold"><Save className="w-4 h-4 mr-1" />Save Changes</Button>
           </div>
-          <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-0">
+          <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-0 overflow-x-auto">
             {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-[#1A1A1A]/5" /></div> : (
               <Table><TableHeader><TableRow className="border-[#E8E4DF]/60 hover:bg-transparent">
                 <TableHead className="text-[#1A1A1A]/50">Brand</TableHead>

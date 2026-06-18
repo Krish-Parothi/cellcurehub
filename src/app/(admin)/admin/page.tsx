@@ -96,17 +96,17 @@ export default function CommandCenter() {
         <p className="text-[#1A1A1A]/60 text-sm mt-1">Real-time overview of all operations</p>
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
         {statCards.map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card className="bg-white border-[#E8E4DF] shadow-sm hover:border-[#FF5C00]/30 hover:shadow-[0_8px_30px_rgba(255,92,0,0.05)] transition-all">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#1A1A1A]/50 font-medium">{s.label}</p>
-                  <p className="text-2xl font-bold text-[#1A1A1A] mt-1">{loading ? '...' : s.value}</p>
+            <Card className="bg-white border-[#E8E4DF] shadow-sm hover:border-[#FF5C00]/30 hover:shadow-[0_8px_30px_rgba(255,92,0,0.05)] transition-all h-full">
+              <CardContent className="p-3 sm:p-5 flex items-start sm:items-center justify-between h-full">
+                <div className="pr-1 sm:pr-2">
+                  <p className="text-[11px] sm:text-xs text-[#1A1A1A]/50 font-medium leading-tight">{s.label}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mt-1">{loading ? '...' : s.value}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-xl bg-[#F7F7F5] flex items-center justify-center ${s.color}`}>
-                  <s.icon className="w-5 h-5" />
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#F7F7F5] shrink-0 flex items-center justify-center ${s.color}`}>
+                  <s.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </CardContent>
             </Card>

@@ -362,7 +362,7 @@ function HeroSection() {
             {/* ✅ /book */}
             <Link
               href={ROUTE_BOOK}
-              className="bg-[#FF5C00] hover:bg-[#e05200] px-9 py-4 rounded-2xl text-base font-bold text-white transition-all duration-300 flex items-center gap-2 shadow-[0_10px_40px_rgba(255,92,0,0.35)]"
+              className="w-full sm:w-auto justify-center bg-[#FF5C00] hover:bg-[#e05200] px-9 py-4 rounded-2xl text-base font-bold text-white transition-all duration-300 flex items-center gap-2 shadow-[0_10px_40px_rgba(255,92,0,0.35)]"
             >
               Book A Repair
               <ArrowRight className="w-4 h-4" />
@@ -370,7 +370,7 @@ function HeroSection() {
             {/* ✅ /track */}
             <Link
               href={ROUTE_TRACK}
-              className="px-9 py-4 rounded-2xl text-base font-semibold text-[#1A1A1A] border border-[#1A1A1A]/10 bg-white hover:border-[#FF5C00]/40 hover:text-[#FF5C00] transition-all duration-300 flex items-center gap-2 shadow-sm"
+              className="w-full sm:w-auto justify-center px-9 py-4 rounded-2xl text-base font-semibold text-[#1A1A1A] border border-[#1A1A1A]/10 bg-white hover:border-[#FF5C00]/40 hover:text-[#FF5C00] transition-all duration-300 flex items-center gap-2 shadow-sm"
             >
               <Search className="w-4 h-4" />
               Track My Repair
@@ -449,7 +449,7 @@ function ServicesGrid() {
         <motion.div
           initial="hidden" whileInView="visible"
           viewport={{ once: true, margin: '-60px' }} variants={staggerContainer}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5"
         >
           {services.map((s) => {
             const Icon = s.icon;
@@ -458,14 +458,14 @@ function ServicesGrid() {
                 <motion.div
                   variants={staggerItem}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className="group bg-white border border-[#E8E4DF] rounded-2xl p-6 sm:p-8 hover:border-[#FF5C00]/40 hover:shadow-[0_8px_30px_rgba(255,92,0,0.08)] transition-all duration-300 cursor-pointer h-full"
+                  className="group bg-white border border-[#E8E4DF] rounded-2xl p-4 sm:p-8 hover:border-[#FF5C00]/40 hover:shadow-[0_8px_30px_rgba(255,92,0,0.08)] transition-all duration-300 cursor-pointer h-full flex flex-col"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#FF5C00]/10 flex items-center justify-center mb-5 group-hover:bg-[#FF5C00] transition-colors duration-300">
-                    <Icon className="w-6 h-6 text-[#FF5C00] group-hover:text-white transition-colors duration-300" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#FF5C00]/10 flex items-center justify-center mb-3 sm:mb-5 group-hover:bg-[#FF5C00] transition-colors duration-300">
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF5C00] group-hover:text-white transition-colors duration-300" />
                   </div>
-                  <h3 className="text-base font-bold text-[#1A1A1A] mb-1">{s.title}</h3>
-                  <p className="text-sm text-[#1A1A1A]/40 mb-4">{s.desc}</p>
-                  <p className="text-[#FF5C00] font-black text-sm">{s.price}</p>
+                  <h3 className="text-sm sm:text-base font-bold text-[#1A1A1A] mb-1 leading-tight">{s.title}</h3>
+                  <p className="text-xs sm:text-sm text-[#1A1A1A]/40 mb-3 sm:mb-4 flex-1">{s.desc}</p>
+                  <p className="text-[#FF5C00] font-black text-xs sm:text-sm">{s.price}</p>
                 </motion.div>
               </Link>
             );
@@ -501,10 +501,10 @@ function HowItWorks() {
         <motion.div
           initial="hidden" whileInView="visible"
           viewport={{ once: true, margin: '-60px' }} variants={staggerContainer}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
+          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8"
         >
           {steps.map((step, i) => (
-            <motion.div key={step.num} variants={staggerItem} className="relative">
+            <motion.div key={step.num} variants={staggerItem} className="relative flex flex-col">
               {i < steps.length - 1 && (
                 <motion.div
                   initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }}
@@ -513,9 +513,9 @@ function HowItWorks() {
                   className="hidden lg:block absolute top-6 left-[calc(50%+28px)] w-[calc(100%-56px)] h-px bg-gradient-to-r from-[#FF5C00]/40 to-[#FF5C00]/10 origin-left"
                 />
               )}
-              <div className="text-4xl font-black text-[#FF5C00]/15 mb-3">{step.num}</div>
-              <h3 className="text-lg font-black text-[#1A1A1A] mb-2">{step.title}</h3>
-              <p className="text-sm text-[#1A1A1A]/40 leading-relaxed">{step.desc}</p>
+              <div className="text-3xl sm:text-4xl font-black text-[#FF5C00]/15 mb-2 sm:mb-3">{step.num}</div>
+              <h3 className="text-base sm:text-lg font-black text-[#1A1A1A] mb-1 sm:mb-2 leading-tight">{step.title}</h3>
+              <p className="text-xs sm:text-sm text-[#1A1A1A]/40 leading-relaxed flex-1">{step.desc}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -550,7 +550,7 @@ function LiveTrackerTeaser() {
               {/* ✅ /track */}
               <Link
                 href={ROUTE_TRACK}
-                className="mt-6 inline-flex items-center gap-2 bg-[#FF5C00] hover:bg-[#e05200] px-6 py-3 rounded-xl text-sm font-bold text-white transition-colors"
+                className="mt-6 inline-flex items-center justify-center w-full sm:w-auto gap-2 bg-[#FF5C00] hover:bg-[#e05200] px-6 py-3 rounded-xl text-sm font-bold text-white transition-colors"
               >
                 Track Your Repair
                 <ChevronRight className="w-4 h-4" />
@@ -626,7 +626,7 @@ function WhyChooseUs() {
         <motion.div
           initial="hidden" whileInView="visible"
           viewport={{ once: true, margin: '-60px' }} variants={staggerContainer}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5"
         >
           {trustBadges.map((badge, i) => {
             const Icon = badge.icon;
@@ -634,22 +634,22 @@ function WhyChooseUs() {
               <motion.div
                 key={badge.title} variants={staggerItem}
                 className={cn(
-                  'rounded-2xl p-6 sm:p-8',
+                  'rounded-2xl p-4 sm:p-8 flex flex-col h-full',
                   i === 0
                     ? 'bg-[#FF5C00] text-white'
                     : 'bg-[#F7F7F5] border border-[#E8E4DF]'
                 )}
               >
                 <div className={cn(
-                  'w-12 h-12 rounded-xl flex items-center justify-center mb-5',
+                  'w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-3 sm:mb-5',
                   i === 0 ? 'bg-white/20' : 'bg-[#FF5C00]/10'
                 )}>
-                  <Icon className={cn('w-6 h-6', i === 0 ? 'text-white' : 'text-[#FF5C00]')} />
+                  <Icon className={cn('w-5 h-5 sm:w-6 sm:h-6', i === 0 ? 'text-white' : 'text-[#FF5C00]')} />
                 </div>
-                <h3 className={cn('text-base font-black mb-2', i === 0 ? 'text-white' : 'text-[#1A1A1A]')}>
+                <h3 className={cn('text-sm sm:text-base font-black mb-1 sm:mb-2 leading-tight', i === 0 ? 'text-white' : 'text-[#1A1A1A]')}>
                   {badge.title}
                 </h3>
-                <p className={cn('text-sm leading-relaxed', i === 0 ? 'text-white/80' : 'text-[#1A1A1A]/50')}>
+                <p className={cn('text-xs sm:text-sm leading-relaxed flex-1', i === 0 ? 'text-white/80' : 'text-[#1A1A1A]/50')}>
                   {badge.desc}
                 </p>
               </motion.div>
@@ -746,7 +746,7 @@ function GoGreenSection() {
             {/* ✅ /ewaste */}
             <Link
               href={ROUTE_EWASTE}
-              className="mt-8 inline-flex items-center gap-2 bg-white px-8 py-3.5 rounded-xl text-base font-black text-[#FF5C00] hover:bg-[#F7F7F5] transition-colors"
+              className="mt-8 inline-flex items-center justify-center w-full sm:w-auto gap-2 bg-white px-8 py-3.5 rounded-xl text-base font-black text-[#FF5C00] hover:bg-[#F7F7F5] transition-colors"
             >
               Sell E-Waste
               <ArrowRight className="w-4 h-4" />
@@ -765,8 +765,8 @@ function UpdatedFooter() {
   return (
     <footer className="bg-[#1A1A1A] pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-          <div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 lg:gap-10 mb-12">
+          <div className="col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-9 h-9 rounded-xl bg-[#FF5C00] flex items-center justify-center">
                 <Phone className="w-5 h-5 text-white" />

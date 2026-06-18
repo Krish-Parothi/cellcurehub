@@ -33,8 +33,7 @@ export default function RootLayout({
             {children}
           </CartProvider>
           <Toaster />
-          <FloatingChatAssistant />
-
+          {/* <FloatingChatAssistant /> */}
         </AuthProvider>
       </body>
     </html>

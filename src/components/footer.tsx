@@ -30,10 +30,10 @@ const footerLinks = {
 export function Footer() {
   return (
     <footer className="bg-[#F7F7F5] border-t border-[#E8E4DF]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 lg:gap-8">
           {/* Brand */}
-          <div className="sm:col-span-2 lg:col-span-1">
+          <div className="col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4 group">
               <div className="w-8 h-8 rounded-lg bg-[#FF5C00] flex items-center justify-center shadow-[0_2px_8px_rgba(255,92,0,0.3)]">
                 <Phone className="w-4 h-4 text-white" />

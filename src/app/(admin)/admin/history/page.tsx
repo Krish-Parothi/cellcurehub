@@ -96,20 +96,20 @@ export default function AdminHistoryPage() {
       </motion.div>
 
       <Tabs defaultValue="repairs" className="w-full">
-        <TabsList className="bg-[#E8E4DF]/50 border border-[#E8E4DF] p-1 rounded-xl mb-6">
-          <TabsTrigger value="repairs" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#FF5C00] data-[state=active]:shadow-sm px-6 py-2 text-sm font-semibold transition-all">
-            <Wrench className="w-4 h-4 mr-2" /> Repairs ({filteredRepairs.length})
+        <TabsList className="bg-[#E8E4DF]/50 border border-[#E8E4DF] p-1 rounded-xl mb-6 flex flex-wrap h-auto justify-start sm:justify-center w-full gap-1">
+          <TabsTrigger value="repairs" className="flex-1 sm:flex-none rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#FF5C00] data-[state=active]:shadow-sm px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold transition-all">
+            <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> Repairs ({filteredRepairs.length})
           </TabsTrigger>
-          <TabsTrigger value="resell" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#FF5C00] data-[state=active]:shadow-sm px-6 py-2 text-sm font-semibold transition-all">
-            <Smartphone className="w-4 h-4 mr-2" /> Reselling ({filteredResell.length})
+          <TabsTrigger value="resell" className="flex-1 sm:flex-none rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#FF5C00] data-[state=active]:shadow-sm px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold transition-all">
+            <Smartphone className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> Reselling ({filteredResell.length})
           </TabsTrigger>
-          <TabsTrigger value="ewaste" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#FF5C00] data-[state=active]:shadow-sm px-6 py-2 text-sm font-semibold transition-all">
-            <Recycle className="w-4 h-4 mr-2" /> E-Waste ({filteredEwaste.length})
+          <TabsTrigger value="ewaste" className="flex-1 sm:flex-none rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#FF5C00] data-[state=active]:shadow-sm px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold transition-all">
+            <Recycle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> E-Waste ({filteredEwaste.length})
           </TabsTrigger>
         </TabsList>
 
         <Card className="bg-white border-[#E8E4DF] shadow-sm">
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
             {loading ? (
               <div className="p-6"><Skeleton className="h-64 w-full bg-[#1A1A1A]/5" /></div>
             ) : (

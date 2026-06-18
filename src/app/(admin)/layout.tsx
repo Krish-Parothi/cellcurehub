@@ -39,11 +39,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
   const SidebarContent = () => (
-    <nav className="flex flex-col gap-1 p-4">
+    <nav className="flex flex-col gap-1 p-4 overflow-y-auto h-full pb-24">
       <p className="text-xs text-[#1A1A1A]/40 font-semibold uppercase tracking-wider px-3 mb-2">Admin Panel</p>
       {NAV_ITEMS.map(item => (
         <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all shrink-0 ${
             isActive(item.href)
               ? 'bg-[#FF5C00]/10 text-[#FF5C00] font-semibold'
               : 'text-[#1A1A1A]/60 hover:text-[#1A1A1A] hover:bg-[#1A1A1A]/5'
@@ -61,7 +61,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Navbar />
         <div className="flex flex-1 pt-20">
           {/* Desktop Sidebar */}
-          <aside className="hidden lg:flex flex-col w-56 min-h-[calc(100vh-5rem)] border-r border-[#E8E4DF] bg-white sticky top-20 shrink-0">
+          <aside className="hidden lg:flex flex-col w-56 min-h-[calc(100vh-5rem)] max-h-[calc(100vh-5rem)] border-r border-[#E8E4DF] bg-white sticky top-20 shrink-0">
             <SidebarContent />
           </aside>
 
@@ -69,18 +69,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {sidebarOpen && (
             <div className="fixed inset-0 z-50 lg:hidden">
               <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-              <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#F7F7F5] border-r border-[#E8E4DF] pt-16">
-                <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-[#1A1A1A]/60 hover:text-[#1A1A1A]">
+              <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#F7F7F5] border-r border-[#E8E4DF] pt-16 flex flex-col">
+                <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 z-10 text-[#1A1A1A]/60 hover:text-[#1A1A1A] bg-[#F7F7F5] p-1 rounded-full">
                   <X className="w-5 h-5" />
                 </button>
-                <SidebarContent />
+                <div className="flex-1 overflow-hidden">
+                  <SidebarContent />
+                </div>
               </aside>
             </div>
           )}
 
           {/* Mobile Hamburger */}
           <button onClick={() => setSidebarOpen(true)}
-            className="fixed bottom-6 right-6 z-40 lg:hidden w-12 h-12 rounded-full bg-[#FF5C00] text-white flex items-center justify-center shadow-lg hover:bg-[#e05200]">
+            className="fixed bottom-24 right-6 z-40 lg:hidden w-12 h-12 rounded-full bg-[#FF5C00] text-white flex items-center justify-center shadow-lg hover:bg-[#e05200]">
             <Menu className="w-5 h-5" />
           </button>
 
