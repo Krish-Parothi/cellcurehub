@@ -528,6 +528,12 @@ export default function RepairsPage() {
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Status</span><div className="mt-1"><Badge className={statusColor(selectedRepair.status)}>{REPAIR_STATUS_LABELS[selectedRepair.status as RepairStatus]}</Badge></div></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Shop</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</p></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2"><span className="text-[#1A1A1A]/40 text-xs block">Technician</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.technician?.full_name || 'Unassigned'}</p></div>
+                  {selectedRepair.address && (
+                    <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2">
+                      <span className="text-[#1A1A1A]/40 text-xs block">Address ({selectedRepair.pickup_type === 'store' ? 'Store Drop-off' : 'Home Pickup'})</span>
+                      <p className="text-[#1A1A1A] font-medium text-sm mt-1">{selectedRepair.address}</p>
+                    </div>
+                  )}
                   {deliveryMap[selectedRepair.id] && (
                     <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2">
                       <span className="text-[#1A1A1A]/40 text-xs block">Delivery Boy</span>

@@ -405,11 +405,40 @@ export default function BookPage() {
                         <div className="space-y-2">
                           <Label className="text-[#1A1A1A]/80 text-sm">Time Slot</Label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {timeSlots.map((slot) => (
-                              <motion.button key={slot.slot_key} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setTimeSlot(slot.slot_key)} className={`flex items-center justify-center gap-1 p-3 rounded-xl border text-sm transition-all ${timeSlot === slot.slot_key ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]' : 'border-[#E8E4DF] bg-[#F7F7F5] text-[#1A1A1A]/60 hover:border-[#E8E4DF]/80'}`}>
-                                <Clock className="w-3.5 h-3.5" /> {slot.label}
-                              </motion.button>
-                            ))}
+                            {timeSlots.map((slot) => {
+                              let expired = false;
+                              const checkDate = preferredDate || new Date();
+                              const now = new Date();
+                              if (checkDate.getDate() === now.getDate() && checkDate.getMonth() === now.getMonth() && checkDate.getFullYear() === now.getFullYear()) {
+                                if (slot.end_time) {
+                                  const [endHours, endMinutes] = slot.end_time.split(':').map(Number);
+                                  if (now.getHours() > endHours || (now.getHours() === endHours && now.getMinutes() >= endMinutes)) {
+                                    expired = true;
+                                  }
+                                }
+                              }
+                              return (
+                                <motion.button 
+                                  key={slot.slot_key} 
+                                  type="button" 
+                                  whileHover={expired ? {} : { scale: 1.02 }} 
+                                  whileTap={expired ? {} : { scale: 0.98 }} 
+                                  onClick={() => {
+                                    if (!expired) setTimeSlot(slot.slot_key);
+                                  }} 
+                                  disabled={expired}
+                                  className={`flex items-center justify-center gap-1 p-3 rounded-xl border text-sm transition-all ${
+                                    expired 
+                                      ? 'opacity-60 cursor-not-allowed border-[#E8E4DF] bg-[#F7F7F5] text-[#1A1A1A]/40' 
+                                      : timeSlot === slot.slot_key 
+                                        ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]' 
+                                        : 'border-[#E8E4DF] bg-[#F7F7F5] text-[#1A1A1A]/60 hover:border-[#E8E4DF]/80'
+                                  }`}
+                                >
+                                  <Clock className="w-3.5 h-3.5" /> {slot.label}
+                                </motion.button>
+                              );
+                            })}
                             {timeSlots.length === 0 && <p className="col-span-full text-xs text-[#1A1A1A]/50">Loading time slots...</p>}
                           </div>
                         </div>
