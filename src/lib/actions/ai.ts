@@ -14,8 +14,8 @@ export async function enhanceTechnicianNotes(notes: string) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-1.5-flash as it's fast and suitable for this text transformation
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Use gemini-2.5-flash-lite as requested by the user
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
     const prompt = `You are an AI assistant for a mobile repair shop. 
 A technician has written some rough diagnostic notes (RCA - Root Cause Analysis) about a customer's device. 

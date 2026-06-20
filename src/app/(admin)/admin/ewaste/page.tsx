@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { format } from 'date-fns';
+import { creditEwasteAccount } from '@/lib/actions/ewaste';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
@@ -84,17 +86,14 @@ export default function AdminEwastePage() {
     if (!offerAmount || isNaN(Number(offerAmount))) { toast.error('Enter a valid amount'); return; }
     setUpdating(item.id);
     try {
-      const { error } = await supabase.from('ewaste').update({
-        admin_offer: Number(offerAmount),
-        status: 'admin_offered',
-      }).eq('id', item.id);
-      if (error) throw error;
-      toast.success('Price offer sent to customer');
+      const result = await creditEwasteAccount(item.id, Number(offerAmount));
+      if (!result.success) throw new Error(result.error);
+      toast.success('Credits successfully added to customer account');
       fetchData();
       setDetailsDialog({ open: false, item: null });
       setOfferAmount('');
     } catch (err: any) {
-      toast.error('Failed to send offer');
+      toast.error(err.message || 'Failed to credit account');
     } finally {
       setUpdating(null);
     }
@@ -212,7 +211,7 @@ export default function AdminEwastePage() {
                       <TableCell>
                         {sub.admin_offer != null ? (
                           <span className="text-[#FF5C00] font-semibold flex items-center">
-                            <IndianRupee className="w-3.5 h-3.5 mr-0.5" />{fmt(sub.admin_offer)}
+                            {fmt(sub.admin_offer)} Credits
                           </span>
                         ) : (
                           <span className="text-[#1A1A1A]/40 text-sm">Not offered</span>
@@ -299,14 +298,14 @@ export default function AdminEwastePage() {
                 </div>
               )}
 
-              {/* PENDING: Admin sends price offer */}
+              {/* PENDING: Admin assigns credits directly */}
               {detailsDialog.item.status === 'pending' && (
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
-                  <h4 className="font-semibold text-blue-900 flex items-center gap-2"><IndianRupee className="w-4 h-4" /> Send Price Offer</h4>
-                  <p className="text-sm text-blue-800/70">Review the photos and item details, then enter your offer price. The customer will see this and can accept or decline.</p>
+                  <h4 className="font-semibold text-blue-900 flex items-center gap-2">Credit Customer Account</h4>
+                  <p className="text-sm text-blue-800/70">Review the photos and item details, then enter the amount of Credits to award. The customer will receive these instantly and the request will be completed.</p>
                   <div className="flex gap-2 items-center">
-                    <Input type="number" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} placeholder="Enter price (₹)" className="bg-white text-[#1A1A1A]" />
-                    <Button onClick={() => sendOffer(detailsDialog.item)} disabled={updating === detailsDialog.item.id} className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap">Send Offer</Button>
+                    <Input type="number" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} placeholder="Enter Credits" className="bg-white text-[#1A1A1A]" />
+                    <Button onClick={() => sendOffer(detailsDialog.item)} disabled={updating === detailsDialog.item.id} className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap">Credit & Complete</Button>
                   </div>
                 </div>
               )}
@@ -316,7 +315,7 @@ export default function AdminEwastePage() {
                 <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
                   <h4 className="font-semibold text-orange-900 flex items-center gap-2"><Clock className="w-4 h-4" /> Waiting for Customer</h4>
                   <p className="text-sm text-orange-800/70 mt-1">
-                    You offered <span className="font-bold text-[#FF5C00]">₹{fmt(detailsDialog.item.admin_offer)}</span>. Waiting for the customer to accept or decline.
+                    You offered <span className="font-bold text-[#FF5C00]">{fmt(detailsDialog.item.admin_offer)} Credits</span>. Waiting for the customer to accept or decline.
                   </p>
                 </div>
               )}
@@ -326,7 +325,7 @@ export default function AdminEwastePage() {
                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
                   <h4 className="font-semibold text-emerald-900 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Customer Agreed!</h4>
                   <p className="text-sm text-emerald-800/70">
-                    Customer accepted your offer of <span className="font-bold">₹{fmt(detailsDialog.item.admin_offer)}</span>. Assign a delivery boy for pickup.
+                    Customer accepted your offer of <span className="font-bold">{fmt(detailsDialog.item.admin_offer)} Credits</span>. Assign a delivery boy for pickup.
                   </p>
                   <div className="flex gap-2 items-center">
                     <Select value={selectedDeliveryBoy} onValueChange={setSelectedDeliveryBoy}>
@@ -347,7 +346,7 @@ export default function AdminEwastePage() {
                 <div className="bg-red-50 p-4 rounded-xl border border-red-100">
                   <h4 className="font-semibold text-red-900 flex items-center gap-2"><XCircle className="w-4 h-4" /> Customer Declined</h4>
                   <p className="text-sm text-red-800/70 mt-1">
-                    The customer declined your offer of ₹{fmt(detailsDialog.item.admin_offer || 0)}. This submission is closed.
+                    The customer declined your offer of {fmt(detailsDialog.item.admin_offer || 0)} Credits. This submission is closed.
                   </p>
                 </div>
               )}

@@ -85,11 +85,10 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
       if (isEwaste) {
         await supabase.from('ewaste').update({ status: 'picked_up' }).eq('id', assignment.ewaste_id);
       } else {
-        await supabase.from('repairs').update({ status: 'device_received' }).eq('id', assignment.repair_id);
         await supabase.from('repair_timeline').insert({
           repair_id: assignment.repair_id,
-          status: 'device_received',
-          note: 'Device picked up by delivery boy — OTP confirmed',
+          status: 'pickup_scheduled',
+          note: 'Device picked up by delivery boy from customer — OTP confirmed',
           updated_by: user?.id,
         });
       }
@@ -121,6 +120,17 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
     setMarkingStore(true);
     try {
       await supabase.from('delivery_assignments').update({ status: isEwaste ? 'delivered' : 'at_store' }).eq('id', assignment.id);
+      
+      if (!isEwaste) {
+        await supabase.from('repairs').update({ status: 'device_received' }).eq('id', assignment.repair_id);
+        await supabase.from('repair_timeline').insert({
+          repair_id: assignment.repair_id,
+          status: 'device_received',
+          note: 'Device delivered to store by delivery boy',
+          updated_by: user?.id,
+        });
+      }
+      
       toast.success(isEwaste ? 'E-waste / Resell item delivered to store' : 'Device dropped at store');
       onComplete(); // close sheet and refresh
     } catch {

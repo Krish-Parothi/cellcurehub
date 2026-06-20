@@ -42,6 +42,7 @@ export default function ShopRepairsPage() {
   const [selectedRepair, setSelectedRepair] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [timeline, setTimeline] = useState<any[]>([]);
+  const [finalCostInput, setFinalCostInput] = useState('');
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [deliveryBoys, setDeliveryBoys] = useState<User[]>([]);
   const [assigning, setAssigning] = useState(false);
@@ -75,6 +76,7 @@ export default function ShopRepairsPage() {
     setSheetOpen(true);
     const { data: tl } = await supabase.from('repair_timeline').select('*').eq('repair_id', repair.id).order('created_at', { ascending: true });
     setTimeline(tl || []);
+    setFinalCostInput(repair.final_cost?.toString() || '');
     const { data: techs } = await supabase.from('users').select('*').in('role', ['technician', 'shop_admin', 'admin']).eq('shop_id', shopId).eq('is_active', true);
     setTechnicians(techs || []);
     const { data: dboys } = await supabase.from('users').select('*').in('role', ['delivery', 'shop_admin', 'admin']).eq('shop_id', shopId).eq('is_active', true);
@@ -123,7 +125,37 @@ export default function ShopRepairsPage() {
     
     if (error) { toast.error('Failed: ' + error.message); setAssigning(false); return; }
     
-    toast.success('Delivery boy assigned');
+    toast.success('Drop-off delivery boy assigned');
+    setAssigning(false); fetchRepairs();
+  };
+
+  const assignPickup = async (boyId: string) => {
+    if (!selectedRepair) return;
+    setAssigning(true);
+    const today = new Date().toISOString().split('T')[0];
+
+    // Clear any existing pickup assignment for this device
+    await supabase.from('delivery_assignments')
+      .delete()
+      .eq('repair_id', selectedRepair.id)
+      .eq('job_type', 'pickup');
+
+    const { error } = await supabase.from('delivery_assignments').insert({ 
+      repair_id: selectedRepair.id, delivery_boy_id: boyId, shop_id: shopId, 
+      job_type: 'pickup', status: 'assigned', scheduled_date: today 
+    });
+    
+    if (error) { toast.error('Failed: ' + error.message); setAssigning(false); return; }
+
+    // Also update repair status to pickup_scheduled
+    await supabase.from('repairs').update({ status: 'pickup_scheduled' }).eq('id', selectedRepair.id);
+    await supabase.from('repair_timeline').insert({
+      repair_id: selectedRepair.id, status: 'pickup_scheduled',
+      note: 'Pickup scheduled — delivery boy assigned by shop admin', updated_by: user?.id,
+    });
+    
+    toast.success('Pickup delivery boy assigned');
+    setSelectedRepair({ ...selectedRepair, status: 'pickup_scheduled' });
     setAssigning(false); fetchRepairs();
   };
 
@@ -134,6 +166,28 @@ export default function ShopRepairsPage() {
     await supabase.from('repair_timeline').insert({ repair_id: selectedRepair.id, status: 'out_for_delivery', note: 'Ready for delivery — dispatched by shop admin', updated_by: user?.id });
     toast.success('Sent out for delivery');
     setAssigning(false); fetchRepairs(); setSheetOpen(false);
+  };
+
+  const updateFinalCost = async () => {
+    if (!selectedRepair) return;
+    const cost = parseFloat(finalCostInput);
+    if (isNaN(cost) || cost < 0) {
+      toast.error('Please enter a valid final cost');
+      return;
+    }
+    setAssigning(true);
+    const { error } = await supabase.from('repairs').update({ final_cost: cost, updated_at: new Date().toISOString() }).eq('id', selectedRepair.id);
+    if (error) { toast.error('Failed to update final cost'); setAssigning(false); return; }
+    
+    await supabase.from('repair_timeline').insert({
+      repair_id: selectedRepair.id, status: selectedRepair.status,
+      note: `Final cost updated to ${fmt(cost)} by shop admin`, updated_by: user?.id,
+    });
+    
+    toast.success('Final cost updated successfully');
+    setSelectedRepair({ ...selectedRepair, final_cost: cost });
+    setAssigning(false);
+    fetchRepairs();
   };
 
   const confirmRca = async (rca: any) => {
@@ -233,10 +287,38 @@ export default function ShopRepairsPage() {
               <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold">⚡ Change Status</p>
                 <Select value={selectedRepair.status} onValueChange={(val) => { console.debug('[SHOP_STATUS_SELECT]', val); changeStatus(val); }} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{REPAIR_STATUS_ORDER.map(s => <SelectItem key={s} value={s} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{REPAIR_STATUS_LABELS[s as RepairStatus]}</SelectItem>)}</SelectContent></Select></div>
               <Separator className="bg-[#E8E4DF]" />
+              
+              {/* Final Cost Input */}
+              <div>
+                <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1">💰 Update Final Cost</p>
+                <div className="flex gap-2">
+                  <Input 
+                    type="number" 
+                    value={finalCostInput} 
+                    onChange={e => setFinalCostInput(e.target.value)} 
+                    placeholder="e.g. 1500" 
+                    className="bg-white border-[#E8E4DF] text-[#1A1A1A]" 
+                  />
+                  <Button onClick={updateFinalCost} disabled={assigning} className="bg-[#FF5C00] hover:bg-[#e05200] text-white">Save</Button>
+                </div>
+              </div>
+              <Separator className="bg-[#E8E4DF]" />
+              
               <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Wrench className="w-3 h-3" />Assign Technician</p>
                 <Select onValueChange={assignTechnician} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select technician..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{technicians.map(t => <SelectItem key={t.id} value={t.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{t.full_name} {t.role !== 'technician' ? `(${t.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
-              <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3" />Assign Delivery Boy</p>
-                <Select onValueChange={assignDelivery} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select delivery boy..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{d.full_name} {d.role !== 'delivery' ? `(${d.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
+
+              {/* Pickup Assignment */}
+              {['booked', 'pickup_scheduled'].includes(selectedRepair.status) && (
+                <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3 text-[#FF5C00]" />Assign Pickup Boy</p>
+                  <Select onValueChange={assignPickup} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select pickup boy..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{d.full_name} {d.role !== 'delivery' ? `(${d.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
+              )}
+
+              {/* Drop-off Assignment */}
+              {(selectedRepair.status === 'ready' || selectedRepair.status === 'done') && (
+                <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3" />Assign Drop-off Boy</p>
+                  <Select onValueChange={assignDelivery} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select drop-off boy..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{d.full_name} {d.role !== 'delivery' ? `(${d.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
+              )}
+
               {selectedRepair.status === 'done' && <Button onClick={sendOutForDelivery} disabled={assigning} className="w-full bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold">{assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}Send Out for Delivery</Button>}
               <Separator className="bg-[#E8E4DF]" />
               <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold">Timeline</p>

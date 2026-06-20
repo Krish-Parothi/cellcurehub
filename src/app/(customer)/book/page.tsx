@@ -58,6 +58,7 @@ export default function BookPage() {
   const [preferredDate, setPreferredDate] = useState<Date | undefined>(undefined);
   const [timeSlot, setTimeSlot] = useState('');
   const [timeSlots, setTimeSlots] = useState<any[]>([]);
+  const [shops, setShops] = useState<any[]>([]);
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
 
@@ -86,6 +87,10 @@ export default function BookPage() {
   const [otpCode, setOtpCode] = useState('');
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+
+  useEffect(() => {
+    supabase.from('shops').select('*').eq('is_active', true).then(({ data }) => setShops(data || []));
+  }, []);
   const [resendTimer, setResendTimer] = useState(0);
 
   useEffect(() => {
@@ -412,15 +417,33 @@ export default function BookPage() {
                     )}
 
                     {pickupType === 'store' && (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        <div className="flex items-start gap-3 p-4 rounded-xl bg-[#F7F7F5] border border-[#E8E4DF]">
-                          <MapPin className="w-5 h-5 text-[#FF5C00] mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-[#1A1A1A] font-medium text-sm">CellCureHub Service Center</p>
-                            <p className="text-[#1A1A1A]/60 text-sm mt-1">42, Central Bazaar Road, Dharampeth,<br />Nagpur 440010</p>
-                            <p className="text-[#1A1A1A]/50 text-xs mt-2">Open Mon–Sat, 9:00 AM – 9:00 PM</p>
-                          </div>
-                        </div>
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                        <p className="text-sm font-semibold text-[#1A1A1A]">Available Drop-off Locations</p>
+                        {shops.length === 0 ? (
+                          <p className="text-[#1A1A1A]/50 text-sm">Loading shops...</p>
+                        ) : (
+                          shops.map(shop => (
+                            <div key={shop.id} className="flex flex-col sm:flex-row sm:items-start gap-3 p-4 rounded-xl bg-[#F7F7F5] border border-[#E8E4DF]">
+                              <MapPin className="w-5 h-5 text-[#FF5C00] mt-0.5 shrink-0 hidden sm:block" />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="w-4 h-4 text-[#FF5C00] sm:hidden" />
+                                  <p className="text-[#1A1A1A] font-medium text-sm">{shop.name}</p>
+                                </div>
+                                <p className="text-[#1A1A1A]/60 text-sm mt-1">{shop.address}</p>
+                                {shop.phone && <p className="text-[#1A1A1A]/50 text-xs mt-2">Phone: {shop.phone}</p>}
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="shrink-0 bg-white border-[#E8E4DF] text-[#FF5C00] hover:bg-[#FF5C00]/10 w-full sm:w-auto mt-2 sm:mt-0"
+                                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name + ', ' + shop.address + ', ' + (shop.area || 'Nagpur'))}`, '_blank')}
+                              >
+                                <MapPin className="w-3.5 h-3.5 mr-1.5" /> Navigate
+                              </Button>
+                            </div>
+                          ))
+                        )}
                       </motion.div>
                     )}
 

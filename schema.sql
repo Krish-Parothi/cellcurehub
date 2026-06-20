@@ -13,6 +13,7 @@ CREATE TABLE public.users (
   shop_id uuid,
   is_active boolean DEFAULT true,
   phone_verified boolean DEFAULT false,
+  credits numeric DEFAULT 0,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
 );

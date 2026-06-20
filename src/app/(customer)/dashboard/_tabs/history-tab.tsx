@@ -107,8 +107,9 @@ export default function HistoryTab({ userId }: { userId: string }) {
                   <Badge className="bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20 shrink-0"><CheckCircle className="w-3 h-3 mr-1" />Delivered</Badge>
                 </div>
  
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-3"><p className="text-[#1A1A1A]/60 text-xs flex items-center gap-1"><IndianRupee className="w-3 h-3" />Final Cost</p><p className="text-[#1A1A1A] font-semibold text-sm">{r.final_cost != null ? `₹${r.final_cost.toLocaleString('en-IN')}` : 'N/A'}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-3"><p className="text-[#1A1A1A]/60 text-xs flex items-center gap-1"><Calendar className="w-3 h-3" />Booked</p><p className="text-[#1A1A1A]/80 text-sm">{new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-3"><p className="text-[#1A1A1A]/60 text-xs flex items-center gap-1"><Calendar className="w-3 h-3" />Delivered</p><p className="text-[#1A1A1A]/80 text-sm">{r.delivered_at ? new Date(r.delivered_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}</p></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-3"><p className="text-[#1A1A1A]/60 text-xs flex items-center gap-1"><Clock className="w-3 h-3" />Warranty</p><p className={`text-sm font-medium ${warranty.color}`}>{warranty.text}</p></div>
                 </div>

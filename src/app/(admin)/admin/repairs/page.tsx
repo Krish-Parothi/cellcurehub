@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -44,9 +44,11 @@ export default function RepairsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('');
   const [selectedRepair, setSelectedRepair] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [timeline, setTimeline] = useState<any[]>([]);
+  const [finalCostInput, setFinalCostInput] = useState('');
 
   // SLA Extension
   const [extendSlaDialog, setExtendSlaDialog] = useState(false);
@@ -148,6 +150,7 @@ export default function RepairsPage() {
     // Fetch timeline
     const { data: tl } = await supabase.from('repair_timeline').select('*').eq('repair_id', repair.id).order('created_at', { ascending: true });
     setTimeline(tl || []);
+    setFinalCostInput(repair.final_cost?.toString() || '');
     // Fetch assignable staff — include admin for self-assignment
     const { data: techs } = await supabase.from('users').select('*').in('role', ['technician', 'admin']).eq('is_active', true);
     setTechnicians(techs || []);
@@ -306,6 +309,28 @@ export default function RepairsPage() {
     setSheetOpen(false);
   };
 
+  const updateFinalCost = async () => {
+    if (!selectedRepair) return;
+    const cost = parseFloat(finalCostInput);
+    if (isNaN(cost) || cost < 0) {
+      toast.error('Please enter a valid final cost');
+      return;
+    }
+    setAssigning(true);
+    const { error } = await supabase.from('repairs').update({ final_cost: cost, updated_at: new Date().toISOString() }).eq('id', selectedRepair.id);
+    if (error) { toast.error('Failed to update final cost'); setAssigning(false); return; }
+    
+    await supabase.from('repair_timeline').insert({
+      repair_id: selectedRepair.id, status: selectedRepair.status,
+      note: `Final cost updated to ${fmt(cost)} by admin`, updated_by: user?.id,
+    });
+    
+    toast.success('Final cost updated successfully');
+    setSelectedRepair({ ...selectedRepair, final_cost: cost });
+    setAssigning(false);
+    fetchRepairs();
+  };
+
   const extendSla = async () => {
     if (!selectedRepair || !slaExtensionReason.trim()) {
       toast.error('Please provide a reason for SLA extension');
@@ -375,14 +400,18 @@ export default function RepairsPage() {
     setRcaProcessing(false);
   };
 
-  const filtered = repairs.filter(r => {
+  const filtered = useMemo(() => repairs.filter(r => {
     if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+    if (dateFilter) {
+      const repairDate = new Date(r.created_at).toISOString().split('T')[0];
+      if (repairDate !== dateFilter) return false;
+    }
     if (search) {
       const s = search.toLowerCase();
       return r.customer?.full_name?.toLowerCase().includes(s) || r.device?.model_name?.toLowerCase().includes(s) || r.id.startsWith(s);
     }
     return true;
-  });
+  }), [repairs, statusFilter, dateFilter, search]);
 
   return (
     <div className="space-y-8">
@@ -404,6 +433,10 @@ export default function RepairsPage() {
             {REPAIR_STATUS_ORDER.filter(s => isTicketsView ? s === 'ticket_raised' : s !== 'ticket_raised').map(s => <SelectItem key={s} value={s} className="hover:bg-[#F7F7F5] cursor-pointer">{REPAIR_STATUS_LABELS[s]}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-2">
+          <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-44 bg-white border-[#E8E4DF] text-[#1A1A1A]" />
+          {dateFilter && <Button variant="ghost" size="sm" onClick={() => setDateFilter('')} className="text-[#1A1A1A]/60 hover:text-[#1A1A1A] text-xs px-2">Clear</Button>}
+        </div>
       </div>
 
       {/* Repairs Table */}
@@ -416,6 +449,7 @@ export default function RepairsPage() {
                 <TableHead className="text-[#1A1A1A]/50">Customer</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Device</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Status</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Date</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Shop</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">SLA</TableHead>
                 <TableHead className="text-[#1A1A1A]/50 text-right">Action</TableHead>
@@ -431,6 +465,7 @@ export default function RepairsPage() {
                       <TableCell className="text-[#1A1A1A] font-medium">{r.customer?.full_name}</TableCell>
                       <TableCell className="text-[#1A1A1A]/70">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</TableCell>
                       <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
+                      <TableCell className="text-[#1A1A1A]/60 text-xs">{new Date(r.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</TableCell>
                       <TableCell className="text-[#1A1A1A]/70">{r.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</TableCell>
                       <TableCell>
                         {['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(r.status) ? (
@@ -545,6 +580,21 @@ export default function RepairsPage() {
                   </Select>
                 </div>
 
+                {/* Final Cost Input */}
+                <div>
+                  <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1">💰 Update Final Cost</p>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="number" 
+                      value={finalCostInput} 
+                      onChange={e => setFinalCostInput(e.target.value)} 
+                      placeholder="e.g. 1500" 
+                      className="bg-white border-[#E8E4DF] text-[#1A1A1A]" 
+                    />
+                    <Button onClick={updateFinalCost} disabled={assigning} className="bg-[#FF5C00] hover:bg-[#e05200] text-white">Save</Button>
+                  </div>
+                </div>
+
                 <Separator className="bg-[#E8E4DF]" />
 
                 {/* Shop Assignment */}
@@ -564,19 +614,19 @@ export default function RepairsPage() {
                   <Select onValueChange={assignTechnician} disabled={assigning}>
                     <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select technician..." /></SelectTrigger>
                     <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                      {technicians.map(t => <SelectItem key={t.id} value={t.id} className="hover:bg-[#F7F7F5] cursor-pointer">{t.full_name} {t.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
+                      {technicians.filter(t => t.role === 'admin' || (selectedRepair.shop_id && t.shop_id === selectedRepair.shop_id)).map(t => <SelectItem key={t.id} value={t.id} className="hover:bg-[#F7F7F5] cursor-pointer">{t.full_name} {t.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Pickup Assignment (if home pickup and booked) */}
-                {selectedRepair.pickup_type === 'home' && selectedRepair.status === 'booked' && (
+                {/* Pickup Assignment (booked or pickup_scheduled) */}
+                {['booked', 'pickup_scheduled'].includes(selectedRepair.status) && (
                   <div>
                     <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3 text-[#FF5C00]" /> Assign Pickup Boy</p>
                     <Select onValueChange={assignPickup} disabled={assigning}>
                       <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select pickup boy..." /></SelectTrigger>
                       <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                        {deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
+                        {deliveryBoys.filter(d => d.role === 'admin' || (selectedRepair.shop_id && d.shop_id === selectedRepair.shop_id)).map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -589,7 +639,7 @@ export default function RepairsPage() {
                     <Select onValueChange={assignDelivery} disabled={assigning}>
                       <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select drop-off boy..." /></SelectTrigger>
                       <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                        {deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
+                        {deliveryBoys.filter(d => d.role === 'admin' || (selectedRepair.shop_id && d.shop_id === selectedRepair.shop_id)).map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>

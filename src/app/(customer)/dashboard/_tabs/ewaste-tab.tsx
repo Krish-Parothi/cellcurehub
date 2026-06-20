@@ -17,19 +17,16 @@ import { compressImage } from '@/lib/compress-image';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-  admin_offered: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
-  agreed: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-  rejected: 'bg-red-500/10 text-red-600 border-red-500/20',
   pickup_assigned: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   picked_up: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-  credited: 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20',
+  completed: 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20',
 };
 
 export default function EwasteTab({ userId }: { userId: string }) {
   const [items, setItems] = useState<Ewaste[]>([]);
   const [categories, setCategories] = useState<EwasteItemCategory[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [totalCredits, setTotalCredits] = useState(0);
 
   // Form state
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
@@ -40,7 +37,7 @@ export default function EwasteTab({ userId }: { userId: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const fetchItems = useCallback(async () => {
-    const [itemsRes, catsRes] = await Promise.all([
+    const [itemsRes, catsRes, userRes] = await Promise.all([
       supabase.from('ewaste')
         .select('*, ewaste_category:ewaste_categories(*)')
         .eq('customer_id', userId)
@@ -50,9 +47,14 @@ export default function EwasteTab({ userId }: { userId: string }) {
         .select('*')
         .eq('is_active', true)
         .order('sort_order', { ascending: true }),
+      supabase.from('users')
+        .select('credits')
+        .eq('id', userId)
+        .single(),
     ]);
     setItems((itemsRes.data as any[]) || []);
     setCategories((catsRes.data as EwasteItemCategory[]) || []);
+    setTotalCredits(userRes.data?.credits || 0);
   }, [userId]);
 
   const { loading } = useAuthFetch(fetchItems, {
@@ -119,26 +121,24 @@ export default function EwasteTab({ userId }: { userId: string }) {
     }
   };
 
-  const handleRespond = async (itemId: string, agree: boolean) => {
-    setRespondingId(itemId);
-    try {
-      const { error } = await supabase.from('ewaste').update({
-        customer_agreed: agree,
-        status: agree ? 'agreed' : 'rejected',
-      }).eq('id', itemId);
-      if (error) throw error;
-      toast.success(agree ? 'You accepted the offer!' : 'Offer declined');
-      fetchItems();
-    } catch (err) {
-      toast.error('Failed to respond');
-    } finally {
-      setRespondingId(null);
-    }
-  };
+
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <h1 className="text-2xl font-bold text-[#1A1A1A] mb-6 hidden lg:block">Sell E-Waste</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-[#1A1A1A] hidden lg:block">Sell E-Waste</h1>
+        
+        {/* Total Credits Display */}
+        <div className="bg-gradient-to-r from-[#FF5C00] to-orange-500 rounded-2xl px-6 py-4 text-white shadow-md flex items-center justify-between min-w-[250px]">
+          <div>
+            <p className="text-white/80 font-medium text-xs uppercase tracking-wider mb-1">My E-Waste Credits</p>
+            <div className="text-3xl font-bold">{totalCredits.toLocaleString('en-IN')}</div>
+          </div>
+          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+            <Recycle className="w-6 h-6 text-white" />
+          </div>
+        </div>
+      </div>
  
       {/* Submit Form */}
       <div className="bg-white border border-[#E8E4DF] rounded-2xl p-6 mb-8 shadow-sm">
@@ -239,41 +239,11 @@ export default function EwasteTab({ userId }: { userId: string }) {
                   <Badge variant="outline" className={STATUS_COLORS[item.status] || 'bg-white/10'}>{item.status.replace(/_/g, ' ')}</Badge>
                   {item.admin_offer != null && (
                     <span className="text-[#FF5C00] text-sm font-semibold flex items-center gap-1">
-                      <IndianRupee className="w-3.5 h-3.5" />{item.admin_offer.toLocaleString('en-IN')} offered
+                      {item.admin_offer.toLocaleString('en-IN')} Credits {item.status === 'completed' ? 'awarded' : 'offered'}
                     </span>
                   )}
                 </div>
               </div>
-
-              {/* Accept/Deny buttons when admin has offered a price */}
-              {item.status === 'admin_offered' && item.admin_offer != null && (
-                <div className="mt-4 pt-4 border-t border-[#E8E4DF]">
-                  <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
-                    <p className="text-sm text-orange-900 font-medium mb-3">
-                      Admin has offered <span className="text-[#FF5C00] font-bold">₹{item.admin_offer.toLocaleString('en-IN')}</span> for this item. Do you accept?
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleRespond(item.id, true)}
-                        disabled={respondingId === item.id}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                      >
-                        <Check className="w-4 h-4 mr-1" /> Accept
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRespond(item.id, false)}
-                        disabled={respondingId === item.id}
-                        className="border-red-200 text-red-600 hover:bg-red-50"
-                      >
-                        <XCircle className="w-4 h-4 mr-1" /> Decline
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </motion.div>
           ))}
         </div>

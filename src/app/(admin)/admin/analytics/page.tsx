@@ -38,7 +38,7 @@ export default function AnalyticsPage() {
     
     const since = getDateFilter();
     const [rRes, iRes, revRes] = await Promise.all([
-      supabase.from('repairs').select('*, device:devices(*), technician:users!repairs_technician_id_fkey(full_name)').gte('created_at', since),
+      supabase.from('repairs').select('*, device:devices(*), technician:users!repairs_technician_id_fkey(full_name), shop:shops(name)').gte('created_at', since),
       supabase.from('invoices').select('*').gte('created_at', since),
       supabase.from('reviews').select('*, repair:repairs(technician_id)').gte('created_at', since),
     ]);
@@ -49,6 +49,18 @@ export default function AnalyticsPage() {
   }, [range]);
 
   const { user, loading } = useAuthFetch(fetchData, { requiredRole: 'admin' });
+
+  // 0. Total & Shop Earnings
+  const totalEarnings = repairs.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
+  
+  const shopEarningsMap: Record<string, number> = {};
+  repairs.forEach(r => {
+    const shopName = r.shop?.name || 'Unassigned/Platform';
+    shopEarningsMap[shopName] = (shopEarningsMap[shopName] || 0) + (r.final_cost || r.estimated_cost || 0);
+  });
+  const shopEarningsData = Object.entries(shopEarningsMap)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, value]) => ({ name, value }));
 
   // 1. Revenue by brand
   const brandRevenue: Record<string, number> = {};
@@ -129,7 +141,21 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{[0,1,2,3].map(i => <Skeleton key={i} className="h-72 bg-[#1A1A1A]/5 rounded-xl" />)}</div>
       ) : (
         <>
+          {/* Total Earnings Summary */}
+          <div className="bg-gradient-to-r from-[#FF5C00] to-orange-500 rounded-2xl p-6 text-white shadow-lg">
+            <h2 className="text-white/80 font-medium text-sm mb-1 uppercase tracking-wider">Total Platform Earnings</h2>
+            <div className="text-4xl font-bold">₹{fmt(totalEarnings)}</div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Earnings by Shop */}
+            <Card className="bg-white border-[#E8E4DF] shadow-sm col-span-1 lg:col-span-2">
+              <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#FF5C00]" />Earnings per Shop</CardTitle></CardHeader>
+              <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
+                <BarChart data={shopEarningsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#E8E4DF" /><XAxis dataKey="name" tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><YAxis tick={{ fill: '#1A1A1A90', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /><Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} /></BarChart>
+              </ResponsiveContainer></CardContent>
+            </Card>
+
             {/* Revenue by Brand */}
             <Card className="bg-white border-[#E8E4DF] shadow-sm">
               <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#FF5C00]" />Revenue by Brand</CardTitle></CardHeader>
