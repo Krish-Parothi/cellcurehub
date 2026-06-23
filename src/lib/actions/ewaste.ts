@@ -33,8 +33,8 @@ export async function creditEwasteAccount(ewasteId: string, amount: number) {
       return { success: false, error: 'E-waste request not found' };
     }
 
-    if (ewaste.status === 'completed') {
-      return { success: false, error: 'Request is already completed' };
+    if (ewaste.status === 'credited') {
+      return { success: false, error: 'Request is already credited' };
     }
 
     const adminSupabase = getServiceRoleClient();
@@ -54,7 +54,7 @@ export async function creditEwasteAccount(ewasteId: string, amount: number) {
     // Update E-waste status
     const { error: ewasteError } = await adminSupabase
       .from('ewaste')
-      .update({ status: 'completed', admin_offer: amount })
+      .update({ status: 'credited', admin_offer: amount })
       .eq('id', ewasteId);
 
     if (ewasteError) throw ewasteError;
@@ -72,3 +72,56 @@ export async function creditEwasteAccount(ewasteId: string, amount: number) {
     return { success: false, error: err.message || 'Server error' };
   }
 }
+
+export async function revokeEwasteCredits(ewasteId: string) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) return { success: false, error: 'Unauthorized' };
+
+    const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (!userData || !['admin', 'shop_admin'].includes(userData.role)) {
+      return { success: false, error: 'Unauthorized role' };
+    }
+
+    const adminSupabase = getServiceRoleClient();
+
+    const { data: ewaste } = await adminSupabase.from('ewaste').select('*').eq('id', ewasteId).single();
+    if (!ewaste) return { success: false, error: 'E-waste request not found' };
+
+    if (ewaste.status !== 'credited') {
+      return { success: false, error: 'Request is not in credited status' };
+    }
+
+    const { data: customer } = await adminSupabase.from('users').select('credits').eq('id', ewaste.customer_id).single();
+    const currentCredits = customer?.credits || 0;
+    const deductAmount = ewaste.admin_offer || 0;
+
+    const { error: creditError } = await adminSupabase
+      .from('users')
+      .update({ credits: Math.max(0, currentCredits - deductAmount) })
+      .eq('id', ewaste.customer_id);
+
+    if (creditError) throw creditError;
+
+    const { error: ewasteError } = await adminSupabase
+      .from('ewaste')
+      .update({ status: 'rejected', admin_offer: null })
+      .eq('id', ewasteId);
+
+    if (ewasteError) throw ewasteError;
+
+    await adminSupabase.from('notifications').insert({
+      recipient_id: ewaste.customer_id,
+      type: 'ewaste_revoked',
+      message: `Your E-waste submission was cancelled and ${deductAmount} Credits were deducted.`,
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    logger.error('EWASTE', 'Failed to revoke credits', err);
+    return { success: false, error: err.message || 'Server error' };
+  }
+}
+

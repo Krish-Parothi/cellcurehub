@@ -31,7 +31,7 @@ CREATE TABLE public.repairs (
   device_id uuid NOT NULL,
   technician_id uuid,
   issue_description text NOT NULL,
-  status text NOT NULL DEFAULT 'booked'::text CHECK (status = ANY (ARRAY['ticket_raised'::text, 'booked'::text, 'pickup_scheduled'::text, 'device_received'::text, 'diagnostic'::text, 'repair_in_progress'::text, 'qa_testing'::text, 'ready'::text, 'done'::text, 'pending_approval'::text, 'out_for_delivery'::text, 'delivered'::text, 'cancelled'::text, 'wocr'::text])),
+  status text NOT NULL DEFAULT 'booked'::text CHECK (status = ANY (ARRAY['ticket_raised'::text, 'booked'::text, 'pickup_scheduled'::text, 'device_received'::text, 'dropped_at_store'::text, 'diagnostic'::text, 'repair_in_progress'::text, 'qa_testing'::text, 'ready'::text, 'done'::text, 'pending_approval'::text, 'out_for_delivery'::text, 'delivered'::text, 'cancelled'::text, 'wocr'::text])),
   estimated_cost numeric,
   final_cost numeric,
   pickup_type text NOT NULL DEFAULT 'store'::text CHECK (pickup_type = ANY (ARRAY['home'::text, 'store'::text])),
@@ -71,31 +71,6 @@ CREATE TABLE public.repair_timeline (
   CONSTRAINT repair_timeline_pkey PRIMARY KEY (id),
   CONSTRAINT repair_timeline_repair_id_fkey FOREIGN KEY (repair_id) REFERENCES public.repairs(id),
   CONSTRAINT repair_timeline_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id)
-);
-CREATE TABLE public.parts (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  brand text NOT NULL,
-  model_compatible text NOT NULL,
-  quantity_in_stock integer NOT NULL DEFAULT 0,
-  cost_price numeric NOT NULL DEFAULT 0,
-  selling_price numeric NOT NULL DEFAULT 0,
-  low_stock_threshold integer NOT NULL DEFAULT 5,
-  shop_id uuid,
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT parts_pkey PRIMARY KEY (id),
-  CONSTRAINT parts_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id)
-);
-CREATE TABLE public.parts_used (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  repair_id uuid NOT NULL,
-  part_id uuid NOT NULL,
-  quantity integer NOT NULL DEFAULT 1,
-  cost_at_time numeric NOT NULL DEFAULT 0,
-  CONSTRAINT parts_used_pkey PRIMARY KEY (id),
-  CONSTRAINT parts_used_repair_id_fkey FOREIGN KEY (repair_id) REFERENCES public.repairs(id),
-  CONSTRAINT parts_used_part_id_fkey FOREIGN KEY (part_id) REFERENCES public.parts(id)
-);
 CREATE TABLE public.invoices (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   repair_id uuid NOT NULL,
@@ -125,7 +100,6 @@ CREATE TABLE public.ewaste (
   condition_description text,
   quoted_value numeric,
   payout_method text,
-  requested_price numeric,
   admin_offer numeric,
   customer_agreed boolean,
   address text,
@@ -335,4 +309,77 @@ CREATE TABLE public.ewaste_categories (
   sort_order integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT ewaste_categories_pkey PRIMARY KEY (id)
-);
+);C R E A T E   T A B L E   p u b l i c . s t o r e _ o r d e r s   (  
+     i d   u u i d   N O T   N U L L   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
+     c u s t o m e r _ i d   u u i d   N O T   N U L L ,  
+     f u l l _ n a m e   t e x t   N O T   N U L L ,  
+     p h o n e   t e x t   N O T   N U L L ,  
+     a d d r e s s   t e x t   N O T   N U L L ,  
+     t o t a l _ a m o u n t   n u m e r i c   N O T   N U L L   D E F A U L T   0 ,  
+     s t a t u s   t e x t   N O T   N U L L   D E F A U L T   ' p e n d i n g ' : : t e x t   C H E C K   ( s t a t u s   =   A N Y   ( A R R A Y [ ' p e n d i n g ' : : t e x t ,   ' d r i v e r _ a s s i g n e d ' : : t e x t ,   ' d e l i v e r e d ' : : t e x t ,   ' c a n c e l l e d ' : : t e x t ] ) ) ,  
+     d e l i v e r y _ b o y _ i d   u u i d ,  
+     c r e a t e d _ a t   t i m e s t a m p   w i t h   t i m e   z o n e   D E F A U L T   n o w ( ) ,  
+     C O N S T R A I N T   s t o r e _ o r d e r s _ p k e y   P R I M A R Y   K E Y   ( i d ) ,  
+     C O N S T R A I N T   s t o r e _ o r d e r s _ c u s t o m e r _ i d _ f k e y   F O R E I G N   K E Y   ( c u s t o m e r _ i d )   R E F E R E N C E S   p u b l i c . u s e r s ( i d ) ,  
+     C O N S T R A I N T   s t o r e _ o r d e r s _ d e l i v e r y _ b o y _ i d _ f k e y   F O R E I G N   K E Y   ( d e l i v e r y _ b o y _ i d )   R E F E R E N C E S   p u b l i c . u s e r s ( i d )  
+ ) ;  
+  
+ C R E A T E   T A B L E   p u b l i c . s t o r e _ o r d e r _ i t e m s   (  
+     i d   u u i d   N O T   N U L L   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
+     o r d e r _ i d   u u i d   N O T   N U L L ,  
+     s h o p _ i t e m _ i d   u u i d   N O T   N U L L ,  
+     q u a n t i t y   i n t e g e r   N O T   N U L L   D E F A U L T   1 ,  
+     p r i c e _ a t _ p u r c h a s e   n u m e r i c   N O T   N U L L   D E F A U L T   0 ,  
+     C O N S T R A I N T   s t o r e _ o r d e r _ i t e m s _ p k e y   P R I M A R Y   K E Y   ( i d ) ,  
+     C O N S T R A I N T   s t o r e _ o r d e r _ i t e m s _ o r d e r _ i d _ f k e y   F O R E I G N   K E Y   ( o r d e r _ i d )   R E F E R E N C E S   p u b l i c . s t o r e _ o r d e r s ( i d )   O N   D E L E T E   C A S C A D E ,  
+     C O N S T R A I N T   s t o r e _ o r d e r _ i t e m s _ s h o p _ i t e m _ i d _ f k e y   F O R E I G N   K E Y   ( s h o p _ i t e m _ i d )   R E F E R E N C E S   p u b l i c . s h o p _ i t e m s ( i d )  
+ ) ;  
+  
+ - -   E n a b l e   R L S  
+ A L T E R   T A B L E   p u b l i c . s t o r e _ o r d e r s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+ A L T E R   T A B L E   p u b l i c . s t o r e _ o r d e r _ i t e m s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+  
+ - -   P o l i c i e s   f o r   s t o r e _ o r d e r s  
+ C R E A T E   P O L I C Y   " A d m i n   c a n   d o   e v e r y t h i n g   o n   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   A L L   T O   a u t h e n t i c a t e d   U S I N G   (  
+     ( S E L E C T   r o l e   F R O M   p u b l i c . u s e r s   W H E R E   i d   =   a u t h . u i d ( ) )   =   ' a d m i n '  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " C u s t o m e r s   c a n   v i e w   o w n   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   S E L E C T   T O   a u t h e n t i c a t e d   U S I N G   (  
+     c u s t o m e r _ i d   =   a u t h . u i d ( )  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " C u s t o m e r s   c a n   c r e a t e   o w n   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   I N S E R T   T O   a u t h e n t i c a t e d   W I T H   C H E C K   (  
+     c u s t o m e r _ i d   =   a u t h . u i d ( )  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " D e l i v e r y   b o y   c a n   v i e w   a s s i g n e d   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   S E L E C T   T O   a u t h e n t i c a t e d   U S I N G   (  
+     d e l i v e r y _ b o y _ i d   =   a u t h . u i d ( )  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " D e l i v e r y   b o y   c a n   u p d a t e   a s s i g n e d   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   U P D A T E   T O   a u t h e n t i c a t e d   U S I N G   (  
+     d e l i v e r y _ b o y _ i d   =   a u t h . u i d ( )  
+ ) ;  
+  
+ - -   P o l i c i e s   f o r   s t o r e _ o r d e r _ i t e m s  
+ C R E A T E   P O L I C Y   " A d m i n   c a n   d o   e v e r y t h i n g   o n   s t o r e _ o r d e r _ i t e m s "   O N   p u b l i c . s t o r e _ o r d e r _ i t e m s   F O R   A L L   T O   a u t h e n t i c a t e d   U S I N G   (  
+     ( S E L E C T   r o l e   F R O M   p u b l i c . u s e r s   W H E R E   i d   =   a u t h . u i d ( ) )   =   ' a d m i n '  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " C u s t o m e r s   c a n   v i e w   o w n   s t o r e _ o r d e r _ i t e m s "   O N   p u b l i c . s t o r e _ o r d e r _ i t e m s   F O R   S E L E C T   T O   a u t h e n t i c a t e d   U S I N G   (  
+     E X I S T S   (  
+         S E L E C T   1   F R O M   p u b l i c . s t o r e _ o r d e r s   W H E R E   s t o r e _ o r d e r s . i d   =   s t o r e _ o r d e r _ i t e m s . o r d e r _ i d   A N D   s t o r e _ o r d e r s . c u s t o m e r _ i d   =   a u t h . u i d ( )  
+     )  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " C u s t o m e r s   c a n   c r e a t e   s t o r e _ o r d e r _ i t e m s "   O N   p u b l i c . s t o r e _ o r d e r _ i t e m s   F O R   I N S E R T   T O   a u t h e n t i c a t e d   W I T H   C H E C K   (  
+     E X I S T S   (  
+         S E L E C T   1   F R O M   p u b l i c . s t o r e _ o r d e r s   W H E R E   s t o r e _ o r d e r s . i d   =   s t o r e _ o r d e r _ i t e m s . o r d e r _ i d   A N D   s t o r e _ o r d e r s . c u s t o m e r _ i d   =   a u t h . u i d ( )  
+     )  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " D e l i v e r y   b o y   c a n   v i e w   a s s i g n e d   s t o r e _ o r d e r _ i t e m s "   O N   p u b l i c . s t o r e _ o r d e r _ i t e m s   F O R   S E L E C T   T O   a u t h e n t i c a t e d   U S I N G   (  
+     E X I S T S   (  
+         S E L E C T   1   F R O M   p u b l i c . s t o r e _ o r d e r s   W H E R E   s t o r e _ o r d e r s . i d   =   s t o r e _ o r d e r _ i t e m s . o r d e r _ i d   A N D   s t o r e _ o r d e r s . d e l i v e r y _ b o y _ i d   =   a u t h . u i d ( )  
+     )  
+ ) ;  
+ 

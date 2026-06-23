@@ -24,8 +24,9 @@ type RepairWithJoins = Repair & {
 
 const KANBAN_COLUMNS = [
   { label: 'New', statuses: ['booked', 'pickup_scheduled'], color: '#FF5C00' },
-  { label: 'Assigned', statuses: ['device_received', 'diagnostic'], color: '#3B82F6' },
+  { label: 'Assigned', statuses: ['device_received', 'dropped_at_store', 'diagnostic'], color: '#3B82F6' },
   { label: 'In Progress', statuses: ['repair_in_progress'], color: '#F59E0B' },
+  { label: 'Pending', statuses: ['wocr', 'pending_approval'], color: '#EC4899' },
   { label: 'QA Testing', statuses: ['qa_testing'], color: '#8B5CF6' },
   { label: 'Done', statuses: ['done'], color: '#00D084' },
 ];
@@ -53,13 +54,24 @@ export default function TechnicianDashboard() {
     return () => clearInterval(timer);
   }, []);
 
+  const { user, loading } = useAuthFetch(() => {}, { requiredRole: ['technician', 'admin', 'shop_admin'] });
+
   const fetchRepairs = useCallback(async () => {
+    if (!user) return;
     console.log('[TECH_DASHBOARD] fetchRepairs started', new Date().toISOString());
-    const { data, error } = await supabase
+    let query = supabase
       .from('repairs')
       .select('*, device:devices(*), customer:users!repairs_customer_id_fkey(full_name, phone)')
-      .in('status', ['booked', 'pickup_scheduled', 'device_received', 'diagnostic', 'repair_in_progress', 'qa_testing', 'done'])
+      .in('status', ['booked', 'pickup_scheduled', 'device_received', 'dropped_at_store', 'diagnostic', 'repair_in_progress', 'wocr', 'pending_approval', 'qa_testing', 'done'])
       .order('created_at', { ascending: false });
+
+    if (user.role === 'technician') {
+      query = query.eq('technician_id', user.id);
+    } else if (user.role === 'shop_admin') {
+      query = query.eq('shop_id', user.shop_id);
+    }
+      
+    const { data, error } = await query;
       
     if (error) { 
       console.error('[TECH_DASHBOARD] fetchRepairs error:', error);
@@ -68,12 +80,22 @@ export default function TechnicianDashboard() {
       console.log('[TECH_DASHBOARD] fetchRepairs success, data length:', data?.length, 'data:', data);
       setRepairs((data as RepairWithJoins[]) || []); 
     }
-  }, []);
+  }, [user]);
 
-  const { user, loading } = useAuthFetch(fetchRepairs, {
-    requiredRole: ['technician', 'admin', 'shop_admin'],
-    realtimeTable: 'repairs',
-  });
+  useEffect(() => {
+    if (user) fetchRepairs();
+  }, [user, fetchRepairs]);
+
+  // Subscribe to realtime updates manually since we bypass useAuthFetch's built-in fetch caller
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel('tech-repairs-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'repairs' }, () => {
+        fetchRepairs();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchRepairs]);
 
   const handleStatusUpdate = async (repairId: string, newStatus: string) => {
     console.debug('[TECH:STATUS_UPDATE] Starting...', { repairId, newStatus, userId: user?.id });

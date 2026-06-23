@@ -5,6 +5,7 @@ export type RepairStatus =
   | 'booked'
   | 'pickup_scheduled'
   | 'device_received'
+  | 'dropped_at_store'
   | 'diagnostic'
   | 'repair_in_progress'
   | 'qa_testing'
@@ -24,6 +25,7 @@ export type EwasteSubmissionCategory = 'ewaste' | 'resell';
 export type DeviceCategory = 'smartphone' | 'laptop' | 'tablet';
 export type TimeSlot = 'morning' | 'afternoon' | 'evening';
 export type EwasteCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'dead' | 'powers_off';
+export type StoreOrderStatus = 'pending' | 'driver_assigned' | 'delivered' | 'cancelled';
 
 export interface User {
   id: string;
@@ -88,28 +90,6 @@ export interface RepairTimelineEntry {
   created_at: string;
 }
 
-export interface Part {
-  id: string;
-  name: string;
-  brand: string;
-  model_compatible: string;
-  quantity_in_stock: number;
-  cost_price: number;
-  selling_price: number;
-  low_stock_threshold: number;
-  shop_id: string | null;
-  updated_at: string;
-}
-
-export interface PartUsed {
-  id: string;
-  repair_id: string;
-  part_id: string;
-  quantity: number;
-  cost_at_time: number;
-  part?: Part;
-}
-
 export interface Invoice {
   id: string;
   repair_id: string;
@@ -140,7 +120,6 @@ export interface Ewaste {
   payout_method: string | null;
   address: string | null;
   category: EwasteSubmissionCategory;
-  requested_price: number | null;
   admin_offer: number | null;
   customer_agreed: boolean | null;
   ewaste_category_id: string | null;
@@ -214,6 +193,7 @@ export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
   booked: 'Booked',
   pickup_scheduled: 'Pickup Scheduled',
   device_received: 'Device Received',
+  dropped_at_store: 'Dropped at Store',
   diagnostic: 'Diagnostic',
   repair_in_progress: 'Repair In Progress',
   qa_testing: 'QA Testing',
@@ -231,9 +211,11 @@ export const REPAIR_STATUS_ORDER: RepairStatus[] = [
   'booked',
   'pickup_scheduled',
   'device_received',
+  'dropped_at_store',
   'diagnostic',
   'repair_in_progress',
   'qa_testing',
+  'done',
   'wocr',
   'ready',
   'out_for_delivery',
@@ -391,6 +373,30 @@ export interface ShopItem {
   stock_qty: number;
   image_url: string | null;
   created_at: string;
+}
+
+export interface StoreOrder {
+  id: string;
+  customer_id: string;
+  full_name: string;
+  phone: string;
+  address: string;
+  total_amount: number;
+  status: StoreOrderStatus;
+  delivery_boy_id: string | null;
+  created_at: string;
+  customer?: User;
+  delivery_boy?: User;
+  items?: StoreOrderItem[];
+}
+
+export interface StoreOrderItem {
+  id: string;
+  order_id: string;
+  shop_item_id: string;
+  quantity: number;
+  price_at_purchase: number;
+  shop_item?: ShopItem;
 }
 
 export interface SalaryConfig {

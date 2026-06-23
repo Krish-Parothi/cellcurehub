@@ -12,13 +12,6 @@ interface ActionResult {
   data?: unknown;
 }
 
-interface AddPartInput {
-  repairId: string;
-  partId: string;
-  quantity: number;
-  costAtTime: number;
-  currentStock: number;
-}
 
 interface SubmitRcaInput {
   repairId: string;
@@ -30,78 +23,6 @@ interface SubmitRcaInput {
 
 // ─── Actions ─────────────────────────────────────────────────────────────
 
-/**
- * Add a part to a repair (Part Requisition).
- * Only technicians assigned to the repair (or admins/shop_admins) can do this.
- * Automatically deducts from inventory.
- */
-export async function addPartToRepair(input: AddPartInput): Promise<ActionResult> {
-  try {
-    const { profile } = await getAuthenticatedUser(['technician', 'admin', 'shop_admin']);
-    logger.info('TECHNICIAN', 'addPartToRepair', {
-      userId: profile.id,
-      repairId: input.repairId,
-      partId: input.partId,
-      quantity: input.quantity,
-    });
-
-    // Validate
-    if (input.quantity < 1) {
-      return { success: false, error: 'Quantity must be at least 1.' };
-    }
-    if (input.quantity > input.currentStock) {
-      logger.warn('TECHNICIAN', 'Insufficient stock', { partId: input.partId, requested: input.quantity, available: input.currentStock });
-      return { success: false, error: `Only ${input.currentStock} units in stock.` };
-    }
-
-    const supabase = await createServerSupabaseClient();
-
-    // Verify repair is assigned to this technician
-    if (profile.role === 'technician') {
-      const { data: repair } = await supabase
-        .from('repairs')
-        .select('technician_id')
-        .eq('id', input.repairId)
-        .single();
-
-      if (repair?.technician_id !== profile.id) {
-        logger.warn('TECHNICIAN', 'Part add on unassigned repair', { repairId: input.repairId });
-        return { success: false, error: 'You can only add parts to repairs assigned to you.' };
-      }
-    }
-
-    // Insert parts_used
-    const { error: insertError } = await supabase.from('parts_used').insert({
-      repair_id: input.repairId,
-      part_id: input.partId,
-      quantity: input.quantity,
-      cost_at_time: input.costAtTime,
-    });
-
-    if (insertError) {
-      logger.error('TECHNICIAN', 'Parts_used insert failed', { error: insertError.message });
-      return { success: false, error: `Failed to log part usage: ${insertError.message}` };
-    }
-
-    // Deduct from inventory
-    const { error: stockError } = await supabase
-      .from('parts')
-      .update({ quantity_in_stock: input.currentStock - input.quantity })
-      .eq('id', input.partId);
-
-    if (stockError) {
-      logger.error('TECHNICIAN', 'Stock deduction failed', { partId: input.partId, error: stockError.message });
-      // Non-fatal but important to log
-    }
-
-    logger.info('TECHNICIAN', 'Part added successfully', { partId: input.partId, quantity: input.quantity });
-    return { success: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    logger.error('TECHNICIAN', 'addPartToRepair exception', { error: message });
-    return { success: false, error: message };
-  }
-}
 
 /**
  * Submit an RCA (Root Cause Analysis) report.

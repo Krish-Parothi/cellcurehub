@@ -23,13 +23,14 @@ import ResellingTab from './_tabs/reselling-tab';
 import ProfileTab from './_tabs/profile-tab';
 import ShopTab from './_tabs/shop-tab';
 import CheckoutTab from './_tabs/checkout-tab';
+import StoreOrdersTab from './_tabs/store-orders-tab';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Wrench, History, Recycle, ChartBar as BarChart3, User, LogOut, Settings, ShoppingBag, ShoppingCart, Smartphone } from 'lucide-react';
+import { Wrench, History, Recycle, ChartBar as BarChart3, User, LogOut, Settings, ShoppingBag, ShoppingCart, Smartphone, Package } from 'lucide-react';
 
-type Tab = 'active' | 'history' | 'analytics' | 'ewaste' | 'reselling' | 'shop' | 'cart' | 'profile';
+type Tab = 'active' | 'history' | 'analytics' | 'ewaste' | 'reselling' | 'shop' | 'cart' | 'store_orders' | 'profile';
 const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'active', label: 'Active Repairs', icon: Wrench },
   { key: 'history', label: 'Repair History', icon: History },
@@ -38,6 +39,7 @@ const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'reselling', label: 'Resell Phone', icon: Smartphone },
   { key: 'shop', label: 'Store', icon: ShoppingBag },
   { key: 'cart', label: 'Cart', icon: ShoppingCart },
+  { key: 'store_orders', label: 'Store Orders', icon: Package },
   { key: 'profile', label: 'Profile', icon: User },
 ];
 
@@ -110,9 +112,10 @@ export default function DashboardPage() {
             {tab === 'history' && user && <HistoryTab userId={user.id} />}
             {tab === 'ewaste' && user && <EwasteTab userId={user.id} />}
             {tab === 'reselling' && user && <ResellingTab userId={user.id} />}
-            {tab === 'shop' && user && <ShopTab />}
-            {tab === 'cart' && user && <CheckoutTab />}
-            {tab === 'profile' && user && <ProfileTab user={user} />}
+            { tab === 'shop' && user && <ShopTab /> }
+            { tab === 'cart' && user && <CheckoutTab /> }
+            { tab === 'store_orders' && user && <StoreOrdersTab userId={user.id} /> }
+            { tab === 'profile' && user && <ProfileTab user={user} /> }
           </main>
         </div>
         <Footer />

@@ -171,7 +171,6 @@ export default function AdminResellingPage() {
                     <TableHead className="text-[#1A1A1A]/50 font-medium whitespace-nowrap">Date</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Customer</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Device</TableHead>
-                    <TableHead className="text-[#1A1A1A]/50 font-medium">Requested Price</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Admin Offer</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Status</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium text-right">Actions</TableHead>
@@ -190,11 +189,6 @@ export default function AdminResellingPage() {
                       <TableCell>
                         <p className="text-[#1A1A1A] font-medium">{sub.device_description}</p>
                         <p className="text-[#1A1A1A]/50 text-xs capitalize">Condition: {sub.condition?.replace('_', ' ')}</p>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-[#1A1A1A] font-semibold flex items-center">
-                          <IndianRupee className="w-3.5 h-3.5 mr-0.5" />{sub.requested_price ? fmt(sub.requested_price) : 'N/A'}
-                        </span>
                       </TableCell>
                       <TableCell>
                         {sub.quoted_value ? (
@@ -269,9 +263,6 @@ export default function AdminResellingPage() {
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
                   <div className="flex justify-between items-center">
                     <h4 className="font-semibold text-blue-900">Make an Offer</h4>
-                    <span className="text-sm text-blue-800 font-medium bg-blue-100 px-2 py-1 rounded">
-                      Customer Requested: <span className="font-bold">₹{detailsDialog.item.requested_price ? fmt(detailsDialog.item.requested_price) : 'N/A'}</span>
-                    </span>
                   </div>
                   <div className="flex gap-2 items-center">
                     <Input type="number" value={valuationAmount} onChange={e => setValuationAmount(e.target.value)} placeholder="Enter value (₹)" className="bg-white text-[#1A1A1A]" />

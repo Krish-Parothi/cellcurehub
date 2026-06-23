@@ -18,20 +18,19 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Search, UserCircle, Phone, Mail, MessageSquare, Eye } from 'lucide-react';
-
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const statusColor = (s: string) => {
   const m: Record<string, string> = { 
     booked: 'bg-blue-500/10 text-blue-600', 
     pickup_scheduled: 'bg-cyan-500/10 text-cyan-600', 
     device_received: 'bg-indigo-500/10 text-indigo-600', 
+    dropped_at_store: 'bg-blue-600/10 text-blue-700',
     repair_in_progress: 'bg-orange-500/10 text-orange-600', 
     done: 'bg-green-500/10 text-green-600', 
     delivered: 'bg-emerald-500/10 text-emerald-600' 
   };
   return m[s] || 'bg-gray-500/10 text-gray-600';
 };
-
 export default function ShopCustomersPage() {
   const shopId = useShopId();
   const [customers, setCustomers] = useState<any[]>([]);

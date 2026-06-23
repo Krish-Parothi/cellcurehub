@@ -6,46 +6,31 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
 import { useShopId } from '@/lib/use-shop-id';
-import type { Part, ShopItem } from '@/lib/types';
+import type { ShopItem } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Package, ShoppingBag, Plus, Pencil, Trash2, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { ShoppingBag, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { compressImage } from '@/lib/compress-image';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 export default function ShopInventoryPage() {
   const shopId = useShopId();
-  const [parts, setParts] = useState<Part[]>([]);
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
-  const [burnRates, setBurnRates] = useState<Record<string, number>>({});
-
-  const [partDialog, setPartDialog] = useState<{ open: boolean; part: Part | null }>({ open: false, part: null });
-  const [partForm, setPartForm] = useState({ name: '', brand: '', model_compatible: '', quantity_in_stock: 0, cost_price: 0, selling_price: 0, low_stock_threshold: 5 });
   const [itemDialog, setItemDialog] = useState<{ open: boolean; item: ShopItem | null }>({ open: false, item: null });
   const [itemForm, setItemForm] = useState({ name: '', category: '', price: 0, stock_qty: 0, image: null as File | null });
   const [uploading, setUploading] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!shopId) return;
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const [pRes, siRes, buRes] = await Promise.all([
-      supabase.from('parts').select('*').eq('shop_id', shopId).order('name'),
-      supabase.from('shop_items').select('*').eq('shop_id', shopId).order('name'),
-      supabase.from('parts_used').select('part_id, quantity, repair:repairs!inner(created_at, shop_id)').eq('repair.shop_id', shopId).gte('repair.created_at', thirtyDaysAgo),
-    ]);
-    setParts(pRes.data || []);
-    setShopItems(siRes.data || []);
-    const rates: Record<string, number> = {};
-    (buRes.data || []).forEach((pu: any) => { rates[pu.part_id] = (rates[pu.part_id] || 0) + pu.quantity; });
-    setBurnRates(rates);
+    const { data } = await supabase.from('shop_items').select('*').eq('shop_id', shopId).order('name');
+    setShopItems(data || []);
   }, [shopId]);
 
   const { user, loading } = useAuthFetch(fetchData, {
@@ -54,14 +39,6 @@ export default function ShopInventoryPage() {
     realtimeTable: 'shop_items',
   });
 
-  const savePart = async () => {
-    const payload = { ...partForm, quantity_in_stock: Number(partForm.quantity_in_stock), cost_price: Number(partForm.cost_price), selling_price: Number(partForm.selling_price), low_stock_threshold: Number(partForm.low_stock_threshold), shop_id: shopId };
-    if (partDialog.part) { await supabase.from('parts').update(payload).eq('id', partDialog.part.id); toast.success('Part updated'); }
-    else { await supabase.from('parts').insert(payload); toast.success('Part added'); }
-    setPartDialog({ open: false, part: null }); fetchData();
-  };
-
-  const deletePart = async (id: string) => { if (!confirm('Delete?')) return; await supabase.from('parts').delete().eq('id', id); toast.success('Part deleted'); fetchData(); };
 
   const saveShopItem = async () => {
     setUploading(true);
@@ -83,49 +60,13 @@ export default function ShopInventoryPage() {
 
   return (
     <div className="space-y-8">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">Inventory</h1>
-        <p className="text-[#1A1A1A]/60 text-sm mt-1">Your shop&apos;s parts and items</p>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-between items-end mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">Shop Items</h1>
+          <p className="text-[#1A1A1A]/60 text-sm mt-1">Manage items sold in your shop</p>
+        </div>
+        <Button onClick={() => { setItemForm({ name: '', category: '', price: 0, stock_qty: 0, image: null }); setItemDialog({ open: true, item: null }); }} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-semibold"><Plus className="w-4 h-4 mr-1" />Add Item</Button>
       </motion.div>
-
-      <Tabs defaultValue="parts" className="w-full">
-        <TabsList className="bg-[#F7F7F5] border border-[#E8E4DF] mb-6">
-          <TabsTrigger value="parts" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] font-semibold text-[#1A1A1A]/60"><Package className="w-3.5 h-3.5 mr-1.5" />Parts</TabsTrigger>
-          <TabsTrigger value="items" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] font-semibold text-[#1A1A1A]/60"><ShoppingBag className="w-3.5 h-3.5 mr-1.5" />Shop Items</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="parts">
-          <div className="flex justify-end mb-4"><Button onClick={() => { setPartForm({ name: '', brand: '', model_compatible: '', quantity_in_stock: 0, cost_price: 0, selling_price: 0, low_stock_threshold: 5 }); setPartDialog({ open: true, part: null }); }} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-semibold"><Plus className="w-4 h-4 mr-1" />Add Part</Button></div>
-          <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-0">
-            {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-[#1A1A1A]/5" /></div> : (
-              <Table><TableHeader><TableRow className="border-[#E8E4DF] hover:bg-transparent">
-                <TableHead className="text-[#1A1A1A]/55">Name</TableHead><TableHead className="text-[#1A1A1A]/55">Brand</TableHead>
-                <TableHead className="text-[#1A1A1A]/55">Stock</TableHead><TableHead className="text-[#1A1A1A]/55">Burn/30d</TableHead>
-                <TableHead className="text-[#1A1A1A]/55">Cost</TableHead><TableHead className="text-[#1A1A1A]/55">Selling</TableHead>
-                <TableHead className="text-[#1A1A1A]/55">Status</TableHead><TableHead className="text-[#1A1A1A]/55">Actions</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>{parts.map(p => {
-                const low = p.quantity_in_stock <= p.low_stock_threshold;
-                return (<TableRow key={p.id} className={`border-[#E8E4DF]/60 ${low ? 'bg-red-500/5' : 'hover:bg-[#F7F7F5]'}`}>
-                  <TableCell className="text-[#1A1A1A] font-medium">{p.name}</TableCell>
-                  <TableCell className="text-[#1A1A1A]/70">{p.brand}</TableCell>
-                  <TableCell className={low ? 'text-red-600 font-bold' : 'text-[#1A1A1A]/70'}>{p.quantity_in_stock}</TableCell>
-                  <TableCell className="text-[#1A1A1A]/70">{burnRates[p.id] || 0}</TableCell>
-                  <TableCell className="text-[#1A1A1A]/70">₹{fmt(p.cost_price)}</TableCell>
-                  <TableCell className="text-[#1A1A1A]/70">₹{fmt(p.selling_price)}</TableCell>
-                  <TableCell>{low ? <Badge className="bg-red-500/10 text-red-600 border border-red-500/20 text-[10px]"><AlertTriangle className="w-2.5 h-2.5 mr-0.5" />Low</Badge> : <Badge className="bg-green-500/10 text-green-600 border border-green-500/20 text-[10px]"><CheckCircle className="w-2.5 h-2.5 mr-0.5" />OK</Badge>}</TableCell>
-                  <TableCell className="flex gap-1">
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-[#1A1A1A]/60 hover:text-[#FF5C00]" onClick={() => { setPartForm({ name: p.name, brand: p.brand, model_compatible: p.model_compatible, quantity_in_stock: p.quantity_in_stock, cost_price: p.cost_price, selling_price: p.selling_price, low_stock_threshold: p.low_stock_threshold }); setPartDialog({ open: true, part: p }); }}><Pencil className="w-3 h-3" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-[#1A1A1A]/60 hover:text-red-600" onClick={() => deletePart(p.id)}><Trash2 className="w-3 h-3" /></Button>
-                  </TableCell>
-                </TableRow>);
-              })}</TableBody></Table>
-            )}
-          </CardContent></Card>
-        </TabsContent>
-
-        <TabsContent value="items">
-          <div className="flex justify-end mb-4"><Button onClick={() => { setItemForm({ name: '', category: '', price: 0, stock_qty: 0, image: null }); setItemDialog({ open: true, item: null }); }} className="bg-[#FF5C00] text-white hover:bg-[#e05200] font-semibold"><Plus className="w-4 h-4 mr-1" />Add Item</Button></div>
           <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-0">
             {loading ? <div className="p-6"><Skeleton className="h-48 w-full bg-[#1A1A1A]/5" /></div> : (
               <Table><TableHeader><TableRow className="border-[#E8E4DF] hover:bg-transparent">
@@ -148,29 +89,7 @@ export default function ShopInventoryPage() {
               ))}</TableBody></Table>
             )}
           </CardContent></Card>
-        </TabsContent>
-      </Tabs>
 
-      {/* Part Dialog */}
-      <Dialog open={partDialog.open} onOpenChange={o => setPartDialog({ open: o, part: null })}>
-        <DialogContent className="bg-white border-[#E8E4DF] max-w-md">
-          <DialogHeader><DialogTitle className="text-[#1A1A1A]">{partDialog.part ? 'Edit' : 'Add'} Part</DialogTitle><DialogDescription className="text-[#1A1A1A]/60">For your shop only</DialogDescription></DialogHeader>
-          <div className="space-y-3">
-            <div><Label className="text-[#1A1A1A]/70">Name</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={partForm.name} onChange={e => setPartForm(f => ({ ...f, name: e.target.value }))} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-[#1A1A1A]/70">Brand</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={partForm.brand} onChange={e => setPartForm(f => ({ ...f, brand: e.target.value }))} /></div>
-              <div><Label className="text-[#1A1A1A]/70">Model</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={partForm.model_compatible} onChange={e => setPartForm(f => ({ ...f, model_compatible: e.target.value }))} /></div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label className="text-[#1A1A1A]/70">Stock</Label><Input type="number" className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={partForm.quantity_in_stock} onChange={e => setPartForm(f => ({ ...f, quantity_in_stock: +e.target.value }))} /></div>
-              <div><Label className="text-[#1A1A1A]/70">Cost</Label><Input type="number" className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={partForm.cost_price} onChange={e => setPartForm(f => ({ ...f, cost_price: +e.target.value }))} /></div>
-              <div><Label className="text-[#1A1A1A]/70">Selling</Label><Input type="number" className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={partForm.selling_price} onChange={e => setPartForm(f => ({ ...f, selling_price: +e.target.value }))} /></div>
-            </div>
-            <div><Label className="text-[#1A1A1A]/70">Low Threshold</Label><Input type="number" className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={partForm.low_stock_threshold} onChange={e => setPartForm(f => ({ ...f, low_stock_threshold: +e.target.value }))} /></div>
-          </div>
-          <DialogFooter><Button onClick={savePart} className="bg-[#FF5C00] text-white hover:bg-[#e05200]">{partDialog.part ? 'Update' : 'Add'}</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Shop Item Dialog */}
       <Dialog open={itemDialog.open} onOpenChange={o => setItemDialog({ open: o, item: null })}>

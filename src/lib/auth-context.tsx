@@ -10,7 +10,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUpWithPassword: (email: string, password: string, fullName: string, role: UserRole, phone: string) => Promise<{ error: string | null }>;
+  signUpWithPassword: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: string | null }>;
   signInWithPhone: (phone: string) => Promise<{ error: string | null }>;
   verifyOtp: (phone: string, token: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<void>;
@@ -161,9 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     fullName: string,
-    role: UserRole,
     phone: string
   ) => {
+    // SECURITY FIX: Client-side signups are always 'customer'
+    const role: UserRole = 'customer';
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

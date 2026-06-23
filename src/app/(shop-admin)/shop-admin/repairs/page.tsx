@@ -26,7 +26,7 @@ const shortId = (id: string) => id.slice(0, 8);
 const statusColor = (s: string) => {
   const m: Record<string, string> = {
     booked: 'bg-blue-500/10 text-blue-600', pickup_scheduled: 'bg-cyan-500/10 text-cyan-600',
-    device_received: 'bg-indigo-500/10 text-indigo-600', diagnostic: 'bg-yellow-500/15 text-yellow-600',
+    device_received: 'bg-indigo-500/10 text-indigo-600', dropped_at_store: 'bg-blue-600/10 text-blue-700', diagnostic: 'bg-yellow-500/15 text-yellow-600',
     repair_in_progress: 'bg-orange-500/10 text-orange-600', qa_testing: 'bg-purple-500/10 text-purple-600',
     ready: 'bg-teal-500/10 text-teal-600', done: 'bg-green-500/10 text-green-600',
     out_for_delivery: 'bg-cyan-500/10 text-cyan-600', delivered: 'bg-emerald-500/10 text-emerald-600',
@@ -40,6 +40,7 @@ export default function ShopRepairsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedRepair, setSelectedRepair] = useState<any | null>(null);
+  const [selectedRca, setSelectedRca] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [finalCostInput, setFinalCostInput] = useState('');
@@ -50,6 +51,9 @@ export default function ShopRepairsPage() {
   const [rcaModal, setRcaModal] = useState<any | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [rcaProcessing, setRcaProcessing] = useState(false);
+
+  // Delivery assignments map: repair_id -> { name, phone, status, delivery_boy_id, job_type }
+  const [deliveryMap, setDeliveryMap] = useState<Record<string, { name: string; phone: string; status: string; delivery_boy_id: string; job_type: string }>>({});
 
   const fetchRepairs = useCallback(async () => {
     if (!shopId) return;
@@ -62,6 +66,27 @@ export default function ShopRepairsPage() {
       .select('*, repair:repairs!inner(id, shop_id, customer:users!repairs_customer_id_fkey(full_name), device:devices(brand, model_name), technician:users!repairs_technician_id_fkey(full_name))')
       .eq('repair.shop_id', shopId).eq('admin_confirmed', false);
     setPendingRcas(rcas || []);
+
+    const repairIds = (data || []).map((r: any) => r.id);
+    if (repairIds.length > 0) {
+      const { data: assignments } = await supabase.from('delivery_assignments')
+        .select('repair_id, status, delivery_boy_id, job_type, delivery_boy:users!delivery_assignments_delivery_boy_id_fkey(full_name, phone)')
+        .in('repair_id', repairIds)
+        .order('created_at', { ascending: false });
+      const dMap: Record<string, { name: string; phone: string; status: string; delivery_boy_id: string; job_type: string }> = {};
+      (assignments || []).forEach((a: any) => {
+        if (!dMap[a.repair_id]) {
+          dMap[a.repair_id] = {
+            name: a.delivery_boy?.full_name || 'Unknown',
+            phone: a.delivery_boy?.phone || '',
+            status: a.status,
+            delivery_boy_id: a.delivery_boy_id,
+            job_type: a.job_type,
+          };
+        }
+      });
+      setDeliveryMap(dMap);
+    }
   }, [shopId]);
 
   const { user, loading } = useAuthFetch(fetchRepairs, {
@@ -76,6 +101,8 @@ export default function ShopRepairsPage() {
     setSheetOpen(true);
     const { data: tl } = await supabase.from('repair_timeline').select('*').eq('repair_id', repair.id).order('created_at', { ascending: true });
     setTimeline(tl || []);
+    const { data: rcaData } = await supabase.from('rca_reports').select('*').eq('repair_id', repair.id).maybeSingle();
+    setSelectedRca(rcaData);
     setFinalCostInput(repair.final_cost?.toString() || '');
     const { data: techs } = await supabase.from('users').select('*').in('role', ['technician', 'shop_admin', 'admin']).eq('shop_id', shopId).eq('is_active', true);
     setTechnicians(techs || []);
@@ -190,6 +217,24 @@ export default function ShopRepairsPage() {
     fetchRepairs();
   };
 
+  const revokeRcaApproval = async () => {
+    if (!selectedRca || !selectedRepair) return;
+    if (!confirm('Are you sure you want to revoke this RCA approval? It will be removed from customer view.')) return;
+    setAssigning(true);
+    const { error } = await supabase.from('rca_reports').update({ admin_confirmed: false }).eq('id', selectedRca.id);
+    if (error) { toast.error('Failed to revoke RCA'); setAssigning(false); return; }
+    
+    await supabase.from('repair_timeline').insert({
+      repair_id: selectedRepair.id, status: selectedRepair.status,
+      note: 'RCA approval revoked by admin', updated_by: user?.id,
+    });
+    
+    toast.success('RCA approval revoked');
+    setSelectedRca({ ...selectedRca, admin_confirmed: false });
+    setAssigning(false);
+    fetchRepairs();
+  };
+
   const confirmRca = async (rca: any) => {
     console.debug('[SHOP_CONFIRM_RCA]', { rcaId: rca.id, repairId: rca.repair_id });
     setRcaProcessing(true);
@@ -236,16 +281,17 @@ export default function ShopRepairsPage() {
           <Table><TableHeader><TableRow className="border-[#E8E4DF] hover:bg-transparent">
             <TableHead className="text-[#1A1A1A]/55">ID</TableHead><TableHead className="text-[#1A1A1A]/55">Customer</TableHead>
             <TableHead className="text-[#1A1A1A]/55">Device</TableHead><TableHead className="text-[#1A1A1A]/55">Status</TableHead>
-            <TableHead className="text-[#1A1A1A]/55">Technician</TableHead><TableHead className="text-[#1A1A1A]/55">Date</TableHead>
+            <TableHead className="text-[#1A1A1A]/55">Technician</TableHead><TableHead className="text-[#1A1A1A]/55">Delivery Boy</TableHead><TableHead className="text-[#1A1A1A]/55">Date</TableHead>
             <TableHead className="text-[#1A1A1A]/55">Action</TableHead>
           </TableRow></TableHeader>
           <TableBody>{filtered.slice(0, 50).map(r => (
             <TableRow key={r.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]">
               <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(r.id)}</TableCell>
               <TableCell className="text-[#1A1A1A]">{r.customer?.full_name || '—'}</TableCell>
-              <TableCell className="text-[#1A1A1A]/70">{r.device?.model_name || r.manual_model || '—'}</TableCell>
+              <TableCell className="text-[#1A1A1A]/70 text-sm">{r.device?.model_name || r.manual_model || '—'}</TableCell>
               <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
-              <TableCell className="text-[#1A1A1A]/70">{r.technician?.full_name || <span className="text-amber-600 font-semibold">Unassigned</span>}</TableCell>
+              <TableCell className="text-[#1A1A1A]/70 text-sm">{r.technician?.full_name || <span className="text-amber-600 font-semibold text-xs">Unassigned</span>}</TableCell>
+              <TableCell className="text-[#1A1A1A]/70 text-sm">{deliveryMap[r.id] ? <div className="flex flex-col"><span>{deliveryMap[r.id].name}</span><span className="text-[10px] text-[#1A1A1A]/50 uppercase font-semibold">{deliveryMap[r.id].status.replace('_', ' ')}</span></div> : <span className="text-amber-600 font-semibold text-xs">Unassigned</span>}</TableCell>
               <TableCell className="text-[#1A1A1A]/50 text-xs">{new Date(r.created_at).toLocaleDateString('en-IN')}</TableCell>
               <TableCell><Button size="sm" variant="ghost" onClick={() => openRepairSheet(r)} className="text-[#FF5C00] hover:bg-[#FF5C00]/10 font-semibold"><Eye className="w-3.5 h-3.5 mr-1" />View</Button></TableCell>
             </TableRow>
@@ -305,21 +351,29 @@ export default function ShopRepairsPage() {
               <Separator className="bg-[#E8E4DF]" />
               
               <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Wrench className="w-3 h-3" />Assign Technician</p>
-                <Select onValueChange={assignTechnician} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select technician..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{technicians.map(t => <SelectItem key={t.id} value={t.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{t.full_name} {t.role !== 'technician' ? `(${t.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
+                <Select value={selectedRepair.technician_id || ''} onValueChange={assignTechnician} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select technician..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{technicians.map(t => <SelectItem key={t.id} value={t.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{t.full_name} {t.role !== 'technician' ? `(${t.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
 
               {/* Pickup Assignment */}
               {['booked', 'pickup_scheduled'].includes(selectedRepair.status) && (
                 <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3 text-[#FF5C00]" />Assign Pickup Boy</p>
-                  <Select onValueChange={assignPickup} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select pickup boy..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{d.full_name} {d.role !== 'delivery' ? `(${d.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
+                  <Select value={deliveryMap[selectedRepair.id]?.job_type === 'pickup' ? deliveryMap[selectedRepair.id]?.delivery_boy_id : ''} onValueChange={assignPickup} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select pickup boy..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{d.full_name} {d.role !== 'delivery' ? `(${d.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
               )}
 
               {/* Drop-off Assignment */}
               {(selectedRepair.status === 'ready' || selectedRepair.status === 'done') && (
                 <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3" />Assign Drop-off Boy</p>
-                  <Select onValueChange={assignDelivery} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select drop-off boy..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{d.full_name} {d.role !== 'delivery' ? `(${d.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
+                  <Select value={deliveryMap[selectedRepair.id]?.job_type === 'dropoff' ? deliveryMap[selectedRepair.id]?.delivery_boy_id : ''} onValueChange={assignDelivery} disabled={assigning}><SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select drop-off boy..." /></SelectTrigger><SelectContent className="bg-white border-[#E8E4DF]">{deliveryBoys.map(d => <SelectItem key={d.id} value={d.id} className="text-[#1A1A1A] hover:bg-[#F7F7F5]">{d.full_name} {d.role !== 'delivery' ? `(${d.role})` : ''}</SelectItem>)}</SelectContent></Select></div>
               )}
 
               {selectedRepair.status === 'done' && <Button onClick={sendOutForDelivery} disabled={assigning} className="w-full bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold">{assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}Send Out for Delivery</Button>}
+
+              {/* Revoke RCA */}
+              {selectedRca?.admin_confirmed && (
+                <Button onClick={revokeRcaApproval} disabled={assigning} variant="outline" className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 font-bold mt-2">
+                  {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />} Revoke RCA Approval
+                </Button>
+              )}
+
               <Separator className="bg-[#E8E4DF]" />
               <div><p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold">Timeline</p>
                 <div className="space-y-2 max-h-60 overflow-y-auto">{timeline.map(t => (

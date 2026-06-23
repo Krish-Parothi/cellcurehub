@@ -39,7 +39,6 @@ export default function ResellingTab({ userId }: { userId: string }) {
   const [condition, setCondition] = useState('');
   const [conditionDesc, setConditionDesc] = useState('');
   const [address, setAddress] = useState('');
-  const [requestedPrice, setRequestedPrice] = useState('');
   const [photos, setPhotos] = useState<File[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -70,7 +69,6 @@ export default function ResellingTab({ userId }: { userId: string }) {
     if (!condition) { toast.error('Please select device condition'); return; }
     if (!imei.match(/^\d{15}$/)) { toast.error('IMEI must be 15 digits'); return; }
     if (!address.trim()) { toast.error('Please provide a pickup address'); return; }
-    if (!requestedPrice || isNaN(Number(requestedPrice))) { toast.error('Please provide a valid requested price'); return; }
     setSubmitting(true);
     try {
       let photosUrl = '';
@@ -101,7 +99,6 @@ export default function ResellingTab({ userId }: { userId: string }) {
         address,
         status: 'pending',
         category: 'resell',
-        requested_price: Number(requestedPrice),
       }).select('id').single();
 
       if (error) {
@@ -111,7 +108,7 @@ export default function ResellingTab({ userId }: { userId: string }) {
 
       toast.success('Reselling submission received! Admin will review your phone.');
       setSelectedDevice(null); setManualModel(''); setImei(''); setCondition(''); setConditionDesc(''); setPhotos([]);
-      setAddress(''); setRequestedPrice('');
+      setAddress('');
       fetchItems();
     } catch (err) {
       toast.error('Failed to submit');
@@ -136,15 +133,9 @@ export default function ResellingTab({ userId }: { userId: string }) {
         <div className="space-y-5">
           <DeviceSelector onSelect={handleDeviceSelect} showManualOption selectedDevice={selectedDevice} selectedManualModel={manualModel} />
  
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-[#1A1A1A]/80 text-sm">IMEI Number *</Label>
-              <Input type="text" maxLength={15} value={imei} onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI" className="bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00] font-mono" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[#1A1A1A]/80 text-sm">Requested Price (₹) *</Label>
-              <Input type="number" value={requestedPrice} onChange={(e) => setRequestedPrice(e.target.value)} placeholder="How much do you want?" className="bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00]" />
-            </div>
+          <div className="space-y-2">
+            <Label className="text-[#1A1A1A]/80 text-sm">IMEI Number *</Label>
+            <Input type="text" maxLength={15} value={imei} onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI" className="bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00] font-mono max-w-sm" />
           </div>
  
           <div className="space-y-2">
@@ -208,7 +199,6 @@ export default function ResellingTab({ userId }: { userId: string }) {
                 <div className="flex flex-col items-end gap-2">
                   <Badge variant="outline" className={STATUS_COLORS[item.status] || 'bg-white/10 text-white/50 border-white/20'}>{item.status.replace(/_/g, ' ')}</Badge>
                   <div className="text-right">
-                    {item.requested_price && <span className="text-[#1A1A1A]/60 text-xs block">Requested: ₹{item.requested_price.toLocaleString('en-IN')}</span>}
                     {item.admin_offer != null && <span className="text-[#FF5C00] text-sm font-semibold flex items-center justify-end gap-1"><IndianRupee className="w-3.5 h-3.5" />{item.admin_offer.toLocaleString('en-IN')} Offer</span>}
                   </div>
                 </div>

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { creditEwasteAccount } from '@/lib/actions/ewaste';
+import { creditEwasteAccount, revokeEwasteCredits } from '@/lib/actions/ewaste';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
@@ -22,8 +22,6 @@ const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-  admin_offered: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
-  agreed: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
   rejected: 'bg-red-500/10 text-red-600 border-red-500/20',
   pickup_assigned: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   picked_up: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
@@ -32,9 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending Review',
-  admin_offered: 'Price Offered',
-  agreed: 'Customer Agreed',
-  rejected: 'Customer Declined',
+  rejected: 'Cancelled/Rejected',
   pickup_assigned: 'Pickup Assigned',
   picked_up: 'Picked Up',
   credited: 'Credited',
@@ -144,7 +140,23 @@ export default function AdminEwastePage() {
     }
   };
 
-  const statuses = ['all', 'pending', 'admin_offered', 'agreed', 'rejected', 'pickup_assigned', 'picked_up', 'credited'];
+  const revokeCredits = async (item: any) => {
+    if (!confirm(`Are you sure you want to revoke ${item.admin_offer} credits from this customer and cancel the request?`)) return;
+    setUpdating(item.id);
+    try {
+      const result = await revokeEwasteCredits(item.id);
+      if (!result.success) throw new Error(result.error);
+      toast.success('Credits revoked and request cancelled');
+      fetchData();
+      setDetailsDialog({ open: false, item: null });
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to revoke credits');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const statuses = ['all', 'pending', 'rejected', 'credited', 'pickup_assigned', 'picked_up'];
 
   return (
     <div className="space-y-8">
@@ -310,32 +322,25 @@ export default function AdminEwastePage() {
                 </div>
               )}
 
-              {/* ADMIN_OFFERED: Waiting for customer response */}
-              {detailsDialog.item.status === 'admin_offered' && (
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                  <h4 className="font-semibold text-orange-900 flex items-center gap-2"><Clock className="w-4 h-4" /> Waiting for Customer</h4>
-                  <p className="text-sm text-orange-800/70 mt-1">
-                    You offered <span className="font-bold text-[#FF5C00]">{fmt(detailsDialog.item.admin_offer)} Credits</span>. Waiting for the customer to accept or decline.
-                  </p>
-                </div>
-              )}
-
-              {/* AGREED: Customer accepted — assign delivery boy */}
-              {detailsDialog.item.status === 'agreed' && (
+              {/* CREDITED: Assign delivery boy */}
+              {detailsDialog.item.status === 'credited' && (
                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
-                  <h4 className="font-semibold text-emerald-900 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Customer Agreed!</h4>
+                  <h4 className="font-semibold text-emerald-900 flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Credits Issued!</h4>
                   <p className="text-sm text-emerald-800/70">
-                    Customer accepted your offer of <span className="font-bold">{fmt(detailsDialog.item.admin_offer)} Credits</span>. Assign a delivery boy for pickup.
+                    Customer was credited <span className="font-bold">{fmt(detailsDialog.item.admin_offer)} Credits</span>. Assign a delivery boy for pickup.
                   </p>
-                  <div className="flex gap-2 items-center">
+                  <div className="flex gap-2 items-center flex-wrap">
                     <Select value={selectedDeliveryBoy} onValueChange={setSelectedDeliveryBoy}>
-                      <SelectTrigger className="bg-white text-[#1A1A1A]"><SelectValue placeholder="Select delivery boy..." /></SelectTrigger>
+                      <SelectTrigger className="bg-white text-[#1A1A1A] w-48"><SelectValue placeholder="Select delivery boy..." /></SelectTrigger>
                       <SelectContent className="bg-white text-[#1A1A1A]">
                         {deliveryBoys.map(db => <SelectItem key={db.id} value={db.id}>{db.full_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <Button onClick={() => assignDelivery(detailsDialog.item)} disabled={updating === detailsDialog.item.id || !selectedDeliveryBoy} className="bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap">
                       <Truck className="w-4 h-4 mr-1" /> Assign Pickup
+                    </Button>
+                    <Button onClick={() => revokeCredits(detailsDialog.item)} disabled={updating === detailsDialog.item.id} variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 ml-auto">
+                      <XCircle className="w-4 h-4 mr-1" /> Revoke Credits
                     </Button>
                   </div>
                 </div>

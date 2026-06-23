@@ -19,7 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
   pickup_assigned: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   picked_up: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-  completed: 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20',
+  credited: 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20',
 };
 
 export default function EwasteTab({ userId }: { userId: string }) {
@@ -239,7 +239,7 @@ export default function EwasteTab({ userId }: { userId: string }) {
                   <Badge variant="outline" className={STATUS_COLORS[item.status] || 'bg-white/10'}>{item.status.replace(/_/g, ' ')}</Badge>
                   {item.admin_offer != null && (
                     <span className="text-[#FF5C00] text-sm font-semibold flex items-center gap-1">
-                      {item.admin_offer.toLocaleString('en-IN')} Credits {item.status === 'completed' ? 'awarded' : 'offered'}
+                      {item.admin_offer.toLocaleString('en-IN')} Credits {item.status === 'credited' ? 'awarded' : 'offered'}
                     </span>
                   )}
                 </div>

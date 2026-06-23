@@ -26,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-[#0A0A0A] text-white antialiased`}>
+    <html lang="en">
+      <body className={`${inter.className} bg-[#F7F7F5] text-[#1A1A1A] antialiased`}>
         <AuthProvider>
           <CartProvider>
             {children}

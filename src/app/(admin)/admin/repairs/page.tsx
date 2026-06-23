@@ -27,7 +27,7 @@ const statusColor = (s: string) => {
   const m: Record<string, string> = {
     ticket_raised: 'bg-rose-500/10 text-rose-600',
     booked: 'bg-blue-500/10 text-blue-600', pickup_scheduled: 'bg-cyan-500/10 text-cyan-600',
-    device_received: 'bg-indigo-500/10 text-indigo-600', diagnostic: 'bg-yellow-500/15 text-yellow-600',
+    device_received: 'bg-indigo-500/10 text-indigo-600', dropped_at_store: 'bg-blue-600/10 text-blue-700', diagnostic: 'bg-yellow-500/15 text-yellow-600',
     repair_in_progress: 'bg-orange-500/10 text-orange-600', qa_testing: 'bg-purple-500/10 text-purple-600',
     ready: 'bg-teal-500/10 text-teal-600', done: 'bg-green-500/10 text-green-600',
     out_for_delivery: 'bg-cyan-500/10 text-cyan-600', delivered: 'bg-emerald-500/10 text-emerald-600',
@@ -46,6 +46,7 @@ export default function RepairsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('');
   const [selectedRepair, setSelectedRepair] = useState<any | null>(null);
+  const [selectedRca, setSelectedRca] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [finalCostInput, setFinalCostInput] = useState('');
@@ -68,8 +69,8 @@ export default function RepairsPage() {
   const [adminNotes, setAdminNotes] = useState('');
   const [rcaProcessing, setRcaProcessing] = useState(false);
 
-  // Delivery assignments map: repair_id -> { delivery_boy_name, delivery_boy_phone, status }
-  const [deliveryMap, setDeliveryMap] = useState<Record<string, { name: string; phone: string; status: string }>>({});
+  // Delivery assignments map: repair_id -> { name, phone, status, delivery_boy_id, job_type }
+  const [deliveryMap, setDeliveryMap] = useState<Record<string, { name: string; phone: string; status: string; delivery_boy_id: string; job_type: string }>>({});
 
   const fetchRepairs = useCallback(async () => {
     console.debug('[fetchRepairs] starting...');
@@ -108,13 +109,13 @@ export default function RepairsPage() {
       if (repairIds.length > 0) {
         console.debug('[fetchRepairs] querying delivery assignments...');
         const { data: assignments, error: err3 } = await supabase.from('delivery_assignments')
-          .select('repair_id, status, delivery_boy:users!delivery_assignments_delivery_boy_id_fkey(full_name, phone)')
+          .select('repair_id, status, delivery_boy_id, job_type, delivery_boy:users!delivery_assignments_delivery_boy_id_fkey(full_name, phone)')
           .in('repair_id', repairIds)
           .order('created_at', { ascending: false });
         if (err3) {
           console.error('[fetchRepairs] delivery assignments query error:', err3);
         }
-        const dMap: Record<string, { name: string; phone: string; status: string }> = {};
+        const dMap: Record<string, { name: string; phone: string; status: string; delivery_boy_id: string; job_type: string }> = {};
         (assignments || []).forEach((a: any) => {
           // Only keep the latest assignment per repair
           if (!dMap[a.repair_id]) {
@@ -122,6 +123,8 @@ export default function RepairsPage() {
               name: a.delivery_boy?.full_name || 'Unknown',
               phone: a.delivery_boy?.phone || '',
               status: a.status,
+              delivery_boy_id: a.delivery_boy_id,
+              job_type: a.job_type,
             };
           }
         });
@@ -150,6 +153,8 @@ export default function RepairsPage() {
     // Fetch timeline
     const { data: tl } = await supabase.from('repair_timeline').select('*').eq('repair_id', repair.id).order('created_at', { ascending: true });
     setTimeline(tl || []);
+    const { data: rcaData } = await supabase.from('rca_reports').select('*').eq('repair_id', repair.id).maybeSingle();
+    setSelectedRca(rcaData);
     setFinalCostInput(repair.final_cost?.toString() || '');
     // Fetch assignable staff — include admin for self-assignment
     const { data: techs } = await supabase.from('users').select('*').in('role', ['technician', 'admin']).eq('is_active', true);
@@ -390,6 +395,24 @@ export default function RepairsPage() {
     setRcaProcessing(false);
   };
 
+  const revokeRcaApproval = async () => {
+    if (!selectedRca || !selectedRepair) return;
+    if (!confirm('Are you sure you want to revoke this RCA approval? It will be removed from customer view.')) return;
+    setAssigning(true);
+    const { error } = await supabase.from('rca_reports').update({ admin_confirmed: false }).eq('id', selectedRca.id);
+    if (error) { toast.error('Failed to revoke RCA'); setAssigning(false); return; }
+    
+    await supabase.from('repair_timeline').insert({
+      repair_id: selectedRepair.id, status: selectedRepair.status,
+      note: 'RCA approval revoked by admin', updated_by: user?.id,
+    });
+    
+    toast.success('RCA approval revoked');
+    setSelectedRca({ ...selectedRca, admin_confirmed: false });
+    setAssigning(false);
+    fetchRepairs();
+  };
+
   const requestRevision = async (rca: any) => {
     if (!adminNotes.trim()) { toast.error('Please add notes'); return; }
     setRcaProcessing(true);
@@ -449,6 +472,8 @@ export default function RepairsPage() {
                 <TableHead className="text-[#1A1A1A]/50">Customer</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Device</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Status</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Technician</TableHead>
+                <TableHead className="text-[#1A1A1A]/50">Delivery Boy</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Date</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">Shop</TableHead>
                 <TableHead className="text-[#1A1A1A]/50">SLA</TableHead>
@@ -465,8 +490,10 @@ export default function RepairsPage() {
                       <TableCell className="text-[#1A1A1A] font-medium">{r.customer?.full_name}</TableCell>
                       <TableCell className="text-[#1A1A1A]/70">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</TableCell>
                       <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
+                      <TableCell className="text-[#1A1A1A]/70 text-sm">{r.technician?.full_name || <span className="text-amber-600 font-semibold">Unassigned</span>}</TableCell>
+                      <TableCell className="text-[#1A1A1A]/70 text-sm">{deliveryMap[r.id] ? <div className="flex flex-col"><span>{deliveryMap[r.id].name}</span><span className="text-[10px] text-[#1A1A1A]/50 uppercase font-semibold">{deliveryMap[r.id].status.replace('_', ' ')}</span></div> : <span className="text-amber-600 font-semibold text-xs">Unassigned</span>}</TableCell>
                       <TableCell className="text-[#1A1A1A]/60 text-xs">{new Date(r.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</TableCell>
-                      <TableCell className="text-[#1A1A1A]/70">{r.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</TableCell>
+                      <TableCell className="text-[#1A1A1A]/70 text-sm">{r.shop?.name || <span className="text-amber-600 font-medium text-xs">Unassigned</span>}</TableCell>
                       <TableCell>
                         {['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(r.status) ? (
                           <span className="text-xs text-green-600 font-medium">Completed</span>
@@ -617,8 +644,10 @@ export default function RepairsPage() {
                 {/* Technician Assignment (includes admin for self-assign) */}
                 <div>
                   <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Wrench className="w-3 h-3" /> Assign Technician</p>
-                  <Select onValueChange={assignTechnician} disabled={assigning}>
-                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select technician..." /></SelectTrigger>
+                  <Select value={selectedRepair.technician_id || ''} onValueChange={assignTechnician} disabled={assigning}>
+                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
+                      <SelectValue placeholder="Select technician..." />
+                    </SelectTrigger>
                     <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
                       {technicians.filter(t => t.role === 'admin' || (selectedRepair.shop_id && t.shop_id === selectedRepair.shop_id)).map(t => <SelectItem key={t.id} value={t.id} className="hover:bg-[#F7F7F5] cursor-pointer">{t.full_name} {t.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
                     </SelectContent>
@@ -629,7 +658,7 @@ export default function RepairsPage() {
                 {['booked', 'pickup_scheduled'].includes(selectedRepair.status) && (
                   <div>
                     <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3 text-[#FF5C00]" /> Assign Pickup Boy</p>
-                    <Select onValueChange={assignPickup} disabled={assigning}>
+                    <Select value={deliveryMap[selectedRepair.id]?.job_type === 'pickup' ? deliveryMap[selectedRepair.id]?.delivery_boy_id : ''} onValueChange={assignPickup} disabled={assigning}>
                       <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select pickup boy..." /></SelectTrigger>
                       <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
                         {deliveryBoys.filter(d => d.role === 'admin' || (selectedRepair.shop_id && d.shop_id === selectedRepair.shop_id)).map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
@@ -642,7 +671,7 @@ export default function RepairsPage() {
                 {(selectedRepair.status === 'ready' || selectedRepair.status === 'done') && (
                   <div>
                     <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3" /> Assign Drop-off Boy</p>
-                    <Select onValueChange={assignDelivery} disabled={assigning}>
+                    <Select value={deliveryMap[selectedRepair.id]?.job_type === 'dropoff' ? deliveryMap[selectedRepair.id]?.delivery_boy_id : ''} onValueChange={assignDelivery} disabled={assigning}>
                       <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select drop-off boy..." /></SelectTrigger>
                       <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
                         {deliveryBoys.filter(d => d.role === 'admin' || (selectedRepair.shop_id && d.shop_id === selectedRepair.shop_id)).map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
@@ -669,6 +698,13 @@ export default function RepairsPage() {
                 {!['done', 'out_for_delivery', 'delivered', 'cancelled'].includes(selectedRepair.status) && (
                   <Button onClick={cancelRequest} disabled={assigning} variant="outline" className="w-full border-red-500/30 text-red-600 hover:bg-red-500/10 font-bold mt-2">
                     {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />} Cancel Customer Request
+                  </Button>
+                )}
+
+                {/* Revoke RCA */}
+                {selectedRca?.admin_confirmed && (
+                  <Button onClick={revokeRcaApproval} disabled={assigning} variant="outline" className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 font-bold mt-2">
+                    {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />} Revoke RCA Approval
                   </Button>
                 )}
 

@@ -74,7 +74,7 @@ export default function SignupPage() {
 
     // OTP is valid, create account
     
-    const { error } = await signUpWithPassword(formData.email, formData.password, formData.fullName, 'customer', formData.phone);
+    const { error } = await signUpWithPassword(formData.email, formData.password, formData.fullName, formData.phone);
     if (error) {
       toast.error(error);
       

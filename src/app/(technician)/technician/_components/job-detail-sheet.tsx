@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { DIAGNOSTIC_CHECKLIST_ITEMS, QA_CHECKLIST_ITEMS, REPAIR_STATUS_LABELS } from '@/lib/types';
-import type { Part, PartUsed, RcaReport, RepairStatus } from '@/lib/types';
+import type { RcaReport, RepairStatus } from '@/lib/types';
 import { Camera, Mic, Plus, Search, Timer, Smartphone, CheckCircle, AlertTriangle, Package, Loader2, IndianRupee, Sparkles } from 'lucide-react';
 import { submitRcaReport, markRepairComplete } from '@/lib/actions/technician';
 import { enhanceTechnicianNotes } from '@/lib/actions/ai';
@@ -120,10 +120,6 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
     if (!repair || !user) return;
     const checkedCount = Object.values(diagnosticChecks).filter(Boolean).length;
     if (checkedCount < 3) { toast.error('Check at least 3 diagnostic items'); return; }
-    if (prePhotos.length < 1) { toast.error('At least 1 pre-repair photo required'); return; }
-    if (['repair_in_progress', 'qa_testing', 'ready', 'done'].includes(repair.status) && postPhotos.length < 1) {
-      toast.error('At least 1 post-repair photo required for current status'); return;
-    }
 
     setSubmittingRca(true);
     try {
@@ -199,8 +195,8 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
   const disableStatusChange = repair.status === 'done';
 
   const nextStatus = repair.status === 'booked' || repair.status === 'pickup_scheduled' ? 'device_received'
-                   : repair.status === 'device_received' ? 'diagnostic'
-                   : repair.status === 'diagnostic' ? 'repair_in_progress' 
+                   : repair.status === 'device_received' || repair.status === 'dropped_at_store' ? 'diagnostic'
+                   : repair.status === 'diagnostic' || repair.status === 'wocr' || repair.status === 'pending_approval' ? 'repair_in_progress' 
                    : repair.status === 'repair_in_progress' ? 'qa_testing' : null;
 
   return (

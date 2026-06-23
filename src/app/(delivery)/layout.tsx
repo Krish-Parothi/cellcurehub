@@ -9,7 +9,7 @@ import { Footer } from '@/components/footer';
 import { useAuth } from '@/lib/auth-context';
 import {
   LayoutDashboard, Wrench, Users, DollarSign, Smartphone,
-  BarChart3, UserCircle, Store, Menu, X, Truck, Activity
+  BarChart3, UserCircle, Store, Menu, X, Truck, Activity, Package
 } from 'lucide-react';
 
 const ADMIN_NAV_ITEMS = [
@@ -21,6 +21,7 @@ const ADMIN_NAV_ITEMS = [
   { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { href: '/admin/customers', icon: UserCircle, label: 'Customers' },
   { href: '/admin/shops', icon: Store, label: 'Shops' },
+  { href: '/admin/store-orders', icon: Package, label: 'Store Orders' },
   { href: '/technician', icon: Activity, label: 'Tech Dashboard' },
   { href: '/delivery', icon: Truck, label: 'Delivery Dashboard' },
 ];
@@ -32,12 +33,14 @@ const SHOP_ADMIN_NAV_ITEMS = [
   { href: '/shop-admin/analytics', icon: BarChart3, label: 'Analytics' },
   { href: '/shop-admin/customers', icon: UserCircle, label: 'Customers' },
   { href: '/shop-admin/devices', icon: Smartphone, label: 'Devices' },
+  { href: '/shop-admin/store-orders', icon: Package, label: 'Store Orders' },
   { href: '/technician', icon: Activity, label: 'Tech Dashboard' },
   { href: '/delivery', icon: Truck, label: 'Delivery Dashboard' },
 ];
 
 const DELIVERY_NAV_ITEMS = [
   { href: '/delivery', icon: Truck, label: 'Delivery Dashboard' },
+  { href: '/delivery/store-orders', icon: Package, label: 'Store Orders' },
 ];
 
 export default function DeliveryLayout({ children }: { children: React.ReactNode }) {

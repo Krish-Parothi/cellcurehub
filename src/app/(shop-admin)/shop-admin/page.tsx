@@ -19,7 +19,7 @@ const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const statusColor = (s: string) => {
   const m: Record<string, string> = {
     booked: 'bg-blue-500/10 text-blue-600', pickup_scheduled: 'bg-cyan-500/10 text-cyan-600',
-    device_received: 'bg-indigo-500/10 text-indigo-600', diagnostic: 'bg-yellow-500/15 text-yellow-600',
+    device_received: 'bg-indigo-500/10 text-indigo-600', dropped_at_store: 'bg-blue-600/10 text-blue-700', diagnostic: 'bg-yellow-500/15 text-yellow-600',
     repair_in_progress: 'bg-orange-500/10 text-orange-600', qa_testing: 'bg-purple-500/10 text-purple-600',
     ready: 'bg-teal-500/10 text-teal-600', done: 'bg-green-500/10 text-green-600',
     out_for_delivery: 'bg-cyan-500/10 text-cyan-600', delivered: 'bg-emerald-500/10 text-emerald-600',
