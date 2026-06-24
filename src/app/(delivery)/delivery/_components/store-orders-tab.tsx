@@ -7,32 +7,42 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import type { StoreOrder, StoreOrderStatus } from '@/lib/types';
-import { updateStoreOrderStatus } from '@/lib/actions/store-orders';
+import { updateStoreOrderStatus, markStoreOrderOutForDelivery, verifyStoreOrderDeliveryOtp } from '@/lib/actions/store-orders';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package, User as UserIcon, Phone, MapPin, Calendar, CheckCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Package, User as UserIcon, Phone, MapPin, Calendar, CheckCircle, Truck } from 'lucide-react';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 const STATUS_COLORS: Record<StoreOrderStatus, string> = {
   pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
   driver_assigned: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  out_for_delivery: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   delivered: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
   cancelled: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
 
 const STATUS_LABELS: Record<StoreOrderStatus, string> = {
   pending: 'Pending',
-  driver_assigned: 'In Transit',
+  driver_assigned: 'Driver Assigned',
+  out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 };
 
-export default function DeliveryStoreOrdersPage() {
+export default function StoreOrdersTab() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<StoreOrder[]>([]);
+  
+  // OTP Modal State
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<StoreOrder | null>(null);
+  const [otpCode, setOtpCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     if (!user) return;
@@ -50,21 +60,52 @@ export default function DeliveryStoreOrdersPage() {
     realtimeTable: 'store_orders'
   });
 
-  const handleUpdateStatus = async (orderId: string, status: StoreOrderStatus) => {
-    const result = await updateStoreOrderStatus(orderId, status);
+  const handleOutForDelivery = async (order: StoreOrder) => {
+    const result = await markStoreOrderOutForDelivery(order.id, order.phone);
     if (result.success) {
-      toast.success(`Order marked as ${STATUS_LABELS[status]}`);
+      toast.success('Marked as Out for Delivery. OTP sent to customer.');
+      setOtpModalOpen(true);
+      setSelectedOrder(order);
     } else {
       toast.error(result.error || 'Failed to update status');
     }
   };
 
+  const handleVerifyOtp = async () => {
+    if (!selectedOrder) return;
+    if (otpCode.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setIsVerifying(true);
+    const result = await verifyStoreOrderDeliveryOtp(selectedOrder.id, selectedOrder.phone, otpCode);
+    setIsVerifying(false);
+
+    if (result.success) {
+      toast.success('OTP verified successfully! Order marked as Delivered.');
+      setOtpModalOpen(false);
+      setOtpCode('');
+      setSelectedOrder(null);
+    } else {
+      toast.error(result.error || 'Invalid or expired OTP');
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!selectedOrder) return;
+    toast.loading('Resending OTP...');
+    const result = await markStoreOrderOutForDelivery(selectedOrder.id, selectedOrder.phone);
+    toast.dismiss();
+    if (result.success) {
+      toast.success('OTP resent successfully!');
+    } else {
+      toast.error(result.error || 'Failed to resend OTP');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">My Store Deliveries</h1>
-        <p className="text-[#1A1A1A]/60 text-sm mt-1">Deliver store purchases to customers</p>
-      </motion.div>
 
       {loading ? (
         <div className="grid gap-4">
@@ -143,10 +184,17 @@ export default function DeliveryStoreOrdersPage() {
                   <div className="w-full md:w-64 bg-[#F7F7F5] p-6 flex flex-col justify-center">
                     {order.status === 'driver_assigned' ? (
                       <Button 
-                        onClick={() => handleUpdateStatus(order.id, 'delivered')} 
+                        onClick={() => handleOutForDelivery(order)} 
+                        className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-base"
+                      >
+                        <Truck className="w-5 h-5 mr-2" /> Start Delivery
+                      </Button>
+                    ) : order.status === 'out_for_delivery' ? (
+                      <Button 
+                        onClick={() => { setSelectedOrder(order); setOtpModalOpen(true); }} 
                         className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-base"
                       >
-                        <CheckCircle className="w-5 h-5 mr-2" /> Mark Delivered
+                        <CheckCircle className="w-5 h-5 mr-2" /> Verify OTP & Deliver
                       </Button>
                     ) : (
                       <div className="text-center">
@@ -162,6 +210,68 @@ export default function DeliveryStoreOrdersPage() {
           ))}
         </div>
       )}
+
+      {/* OTP Verification Modal */}
+      <Dialog open={otpModalOpen} onOpenChange={setOtpModalOpen}>
+        <DialogContent className="sm:max-w-md bg-white border-[#E8E4DF]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#1A1A1A] flex items-center gap-2">
+              <CheckCircle className="w-6 h-6 text-[#FF5C00]" />
+              Verify Delivery OTP
+            </DialogTitle>
+            <DialogDescription className="text-[#1A1A1A]/60 text-base">
+              Ask the customer for the 6-digit OTP sent to their mobile number ({selectedOrder?.phone}).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6">
+            <div className="flex justify-center mb-6">
+              <div className="flex gap-2">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="w-12 h-14 rounded-lg border-2 border-[#E8E4DF] flex items-center justify-center text-2xl font-bold text-[#1A1A1A] bg-[#F7F7F5]">
+                    {otpCode[i] || ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <Input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter 6-digit OTP"
+              className="text-center text-lg tracking-widest bg-white border-[#E8E4DF]"
+              autoFocus
+            />
+
+            <div className="mt-4 flex justify-between items-center px-1">
+              <p className="text-sm text-[#1A1A1A]/60">Didn't receive OTP?</p>
+              <button 
+                onClick={handleResendOtp}
+                className="text-sm text-[#FF5C00] font-semibold hover:underline"
+              >
+                Resend OTP
+              </button>
+            </div>
+          </div>
+
+          <DialogFooter className="sm:justify-between flex-row gap-3">
+            <Button variant="outline" onClick={() => setOtpModalOpen(false)} className="w-full">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleVerifyOtp} 
+              className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white"
+              disabled={otpCode.length !== 6 || isVerifying}
+            >
+              {isVerifying ? 'Verifying...' : 'Verify & Complete Delivery'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

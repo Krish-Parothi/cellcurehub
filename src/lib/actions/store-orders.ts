@@ -108,3 +108,45 @@ export async function updateStoreOrderStatus(orderId: string, status: StoreOrder
   revalidatePath('/admin/store-orders');
   return { success: true };
 }
+
+export async function markStoreOrderOutForDelivery(orderId: string, phone: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Unauthorized' };
+
+  const { sendBookingOtp } = await import('./otp');
+  const otpRes = await sendBookingOtp(phone);
+  if (!otpRes.success) return otpRes;
+
+  const { error } = await supabase
+    .from('store_orders')
+    .update({ status: 'out_for_delivery' })
+    .eq('id', orderId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath('/delivery/store-orders');
+  revalidatePath('/admin/store-orders');
+  return { success: true };
+}
+
+export async function verifyStoreOrderDeliveryOtp(orderId: string, phone: string, code: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Unauthorized' };
+
+  const { verifyBookingOtp } = await import('./otp');
+  const otpRes = await verifyBookingOtp(phone, code);
+  if (!otpRes.success) return otpRes;
+
+  const { error } = await supabase
+    .from('store_orders')
+    .update({ status: 'delivered' })
+    .eq('id', orderId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath('/delivery/store-orders');
+  revalidatePath('/admin/store-orders');
+  return { success: true };
+}

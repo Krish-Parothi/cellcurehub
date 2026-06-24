@@ -25,7 +25,7 @@ export type EwasteSubmissionCategory = 'ewaste' | 'resell';
 export type DeviceCategory = 'smartphone' | 'laptop' | 'tablet';
 export type TimeSlot = 'morning' | 'afternoon' | 'evening';
 export type EwasteCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'dead' | 'powers_off';
-export type StoreOrderStatus = 'pending' | 'driver_assigned' | 'delivered' | 'cancelled';
+export type StoreOrderStatus = 'pending' | 'driver_assigned' | 'out_for_delivery' | 'delivered' | 'cancelled';
 
 export interface User {
   id: string;
@@ -384,6 +384,7 @@ export interface StoreOrder {
   total_amount: number;
   status: StoreOrderStatus;
   delivery_boy_id: string | null;
+  delivery_otp?: string | null;
   created_at: string;
   customer?: User;
   delivery_boy?: User;

@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Truck, Package, CheckCircle, Phone, MapPin, Smartphone, Clock, ChevronRight, Navigation } from 'lucide-react';
 import PickupFlow from './_components/pickup-flow';
 import DropoffFlow from './_components/dropoff-flow';
+import StoreOrdersTab from './_components/store-orders-tab';
 
 type AssignmentWithJoins = DeliveryAssignment & {
   repair: any;
@@ -164,7 +165,10 @@ export default function DeliveryDashboard() {
         <Tabs defaultValue="today" className="w-full">
           <TabsList className="bg-white border border-[#E8E4DF] mb-6 shadow-xs">
             <TabsTrigger value="today" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] text-[#1A1A1A]/70">
-              <Truck className="w-4 h-4 mr-2" /> Today&apos;s Jobs ({todayJobs.length})
+              <Truck className="w-4 h-4 mr-2" /> Today's Jobs ({todayJobs.length})
+            </TabsTrigger>
+            <TabsTrigger value="store-orders" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] text-[#1A1A1A]/70">
+              <Package className="w-4 h-4 mr-2" /> Store Orders
             </TabsTrigger>
             <TabsTrigger value="completed" className="data-[state=active]:bg-[#FF5C00]/10 data-[state=active]:text-[#FF5C00] text-[#1A1A1A]/70">
               <CheckCircle className="w-4 h-4 mr-2" /> Completed ({completedJobs.length})
@@ -258,6 +262,11 @@ export default function DeliveryDashboard() {
                   </div>
                 ))
             )}
+          </TabsContent>
+
+          {/* TAB: Store Orders */}
+          <TabsContent value="store-orders">
+            <StoreOrdersTab />
           </TabsContent>
 
           {/* TAB 2: Completed */}

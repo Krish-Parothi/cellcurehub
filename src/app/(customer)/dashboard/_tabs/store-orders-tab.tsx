@@ -12,25 +12,28 @@ import { Button } from '@/components/ui/button';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
-const STATUS_ORDER: StoreOrderStatus[] = ['pending', 'driver_assigned', 'delivered'];
+const STATUS_ORDER: StoreOrderStatus[] = ['pending', 'driver_assigned', 'out_for_delivery', 'delivered'];
 
 const STATUS_COLORS: Record<StoreOrderStatus, string> = {
   pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
   driver_assigned: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  out_for_delivery: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   delivered: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
   cancelled: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
 
 const STATUS_LABELS: Record<StoreOrderStatus, string> = {
   pending: 'Order Placed',
-  driver_assigned: 'Out for Delivery',
+  driver_assigned: 'Assigned',
+  out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 };
 
 const STATUS_ICONS: Record<StoreOrderStatus, React.ElementType> = {
   pending: Package,
-  driver_assigned: Truck,
+  driver_assigned: CheckCircle,
+  out_for_delivery: Truck,
   delivered: CheckCircle,
   cancelled: XCircle,
 };
@@ -111,7 +114,7 @@ export default function StoreOrdersTab({ userId }: { userId: string }) {
     realtimeFilter: `customer_id=eq.${userId}`
   });
 
-  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'driver_assigned');
+  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'driver_assigned' || o.status === 'out_for_delivery');
   const historyOrders = orders.filter(o => o.status === 'delivered' || o.status === 'cancelled');
 
   const displayedOrders = view === 'active' ? activeOrders : historyOrders;

@@ -20,6 +20,7 @@ const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const STATUS_COLORS: Record<StoreOrderStatus, string> = {
   pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
   driver_assigned: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  out_for_delivery: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   delivered: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
   cancelled: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
@@ -27,6 +28,7 @@ const STATUS_COLORS: Record<StoreOrderStatus, string> = {
 const STATUS_LABELS: Record<StoreOrderStatus, string> = {
   pending: 'Pending',
   driver_assigned: 'Driver Assigned',
+  out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 };
@@ -44,7 +46,7 @@ export default function AdminStoreOrdersPage() {
     
     setOrders((data as StoreOrder[]) || []);
 
-    const { data: db } = await supabase.from('users').select('*').eq('role', 'delivery').eq('is_active', true);
+    const { data: db } = await supabase.from('users').select('*').in('role', ['delivery', 'admin']).eq('is_active', true);
     setDeliveryBoys((db as User[]) || []);
   }, []);
 

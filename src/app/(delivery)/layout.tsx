@@ -40,7 +40,6 @@ const SHOP_ADMIN_NAV_ITEMS = [
 
 const DELIVERY_NAV_ITEMS = [
   { href: '/delivery', icon: Truck, label: 'Delivery Dashboard' },
-  { href: '/delivery/store-orders', icon: Package, label: 'Store Orders' },
 ];
 
 export default function DeliveryLayout({ children }: { children: React.ReactNode }) {
