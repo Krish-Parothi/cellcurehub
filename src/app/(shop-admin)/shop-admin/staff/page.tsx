@@ -54,8 +54,9 @@ export default function ShopStaffPage() {
 
   const fetchData = useCallback(async () => {
     if (!shopId) return;
-    const monthStr = currentMonth.toISOString().split('T')[0];
-    const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0];
+    const getLocalStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const monthStr = getLocalStr(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1));
+    const endOfMonth = getLocalStr(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0));
 
     const [staffRes, attRes, holRes, salRes] = await Promise.all([
       supabase.from('users').select('*').in('role', ['technician', 'delivery']).eq('shop_id', shopId).order('full_name'),
@@ -148,9 +149,10 @@ export default function ShopStaffPage() {
   };
 
   // Attendance helpers
+  const getLocalStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-  const monthDates = Array.from({ length: daysInMonth }, (_, i) => new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1).toISOString().split('T')[0]);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const monthDates = Array.from({ length: daysInMonth }, (_, i) => getLocalStr(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1)));
+  const todayStr = getLocalStr(new Date());
   const holidayDates = new Set(holidays.map(h => h.date));
 
   const getAttStatus = (empId: string, date: string): AttendanceStatus | null => attendance.find(a => a.employee_id === empId && a.date === date)?.status || null;
@@ -182,7 +184,8 @@ export default function ShopStaffPage() {
   };
 
   const saveSalary = async (emp: User, baseSalary: number, perDay: number, override: number | null) => {
-    const monthStr = currentMonth.toISOString().split('T')[0];
+    const getLocalStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const monthStr = getLocalStr(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1));
     await supabase.from('salary_config').upsert({ employee_id: emp.id, shop_id: shopId, month: monthStr, base_salary: baseSalary, per_day_deduction: perDay, final_salary_override: override }, { onConflict: 'employee_id,month' as any });
     toast.success('Salary saved'); fetchData();
   };
