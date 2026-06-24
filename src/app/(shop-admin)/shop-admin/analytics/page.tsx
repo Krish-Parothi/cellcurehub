@@ -22,7 +22,6 @@ export default function ShopAnalyticsPage() {
   const shopId = useShopId();
   const [range, setRange] = useState<DateRange>('month');
   const [repairs, setRepairs] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
 
   const getDateFilter = () => {
@@ -36,12 +35,11 @@ export default function ShopAnalyticsPage() {
   const fetchData = useCallback(async () => {
     if (!shopId) return;
     const since = getDateFilter();
-    const [rRes, iRes, revRes] = await Promise.all([
+    const [rRes, revRes] = await Promise.all([
       supabase.from('repairs').select('*, device:devices(brand, model_name), technician:users!repairs_technician_id_fkey(full_name)').eq('shop_id', shopId).gte('created_at', since),
-      supabase.from('invoices').select('*, repair:repairs!inner(shop_id)').eq('repair.shop_id', shopId).gte('created_at', since),
       supabase.from('reviews').select('*, repair:repairs!inner(technician_id, shop_id)').eq('repair.shop_id', shopId).gte('created_at', since),
     ]);
-    setRepairs(rRes.data || []); setInvoices(iRes.data || []); setReviews(revRes.data || []);
+    setRepairs(rRes.data || []); setReviews(revRes.data || []);
   }, [range, shopId]);
 
   const { user, loading } = useAuthFetch(fetchData, {
@@ -52,20 +50,22 @@ export default function ShopAnalyticsPage() {
 
   // Charts data — same calculations as admin
   const brandRevenue: Record<string, number> = {};
-  repairs.forEach(r => { const b = r.device?.brand || 'Unknown'; brandRevenue[b] = (brandRevenue[b] || 0) + (r.final_cost || r.estimated_cost || 0); });
+  repairs.forEach(r => { const b = r.device?.brand || r.manual_model?.split(' ')[0] || 'Unknown'; brandRevenue[b] = (brandRevenue[b] || 0) + (r.final_cost || r.estimated_cost || 0); });
   const brandRevenueData = Object.entries(brandRevenue).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
 
   const dailyMap: Record<string, number> = {};
-  invoices.filter(i => i.payment_status === 'paid').forEach(i => { const d = new Date(i.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }); dailyMap[d] = (dailyMap[d] || 0) + i.total; });
-  const dailyTrend = Object.entries(dailyMap).map(([date, revenue]) => ({ date, revenue }));
+  repairs.forEach(r => {
+    const d = r.created_at.split('T')[0];
+    dailyMap[d] = (dailyMap[d] || 0) + (r.final_cost || r.estimated_cost || 0);
+  });
+  const dailyTrend = Object.keys(dailyMap).sort().map(dateStr => ({
+    date: new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+    revenue: dailyMap[dateStr]
+  }));
 
   const typeMap: Record<string, number> = {};
   repairs.forEach(r => { const t = r.repair_type || 'other'; typeMap[t] = (typeMap[t] || 0) + 1; });
   const typePie = Object.entries(typeMap).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }));
-
-  const pmMap: Record<string, number> = {};
-  invoices.filter(i => i.payment_status === 'paid').forEach(i => { const m = i.payment_method || 'unknown'; pmMap[m] = (pmMap[m] || 0) + 1; });
-  const pmPie = Object.entries(pmMap).map(([name, value]) => ({ name, value }));
 
   const techMap: Record<string, { name: string; completed: number; totalHours: number; qaCount: number; doneCount: number; ratings: number[] }> = {};
   repairs.forEach(r => {
@@ -106,7 +106,6 @@ export default function ShopAnalyticsPage() {
 
             <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardHeader className="border-b border-[#E8E4DF]/60"><CardTitle className="text-[#1A1A1A] text-sm">Repair Types</CardTitle></CardHeader><CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={typePie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A30' }}>{typePie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: 'white', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart></ResponsiveContainer></CardContent></Card>
 
-            <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardHeader className="border-b border-[#E8E4DF]/60"><CardTitle className="text-[#1A1A1A] text-sm">Payment Methods</CardTitle></CardHeader><CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={pmPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A30' }}>{pmPie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: 'white', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart></ResponsiveContainer></CardContent></Card>
           </div>
 
           <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardHeader className="border-b border-[#E8E4DF]/60"><CardTitle className="text-[#1A1A1A] text-sm">Technician Performance</CardTitle></CardHeader><CardContent className="p-0">

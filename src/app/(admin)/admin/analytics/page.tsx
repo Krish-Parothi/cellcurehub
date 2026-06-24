@@ -22,7 +22,6 @@ export default function AnalyticsPage() {
   
   const [range, setRange] = useState<DateRange>('month');
   const [repairs, setRepairs] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   
 
@@ -37,13 +36,11 @@ export default function AnalyticsPage() {
   const fetchData = useCallback(async () => {
     
     const since = getDateFilter();
-    const [rRes, iRes, revRes] = await Promise.all([
+    const [rRes, revRes] = await Promise.all([
       supabase.from('repairs').select('*, device:devices(*), technician:users!repairs_technician_id_fkey(full_name), shop:shops(name)').gte('created_at', since),
-      supabase.from('invoices').select('*').gte('created_at', since),
       supabase.from('reviews').select('*, repair:repairs(technician_id)').gte('created_at', since),
     ]);
     setRepairs(rRes.data || []);
-    setInvoices(iRes.data || []);
     setReviews(revRes.data || []);
     
   }, [range]);
@@ -64,26 +61,24 @@ export default function AnalyticsPage() {
 
   // 1. Revenue by brand
   const brandRevenue: Record<string, number> = {};
-  repairs.forEach(r => { const b = r.device?.brand || 'Unknown'; brandRevenue[b] = (brandRevenue[b] || 0) + (r.final_cost || r.estimated_cost || 0); });
+  repairs.forEach(r => { const b = r.device?.brand || r.manual_model?.split(' ')[0] || 'Unknown'; brandRevenue[b] = (brandRevenue[b] || 0) + (r.final_cost || r.estimated_cost || 0); });
   const brandRevenueData = Object.entries(brandRevenue).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
 
   // 2. Daily revenue trend
   const dailyMap: Record<string, number> = {};
-  invoices.filter(i => i.payment_status === 'paid').forEach(i => {
-    const d = new Date(i.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-    dailyMap[d] = (dailyMap[d] || 0) + i.total;
+  repairs.forEach(r => {
+    const d = r.created_at.split('T')[0];
+    dailyMap[d] = (dailyMap[d] || 0) + (r.final_cost || r.estimated_cost || 0);
   });
-  const dailyTrend = Object.entries(dailyMap).map(([date, revenue]) => ({ date, revenue }));
+  const dailyTrend = Object.keys(dailyMap).sort().map(dateStr => ({
+    date: new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+    revenue: dailyMap[dateStr]
+  }));
 
   // 3. Repair types pie
   const typeMap: Record<string, number> = {};
   repairs.forEach(r => { const t = r.repair_type || 'other'; typeMap[t] = (typeMap[t] || 0) + 1; });
   const typePie = Object.entries(typeMap).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }));
-
-  // 4. Payment methods pie
-  const pmMap: Record<string, number> = {};
-  invoices.filter(i => i.payment_status === 'paid').forEach(i => { const m = i.payment_method || 'unknown'; pmMap[m] = (pmMap[m] || 0) + 1; });
-  const pmPie = Object.entries(pmMap).map(([name, value]) => ({ name, value }));
 
   // 5. Technician performance
   const techMap: Record<string, { name: string; completed: number; totalHours: number; qaCount: number; doneCount: number; ratings: number[]; }> = {};
@@ -180,13 +175,6 @@ export default function AnalyticsPage() {
               </ResponsiveContainer></CardContent>
             </Card>
 
-            {/* Payment Methods */}
-            <Card className="bg-white border-[#E8E4DF] shadow-sm">
-              <CardHeader className="border-b border-[#E8E4DF] pb-3"><CardTitle className="text-[#1A1A1A] text-sm">Payment Methods</CardTitle></CardHeader>
-              <CardContent className="pt-4"><ResponsiveContainer width="100%" height={250}>
-                <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}><Pie data={pmPie} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={65} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={{ stroke: '#1A1A1A40' }}>{pmPie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E8E4DF', borderRadius: 8, color: '#1A1A1A' }} /></PieChart>
-              </ResponsiveContainer></CardContent>
-            </Card>
           </div>
 
           {/* Technician Performance */}

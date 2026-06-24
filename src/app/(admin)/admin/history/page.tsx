@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Search, History, Wrench, Smartphone, Recycle, IndianRupee } from 'lucide-react';
@@ -37,6 +38,9 @@ export default function AdminHistoryPage() {
   const [ewaste, setEwaste] = useState<any[]>([]);
   const [resell, setResell] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [customerFilter, setCustomerFilter] = useState('all');
 
   const fetchData = useCallback(async () => {
     // 1. Fetch Repairs (delivered or cancelled)
@@ -65,10 +69,62 @@ export default function AdminHistoryPage() {
     deps: [],
   });
 
+  const uniqueCustomers = Array.from(new Set([
+    ...repairs.map(r => r.customer?.full_name),
+    ...ewaste.map(e => e.customer?.full_name),
+    ...resell.map(e => e.customer?.full_name),
+  ].filter(Boolean))) as string[];
+
   const filterData = (data: any[]) => {
-    if (!search) return data;
-    const s = search.toLowerCase();
-    return data.filter(item => item.customer?.full_name?.toLowerCase().includes(s));
+    let filtered = data;
+
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.created_at);
+        if (dateFilter === 'today') {
+          return itemDate.toDateString() === now.toDateString();
+        }
+        if (dateFilter === 'week') {
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return itemDate >= weekAgo;
+        }
+        if (dateFilter === 'month') {
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          return itemDate >= monthAgo;
+        }
+        return true;
+      });
+    }
+
+    if (customerFilter !== 'all') {
+      filtered = filtered.filter(item => item.customer?.full_name === customerFilter);
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(item => item.status === statusFilter);
+    }
+
+    if (search) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter(item => {
+        const customerName = item.customer?.full_name?.toLowerCase() || '';
+        const deviceName = item.device ? `${item.device.brand} ${item.device.model_name}`.toLowerCase() : (item.manual_model?.toLowerCase() || '');
+        const ewasteDevice = item.device_description?.toLowerCase() || '';
+        const status = item.status?.replace(/_/g, ' ')?.toLowerCase() || '';
+        const issue = item.repair_type?.replace(/_/g, ' ')?.toLowerCase() || item.issue_description?.toLowerCase() || '';
+        const category = item.ewaste_category?.name?.toLowerCase() || '';
+        
+        return customerName.includes(s) || 
+               deviceName.includes(s) || 
+               ewasteDevice.includes(s) || 
+               status.includes(s) || 
+               issue.includes(s) || 
+               category.includes(s);
+      });
+    }
+
+    return filtered;
   };
 
   const filteredRepairs = filterData(repairs);
@@ -77,21 +133,64 @@ export default function AdminHistoryPage() {
 
   return (
     <div className="space-y-8">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1A1A1A] flex items-center gap-2">
-            <History className="w-6 h-6 text-[#FF5C00]" /> History
-          </h1>
-          <p className="text-[#1A1A1A]/50 text-sm mt-1">View fully completed or cancelled orders</p>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1A1A1A] flex items-center gap-2">
+              <History className="w-6 h-6 text-[#FF5C00]" /> History
+            </h1>
+            <p className="text-[#1A1A1A]/50 text-sm mt-1">View fully completed or cancelled orders</p>
+          </div>
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-[#1A1A1A]/40" />
+            <Input 
+              className="pl-9 bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 w-full" 
+              placeholder="Search by customer, device, status..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+            />
+          </div>
         </div>
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-[#1A1A1A]/40" />
-          <Input 
-            className="pl-9 bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 w-full" 
-            placeholder="Search by customer name..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
-          />
+
+        <div className="flex flex-wrap gap-3 items-center">
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-[140px] bg-white border-[#E8E4DF] text-[#1A1A1A]">
+              <SelectValue placeholder="Date" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Dates</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={customerFilter} onValueChange={setCustomerFilter}>
+            <SelectTrigger className="w-[160px] bg-white border-[#E8E4DF] text-[#1A1A1A]">
+              <SelectValue placeholder="Customer" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Customers</SelectItem>
+              {uniqueCustomers.map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px] bg-white border-[#E8E4DF] text-[#1A1A1A]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="done">Done</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="picked_up">Picked Up</SelectItem>
+              <SelectItem value="credited">Credited</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </motion.div>
 

@@ -36,12 +36,12 @@ type AddStaffForm = z.infer<typeof addStaffSchema>;
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 export default function StaffPage() {
-  
+
   const [staff, setStaff] = useState<User[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [salaryConfigs, setSalaryConfigs] = useState<SalaryConfig[]>([]);
-  
+
   const [currentMonth, setCurrentMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [shops, setShops] = useState<any[]>([]);
 
@@ -57,7 +57,7 @@ export default function StaffPage() {
   const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
-    
+
     const monthStr = currentMonth.toISOString().split('T')[0];
     const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0];
 
@@ -74,7 +74,7 @@ export default function StaffPage() {
     setHolidays(holRes.data || []);
     setSalaryConfigs(salRes.data || []);
     setShops(shopRes.data || []);
-    
+
   }, [currentMonth]);
 
   const { user, loading } = useAuthFetch(fetchData, { requiredRole: 'admin' });
@@ -238,20 +238,20 @@ export default function StaffPage() {
                 <TableHead className="text-[#1A1A1A]/50 font-medium">Phone</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Shop</TableHead>
                 <TableHead className="text-[#1A1A1A]/50 font-medium">Active</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Actions</TableHead>
               </TableRow></TableHeader>
-              <TableBody>{staff.map(s => (
-                <TableRow key={s.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]/40">
-                  <TableCell className="text-[#1A1A1A] font-semibold">{s.full_name}</TableCell>
-                  <TableCell><Badge className="bg-black/5 text-[#1A1A1A]/70 capitalize border-0 hover:bg-black/10">{s.role}</Badge></TableCell>
-                  <TableCell className="text-[#1A1A1A]/70">{s.phone || '—'}</TableCell>
-                  <TableCell className="text-[#1A1A1A]/70 text-xs">{shops.find(sh => sh.id === s.shop_id)?.name || '—'}</TableCell>
-                  <TableCell><Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} className="data-[state=checked]:bg-[#FF5C00]" /></TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(s)} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 text-xs">
-                      <Trash2 className="w-3 h-3 mr-1" />Remove
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}</TableBody></Table>
+                <TableBody>{staff.map(s => (
+                  <TableRow key={s.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]/40">
+                    <TableCell className="text-[#1A1A1A] font-semibold">{s.full_name}</TableCell>
+                    <TableCell><Badge className="bg-black/5 text-[#1A1A1A]/70 capitalize border-0 hover:bg-black/10">{s.role}</Badge></TableCell>
+                    <TableCell className="text-[#1A1A1A]/70">{s.phone || '—'}</TableCell>
+                    <TableCell className="text-[#1A1A1A]/70 text-xs">{shops.find(sh => sh.id === s.shop_id)?.name || '—'}</TableCell>
+                    <TableCell><Switch checked={s.is_active} onCheckedChange={() => toggleActive(s)} className="data-[state=checked]:bg-[#FF5C00]" /></TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(s)} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 text-xs">
+                        <Trash2 className="w-3 h-3 mr-1" />Remove
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}</TableBody></Table>
             )}
           </CardContent></Card>
         </TabsContent>
@@ -305,7 +305,7 @@ export default function StaffPage() {
           </div>
           <Card className="bg-white border-[#E8E4DF] shadow-sm"><CardContent className="p-4">
             <div className="grid grid-cols-7 gap-2">
-              {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} className="text-center text-[#1A1A1A]/40 text-xs font-semibold py-1">{d}</div>)}
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="text-center text-[#1A1A1A]/40 text-xs font-semibold py-1">{d}</div>)}
               {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => <div key={`pad-${i}`} />)}
               {monthDates.map(d => {
                 const day = new Date(d).getDate();
@@ -338,27 +338,27 @@ export default function StaffPage() {
               <TableHead className="text-[#1A1A1A]/50 font-medium">Calculated</TableHead><TableHead className="text-[#1A1A1A]/50 font-medium">Override</TableHead>
               <TableHead className="text-[#1A1A1A]/50 font-medium">Action</TableHead>
             </TableRow></TableHeader>
-            <TableBody>{staff.map(emp => {
-              const sd = getSalaryData(emp);
-              return (
-                <TableRow key={emp.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]/40">
-                  <TableCell className="text-[#1A1A1A] font-semibold">{emp.full_name}</TableCell>
-                  <TableCell><Input type="number" defaultValue={sd.baseSalary} className="w-20 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`base-${emp.id}`} /></TableCell>
-                  <TableCell><Input type="number" defaultValue={sd.perDay} className="w-16 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`pdd-${emp.id}`} /></TableCell>
-                  <TableCell className="text-red-600 font-semibold">{sd.absentDays}</TableCell>
-                  <TableCell className="text-amber-600 font-semibold">{sd.adjustedAbsent}</TableCell>
-                  <TableCell className="text-red-600 font-semibold">₹{fmt(sd.deduction)}</TableCell>
-                  <TableCell className="text-[#1A1A1A] font-semibold">₹{fmt(sd.calculated)}</TableCell>
-                  <TableCell><Input type="number" defaultValue={sd.config?.final_salary_override ?? ''} placeholder="—" className="w-20 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`ovr-${emp.id}`} /></TableCell>
-                  <TableCell><Button size="sm" className="h-7 text-xs bg-[#FF5C00] text-white hover:bg-[#FF5C00]/90" onClick={() => {
-                    const base = Number((document.getElementById(`base-${emp.id}`) as HTMLInputElement)?.value || 0);
-                    const pdd = Number((document.getElementById(`pdd-${emp.id}`) as HTMLInputElement)?.value || 0);
-                    const ovr = (document.getElementById(`ovr-${emp.id}`) as HTMLInputElement)?.value;
-                    saveSalary(emp, base, pdd, ovr ? Number(ovr) : null);
-                  }}>Save</Button></TableCell>
-                </TableRow>
-              );
-            })}</TableBody></Table>
+              <TableBody>{staff.map(emp => {
+                const sd = getSalaryData(emp);
+                return (
+                  <TableRow key={emp.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]/40">
+                    <TableCell className="text-[#1A1A1A] font-semibold">{emp.full_name}</TableCell>
+                    <TableCell><Input type="number" defaultValue={sd.baseSalary} className="w-20 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`base-${emp.id}`} /></TableCell>
+                    <TableCell><Input type="number" defaultValue={sd.perDay} className="w-16 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`pdd-${emp.id}`} /></TableCell>
+                    <TableCell className="text-red-600 font-semibold">{sd.absentDays}</TableCell>
+                    <TableCell className="text-amber-600 font-semibold">{sd.adjustedAbsent}</TableCell>
+                    <TableCell className="text-red-600 font-semibold">₹{fmt(sd.deduction)}</TableCell>
+                    <TableCell className="text-[#1A1A1A] font-semibold">₹{fmt(sd.calculated)}</TableCell>
+                    <TableCell><Input type="number" defaultValue={sd.config?.final_salary_override ?? ''} placeholder="—" className="w-20 h-7 text-xs bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" id={`ovr-${emp.id}`} /></TableCell>
+                    <TableCell><Button size="sm" className="h-7 text-xs bg-[#FF5C00] text-white hover:bg-[#FF5C00]/90" onClick={() => {
+                      const base = Number((document.getElementById(`base-${emp.id}`) as HTMLInputElement)?.value || 0);
+                      const pdd = Number((document.getElementById(`pdd-${emp.id}`) as HTMLInputElement)?.value || 0);
+                      const ovr = (document.getElementById(`ovr-${emp.id}`) as HTMLInputElement)?.value;
+                      saveSalary(emp, base, pdd, ovr ? Number(ovr) : null);
+                    }}>Save</Button></TableCell>
+                  </TableRow>
+                );
+              })}</TableBody></Table>
           </CardContent></Card>
         </TabsContent>
       </Tabs>
