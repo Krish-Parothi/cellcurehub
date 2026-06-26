@@ -110,7 +110,7 @@ export default function ShopStaffPage() {
         role: staffRole,
         password: data.password,
         phone: data.phone,
-        shopId: shopId,
+        shopId: shopId || undefined,
         aadharNumber: data.aadhar,
       });
 
