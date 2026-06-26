@@ -201,8 +201,8 @@ const COMING_SOON = '/coming-soon';
 const navLinks = [
   { label: 'Services',     href: '/#services' },
   { label: 'How It Works', href: '/#how-it-works' },
-  { label: 'Track Repair', href: COMING_SOON },
   { label: 'E-Waste',      href: '/#go-green' },
+  { label: 'About',        href: '/about' },
 ];
 
 function getDashboardHref(role?: string) {
@@ -279,13 +279,7 @@ export function Navbar() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              href={COMING_SOON}
-              className="flex items-center gap-1.5 text-sm font-medium text-[#1A1A1A]/60 hover:text-[#FF5C00] transition-colors"
-            >
-              <Search className="w-4 h-4" />
-              Track
-            </Link>
+
 
             {user ? (
               <>
