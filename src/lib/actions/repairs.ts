@@ -70,12 +70,20 @@ export async function bookRepair(input: BookRepairInput): Promise<ActionResult> 
 
     // 3. Insert repair — always set customer_id to the authenticated user
     const supabase = await createServerSupabaseClient();
+    
+    let deviceId = input.device_id;
+    if (!deviceId && input.manual_model) {
+      const { data: otherDevice } = await supabase.from('devices').select('id').eq('brand', 'Other').limit(1).single();
+      if (otherDevice) {
+        deviceId = otherDevice.id;
+      }
+    }
 
     const { data: repair, error: repairError } = await supabase
       .from('repairs')
       .insert({
         customer_id: profile.id, // ← ENFORCED server-side, not from input
-        device_id: input.device_id,
+        device_id: deviceId,
         manual_model: input.manual_model,
         imei_number: input.imei_number,
         contact_email: input.contact_email,

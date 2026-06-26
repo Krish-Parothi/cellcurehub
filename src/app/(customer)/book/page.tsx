@@ -141,7 +141,7 @@ export default function BookPage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoordinates({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setAddress(`Location captured (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`);
+        setAddress(`https://www.google.com/maps/search/?api=1&query=${pos.coords.latitude},${pos.coords.longitude}`);
         setGeoLoading(false);
         toast.success('Location captured!');
       },
