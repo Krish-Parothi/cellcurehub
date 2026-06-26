@@ -87,7 +87,7 @@ export default function DashboardPage() {
   );
  
   return (
-    <RoleGuard allowedRoles={['customer', 'admin']}>
+    <RoleGuard allowedRoles={['customer', 'admin', 'technician', 'delivery', 'shop_admin']}>
       <div className="min-h-screen bg-[#F7F7F5] flex flex-col text-[#1A1A1A]">
         <Navbar />
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">

@@ -44,7 +44,7 @@ function validateImei(imei: string): boolean {
 export async function bookRepair(input: BookRepairInput): Promise<ActionResult> {
   try {
     // 1. Auth check — only customers (and admins acting on behalf) can book
-    const { profile } = await getAuthenticatedUser(['customer', 'admin']);
+    const { profile } = await getAuthenticatedUser(['customer', 'admin', 'technician', 'delivery', 'shop_admin']);
     logger.info('REPAIR', 'bookRepair started', { userId: profile.id, device_id: input.device_id, repair_type: input.repair_type });
 
     // 2. Input validation
