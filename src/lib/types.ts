@@ -243,6 +243,7 @@ export const NAGPUR_AREAS = [
   'Jaripatka',
   'Gandhibagh',
   'Mominpura',
+  'Other',
 ];
 
 export const REPAIR_TYPE_OPTIONS = [

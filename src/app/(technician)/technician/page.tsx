@@ -83,6 +83,15 @@ export default function TechnicianDashboard() {
   }, [user]);
 
   useEffect(() => {
+    if (selectedRepair) {
+      const updated = repairs.find(r => r.id === selectedRepair.id);
+      if (updated && updated.status !== selectedRepair.status) {
+        setSelectedRepair(updated);
+      }
+    }
+  }, [repairs]);
+
+  useEffect(() => {
     if (user) fetchRepairs();
   }, [user, fetchRepairs]);
 

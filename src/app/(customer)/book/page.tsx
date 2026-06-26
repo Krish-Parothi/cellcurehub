@@ -56,6 +56,7 @@ export default function BookPage() {
   const [pickupType, setPickupType] = useState<'home' | 'store'>('home');
   const [address, setAddress] = useState('');
   const [area, setArea] = useState('');
+  const [otherArea, setOtherArea] = useState('');
   const [preferredDate, setPreferredDate] = useState<Date | undefined>(undefined);
   const [timeSlot, setTimeSlot] = useState('');
   const [timeSlots, setTimeSlots] = useState<any[]>([]);
@@ -129,7 +130,7 @@ export default function BookPage() {
   // Validations
   const step1Valid = selectedDevice !== null || manualModel.trim().length > 0;
   const step2Valid = repairType && phone.match(/^[6-9]\d{9}$/) && contactEmail.includes('@') && (!imei || imei.length === 15) && (repairType !== 'custom' || customDescription.trim().length > 0);
-  const step3Valid = pickupType === 'store' || (address.trim().length > 0 && area && timeSlot && preferredDate);
+  const step3Valid = pickupType === 'store' || (address.trim().length > 0 && area && (area !== 'Other' || otherArea.trim().length > 0) && timeSlot && preferredDate);
 
   const handleGeolocation = () => {
     if (!navigator.geolocation) {
@@ -166,7 +167,7 @@ export default function BookPage() {
         custom_repair_description: repairType === 'custom' ? customDescription : null,
         issue_description: issueNotes || `${REPAIR_TYPE_OPTIONS.find(r => r.value === repairType)?.label || repairType} repair`,
         pickup_type: pickupType,
-        address: pickupType === 'home' ? `${address}, ${area}, Nagpur` : 'CellCureHub Service Center, Dharampeth, Nagpur 440010',
+        address: pickupType === 'home' ? `${address}, ${area === 'Other' ? otherArea : area}, Nagpur` : 'CellCureHub Service Center, Dharampeth, Nagpur 440010',
         coordinates: coordinates ? `(${coordinates.lng},${coordinates.lat})` : null,
         preferred_date: preferredDate ? preferredDate.toISOString().split('T')[0] : null,
         time_slot: pickupType === 'home' ? timeSlot : null,
@@ -366,6 +367,11 @@ export default function BookPage() {
                               {NAGPUR_AREAS.map((a) => <SelectItem key={a} value={a} className="text-[#1A1A1A]/80 focus:bg-[#FF5C00]/10 focus:text-[#FF5C00] hover:bg-[#F7F7F5] cursor-pointer">{a}</SelectItem>)}  
                             </SelectContent>
                           </Select>
+                          {area === 'Other' && (
+                            <div className="mt-2">
+                              <Input value={otherArea} onChange={(e) => setOtherArea(e.target.value)} placeholder="Enter your area" className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00]" />
+                            </div>
+                          )}
                         </div>
 
                         {/* Date */}

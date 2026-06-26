@@ -70,6 +70,9 @@ export async function submitRcaReport(input: SubmitRcaInput): Promise<ActionResu
       return { success: false, error: `Failed to submit RCA: ${rcaError.message}` };
     }
 
+    // Update repair status to pending_approval
+    await supabase.from('repairs').update({ status: 'pending_approval' }).eq('id', input.repairId);
+
     // Add timeline entry
     await supabase.from('repair_timeline').insert({
       repair_id: input.repairId,

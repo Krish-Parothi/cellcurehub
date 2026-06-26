@@ -142,11 +142,26 @@ export default function DeviceSelector({
             })
           )}
         </div>
+        {showManualOption && availableBrands.length > 0 && !isManual && !selectedBrand && (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedBrand('');
+                setIsManual(true);
+                onSelect(null);
+              }}
+              className="text-[#FF5C00] text-sm font-medium hover:underline"
+            >
+              Brand not listed?
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Model Grid */}
-      <AnimatePresence>
-        {selectedBrand && (
+      {/* Step 2: Select Model or Manual Input */}
+      <AnimatePresence mode="wait">
+        {(selectedBrand || isManual) && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -250,7 +265,7 @@ export default function DeviceSelector({
                   </div>
                   <Input
                     type="text"
-                    placeholder="e.g. iPhone 15 Pro Max"
+                    placeholder={selectedBrand ? `e.g. ${selectedBrand} Model Name` : 'e.g. Motorola Edge 50 Pro'}
                     value={manualModel}
                     onChange={(e) => handleManualChange(e.target.value)}
                     className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00]"

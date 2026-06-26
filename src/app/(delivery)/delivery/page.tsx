@@ -33,7 +33,11 @@ const getArea = (address: string | null | undefined) => {
   return NAGPUR_AREAS.find(a => address.toLowerCase().includes(a.toLowerCase())) || 'Other';
 };
 
-const getNavigationUrl = (address: string | null | undefined) => {
+const getNavigationUrl = (address: string | null | undefined, coordinates: string | null | undefined) => {
+  if (coordinates) {
+    const [lng, lat] = coordinates.replace('(', '').replace(')', '').split(',');
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
   if (!address) return '#';
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
 };
@@ -247,8 +251,10 @@ export default function DeliveryDashboard() {
                               size="sm" 
                               className="h-8 text-[#FF5C00] hover:text-[#FF5C00] hover:bg-[#FF5C00]/10 px-2 -ml-2"
                               onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(getNavigationUrl(job.repair?.address || job.ewaste?.address), '_blank');
+                                window.open(getNavigationUrl(
+                                  job.repair?.address || job.ewaste?.address,
+                                  job.repair?.coordinates || job.ewaste?.coordinates
+                                ), '_blank');
                               }}
                             >
                               <Navigation className="w-3.5 h-3.5 mr-1.5" /> Navigate

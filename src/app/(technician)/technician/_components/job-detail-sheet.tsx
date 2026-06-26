@@ -215,6 +215,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
 
       toast.success('RCA Report submitted');
       loadRcaReport();
+      fetchRepairs();
     } catch (e) { 
       toast.error(e instanceof Error ? e.message : 'Failed to submit RCA'); 
     }
@@ -274,7 +275,6 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
                 <span className="text-[#1A1A1A]/40 text-xs block mb-1">Customer</span>
                 <p className="text-[#1A1A1A] font-semibold">{repair.customer?.full_name}</p>
                 <p className="text-[#1A1A1A]/60">{repair.customer?.phone}</p>
-                {repair.contact_email && <p className="text-[#1A1A1A]/60 text-xs mt-1">{repair.contact_email}</p>}
               </div>
               <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg">
                 <span className="text-[#1A1A1A]/40 text-xs block mb-1">Status</span>
@@ -282,6 +282,12 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
                   <Badge className="bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20 font-semibold">{REPAIR_STATUS_LABELS[repair.status as RepairStatus]}</Badge>
                 </div>
               </div>
+              {repair.contact_email && (
+                <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2">
+                  <span className="text-[#1A1A1A]/40 text-xs block mb-1">Contact Email</span>
+                  <p className="text-[#1A1A1A]/80 font-medium break-all">{repair.contact_email}</p>
+                </div>
+              )}
               <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2">
                 <span className="text-[#1A1A1A]/40 text-xs block mb-1">Issue / Repair Type</span>
                 <p className="text-[#1A1A1A] font-semibold">{repair.repair_type === 'custom' ? repair.custom_repair_description : repair.repair_type?.replace(/_/g, ' ')}</p>
