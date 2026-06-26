@@ -40,7 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
   const SidebarContent = () => (
-    <nav className="flex flex-col gap-1 p-4 overflow-y-auto h-full pb-24">
+    <nav data-lenis-prevent="true" className="flex flex-col gap-1 p-4 overflow-y-auto h-full pb-24">
       <p className="text-xs text-[#1A1A1A]/40 font-semibold uppercase tracking-wider px-3 mb-2">Admin Panel</p>
       {NAV_ITEMS.map(item => (
         <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}

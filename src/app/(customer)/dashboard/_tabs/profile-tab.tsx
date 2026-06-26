@@ -21,25 +21,14 @@ export default function ProfileTab({ user }: { user: User }) {
   const [editEmail, setEditEmail] = useState(user.email || '');
   const [editAddress, setEditAddress] = useState('');
   const [saving, setSaving] = useState(false);
-  const [warranties, setWarranties] = useState(0);
-  const [totalRepairs, setTotalRepairs] = useState(0);
+
 
   useEffect(() => {
     const saved = localStorage.getItem('cellcurehub_default_address');
     if (saved) setEditAddress(saved);
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      // Active warranties: delivered within last 90 days
-      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-      const { count: wCount } = await supabase.from('repairs').select('id', { count: 'exact', head: true }).eq('customer_id', user.id).in('status', ['delivered', 'done']).gte('delivered_at', ninetyDaysAgo);
-      setWarranties(wCount || 0);
-      // Total repairs
-      const { count: tCount } = await supabase.from('repairs').select('id', { count: 'exact', head: true }).eq('customer_id', user.id);
-      setTotalRepairs(tCount || 0);
-    })();
-  }, [user.id]);
+
 
   const handleSave = async () => {
     if (!editName.trim()) { toast.error('Name is required'); return; }
@@ -73,19 +62,7 @@ export default function ProfileTab({ user }: { user: User }) {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 text-center">
-            <Shield className="w-5 h-5 text-[#FF5C00] mx-auto mb-1" />
-            <p className="text-[#1A1A1A] font-bold text-lg">{warranties}</p>
-            <p className="text-[#1A1A1A]/60 text-xs">Active Warranties</p>
-          </div>
-          <div className="bg-[#F7F7F5] border border-[#E8E4DF] rounded-xl p-4 text-center">
-            <Wrench className="w-5 h-5 text-[#FF5C00] mx-auto mb-1" />
-            <p className="text-[#1A1A1A] font-bold text-lg">{totalRepairs}</p>
-            <p className="text-[#1A1A1A]/60 text-xs">Total Repairs</p>
-          </div>
-        </div>
+
 
         <Separator className="bg-[#E8E4DF] mb-6" />
 

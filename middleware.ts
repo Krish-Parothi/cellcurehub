@@ -19,8 +19,8 @@ const ROLE_PROTECTED_ROUTES: { pathPrefix: string; allowedRoles: string[] }[] = 
   { pathPrefix: '/shop-admin', allowedRoles: ['admin', 'shop_admin'] },
   { pathPrefix: '/technician', allowedRoles: ['admin', 'shop_admin', 'technician'] },
   { pathPrefix: '/delivery', allowedRoles: ['admin', 'shop_admin', 'delivery'] },
-  { pathPrefix: '/dashboard', allowedRoles: ['customer', 'admin'] },
-  { pathPrefix: '/book', allowedRoles: ['customer', 'admin'] },
+  { pathPrefix: '/dashboard', allowedRoles: ['customer', 'admin', 'shop_admin', 'technician', 'delivery'] },
+  { pathPrefix: '/book', allowedRoles: ['customer', 'admin', 'shop_admin', 'technician', 'delivery'] },
 ];
 
 // Routes that require authentication but no specific role

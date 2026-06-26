@@ -313,7 +313,7 @@ export function Navbar() {
               </>
             ) : (
               <Link
-                href={COMING_SOON}
+                href="/login"
                 className="bg-[#FF5C00] hover:bg-[#e05200] text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-[0_4px_14px_rgba(255,92,0,0.25)] hover:shadow-[0_4px_20px_rgba(255,92,0,0.4)]"
               >
                 Book Repair
@@ -384,7 +384,7 @@ export function Navbar() {
                       Track Repair
                     </Link>
                     <Link
-                      href={COMING_SOON}
+                      href="/login"
                       onClick={() => setMobileOpen(false)}
                       className="block w-full text-center py-3 rounded-xl bg-[#FF5C00] hover:bg-[#e05200] text-white font-bold transition-colors text-sm shadow-[0_4px_14px_rgba(255,92,0,0.25)]"
                     >

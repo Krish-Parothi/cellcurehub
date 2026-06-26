@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   },
 };
 
+import SmoothScroll from '@/components/smooth-scroll';
+
 export default function RootLayout({
   children,
 }: {
@@ -28,13 +30,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-[#F7F7F5] text-[#1A1A1A] antialiased`}>
-        <AuthProvider>
-          <CartProvider>
-            {children}
-          </CartProvider>
-          <Toaster />
-          {/* <FloatingChatAssistant /> */}
-        </AuthProvider>
+        <SmoothScroll>
+          <AuthProvider>
+            <CartProvider>
+              {children}
+            </CartProvider>
+            <Toaster />
+            {/* <FloatingChatAssistant /> */}
+          </AuthProvider>
+        </SmoothScroll>
       </body>
     </html>
   );

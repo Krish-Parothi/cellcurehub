@@ -115,6 +115,7 @@ export default function StaffPage() {
         email: data.email,
         fullName: data.full_name,
         role: staffRole,
+        password: data.password,
         phone: data.phone,
         shopId: selectedShop,
         aadharNumber: data.aadhar,

@@ -246,9 +246,9 @@ export default function DeliveryDashboard() {
                             <p className="text-amber-700 text-xs mb-3 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded font-medium">⚠ {job.special_instructions}</p>
                           )}
                           <div className="flex items-center justify-between mt-2 pt-3 border-t border-[#E8E4DF]/60">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-8 text-[#FF5C00] hover:text-[#FF5C00] hover:bg-[#FF5C00]/10 px-2 -ml-2"
                               onClick={(e) => {
                                 window.open(getNavigationUrl(

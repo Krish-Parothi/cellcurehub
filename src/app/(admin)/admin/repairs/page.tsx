@@ -236,6 +236,12 @@ export default function RepairsPage() {
       job_type: 'dropoff', status: 'assigned', scheduled_date: today,
     });
     if (error) { console.debug('[ADMIN_ASSIGN_DELIVERY_ERROR]', error); toast.error('Failed: ' + error.message); setAssigning(false); return; }
+    
+    const boy = deliveryBoys.find(d => d.id === boyId);
+    if (boy) {
+      setDeliveryMap(prev => ({ ...prev, [selectedRepair.id]: { name: boy.full_name, phone: boy.phone || '', status: 'assigned', delivery_boy_id: boy.id, job_type: 'dropoff' } }));
+    }
+
     toast.success('Drop-off delivery boy assigned');
     setAssigning(false);
     fetchRepairs();
@@ -259,6 +265,11 @@ export default function RepairsPage() {
     });
 
     if (error) { console.debug('[ADMIN_ASSIGN_PICKUP_ERROR]', error); toast.error('Failed: ' + error.message); setAssigning(false); return; }
+
+    const boy = deliveryBoys.find(d => d.id === boyId);
+    if (boy) {
+      setDeliveryMap(prev => ({ ...prev, [selectedRepair.id]: { name: boy.full_name, phone: boy.phone || '', status: 'assigned', delivery_boy_id: boy.id, job_type: 'pickup' } }));
+    }
 
     // Also update repair status to pickup_scheduled
     await supabase.from('repairs').update({ status: 'pickup_scheduled' }).eq('id', selectedRepair.id);
@@ -542,7 +553,7 @@ export default function RepairsPage() {
                 <TableRow key={rca.id} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5]">
                   <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(rca.repair_id)}</TableCell>
                   <TableCell className="text-[#1A1A1A] font-medium">{rca.repair?.customer?.full_name}</TableCell>
-                  <TableCell className="text-[#1A1A1A]/70">{rca.repair?.device?.brand} {rca.repair?.device?.model_name}</TableCell>
+                  <TableCell className="text-[#1A1A1A]/70">{rca.repair?.device ? `${rca.repair.device.brand} ${rca.repair.device.model_name}` : rca.repair?.manual_model || 'Unknown'}</TableCell>
                   <TableCell className="text-[#1A1A1A]/70">{rca.repair?.technician?.full_name}</TableCell>
                   <TableCell><Button size="sm" onClick={() => { setRcaModal(rca); setAdminNotes(''); }} className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 text-xs font-semibold"><Eye className="w-3.5 h-3.5 mr-1" />Review</Button></TableCell>
                 </TableRow>
@@ -565,7 +576,7 @@ export default function RepairsPage() {
                 {/* Info */}
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Customer</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.customer?.full_name}</p><p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.customer?.phone}</p>{selectedRepair.contact_email && <p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.contact_email}</p>}</div>
-                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Device</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.device?.brand} {selectedRepair.device?.model_name}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Device</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.device ? `${selectedRepair.device.brand} ${selectedRepair.device.model_name}` : selectedRepair.manual_model || 'Unknown'}</p></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Status</span><div className="mt-1"><Badge className={statusColor(selectedRepair.status)}>{REPAIR_STATUS_LABELS[selectedRepair.status as RepairStatus]}</Badge></div></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Shop</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</p></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2"><span className="text-[#1A1A1A]/40 text-xs block">Technician</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.technician?.full_name || 'Unassigned'}</p></div>
@@ -619,12 +630,16 @@ export default function RepairsPage() {
                 {/* Status Change — Admin can set ANY status */}
                 <div>
                   <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1">⚡ Change Status (Admin)</p>
-                  <Select value={selectedRepair.status} onValueChange={(val) => { console.debug('[ADMIN_STATUS_SELECT]', val); changeStatus(val); }} disabled={assigning}>
-                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                      {REPAIR_STATUS_ORDER.map(s => <SelectItem key={s} value={s} className="hover:bg-[#F7F7F5] cursor-pointer">{REPAIR_STATUS_LABELS[s as RepairStatus]}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <select 
+                    value={selectedRepair.status} 
+                    onChange={(e) => changeStatus(e.target.value)} 
+                    disabled={assigning}
+                    data-lenis-prevent="true"
+                    onWheel={(e) => e.stopPropagation()}
+                    className="w-full h-10 px-3 bg-white border border-[#E8E4DF] rounded-md text-sm text-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+                  >
+                    {REPAIR_STATUS_ORDER.map(s => <option key={s} value={s}>{REPAIR_STATUS_LABELS[s as RepairStatus]}</option>)}
+                  </select>
                 </div>
 
                 {/* Final Cost Input */}
@@ -647,37 +662,50 @@ export default function RepairsPage() {
                 {/* Shop Assignment */}
                 <div>
                   <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Store className="w-3 h-3" /> Assign to Shop</p>
-                  <Select value={selectedRepair.shop_id || ''} onValueChange={assignShop} disabled={assigning}>
-                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select shop..." /></SelectTrigger>
-                    <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                      {shops.map(s => <SelectItem key={s.id} value={s.id} className="hover:bg-[#F7F7F5] cursor-pointer">{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <select 
+                    value={selectedRepair.shop_id || ''} 
+                    onChange={(e) => assignShop(e.target.value)} 
+                    disabled={assigning}
+                    data-lenis-prevent="true"
+                    onWheel={(e) => e.stopPropagation()}
+                    className="w-full h-10 px-3 bg-white border border-[#E8E4DF] rounded-md text-sm text-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+                  >
+                    <option value="" disabled>Select shop...</option>
+                    {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
                 </div>
 
                 {/* Technician Assignment (includes admin for self-assign) */}
                 <div>
                   <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Wrench className="w-3 h-3" /> Assign Technician</p>
-                  <Select value={selectedRepair.technician_id || ''} onValueChange={assignTechnician} disabled={assigning}>
-                    <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                      <SelectValue placeholder="Select technician..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                      {technicians.filter(t => t.role === 'admin' || (selectedRepair.shop_id && t.shop_id === selectedRepair.shop_id)).map(t => <SelectItem key={t.id} value={t.id} className="hover:bg-[#F7F7F5] cursor-pointer">{t.full_name} {t.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <select 
+                    value={selectedRepair.technician_id || ''} 
+                    onChange={(e) => assignTechnician(e.target.value)} 
+                    disabled={assigning}
+                    data-lenis-prevent="true"
+                    onWheel={(e) => e.stopPropagation()}
+                    className="w-full h-10 px-3 bg-white border border-[#E8E4DF] rounded-md text-sm text-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+                  >
+                    <option value="" disabled>Select technician...</option>
+                    {technicians.filter(t => t.role === 'admin' || (selectedRepair.shop_id && t.shop_id === selectedRepair.shop_id)).map(t => <option key={t.id} value={t.id}>{t.full_name} {t.role === 'admin' ? '(Admin)' : ''}</option>)}
+                  </select>
                 </div>
 
                 {/* Pickup Assignment (booked or pickup_scheduled) */}
                 {['booked', 'pickup_scheduled'].includes(selectedRepair.status) && (
                   <div>
                     <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3 text-[#FF5C00]" /> Assign Pickup Boy</p>
-                    <Select value={deliveryMap[selectedRepair.id]?.job_type === 'pickup' ? deliveryMap[selectedRepair.id]?.delivery_boy_id : ''} onValueChange={assignPickup} disabled={assigning}>
-                      <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select pickup boy..." /></SelectTrigger>
-                      <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                        {deliveryBoys.filter(d => d.role === 'admin' || (selectedRepair.shop_id && d.shop_id === selectedRepair.shop_id)).map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <select 
+                      value={deliveryMap[selectedRepair.id]?.job_type === 'pickup' ? deliveryMap[selectedRepair.id]?.delivery_boy_id : ''} 
+                      onChange={(e) => assignPickup(e.target.value)} 
+                      disabled={assigning}
+                      data-lenis-prevent="true"
+                      onWheel={(e) => e.stopPropagation()}
+                      className="w-full h-10 px-3 bg-white border border-[#E8E4DF] rounded-md text-sm text-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+                    >
+                      <option value="" disabled>Select pickup boy...</option>
+                      {deliveryBoys.filter(d => d.role === 'admin' || (selectedRepair.shop_id && d.shop_id === selectedRepair.shop_id)).map(d => <option key={d.id} value={d.id}>{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</option>)}
+                    </select>
                   </div>
                 )}
 
@@ -685,12 +713,17 @@ export default function RepairsPage() {
                 {(selectedRepair.status === 'ready' || selectedRepair.status === 'done') && (
                   <div>
                     <p className="text-xs text-[#1A1A1A]/60 mb-2 font-semibold flex items-center gap-1"><Truck className="w-3 h-3" /> Assign Drop-off Boy</p>
-                    <Select value={deliveryMap[selectedRepair.id]?.job_type === 'dropoff' ? deliveryMap[selectedRepair.id]?.delivery_boy_id : ''} onValueChange={assignDelivery} disabled={assigning}>
-                      <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A]"><SelectValue placeholder="Select drop-off boy..." /></SelectTrigger>
-                      <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
-                        {deliveryBoys.filter(d => d.role === 'admin' || (selectedRepair.shop_id && d.shop_id === selectedRepair.shop_id)).map(d => <SelectItem key={d.id} value={d.id} className="hover:bg-[#F7F7F5] cursor-pointer">{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <select 
+                      value={deliveryMap[selectedRepair.id]?.job_type === 'dropoff' ? deliveryMap[selectedRepair.id]?.delivery_boy_id : ''} 
+                      onChange={(e) => assignDelivery(e.target.value)} 
+                      disabled={assigning}
+                      data-lenis-prevent="true"
+                      onWheel={(e) => e.stopPropagation()}
+                      className="w-full h-10 px-3 bg-white border border-[#E8E4DF] rounded-md text-sm text-[#1A1A1A] focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+                    >
+                      <option value="" disabled>Select drop-off boy...</option>
+                      {deliveryBoys.filter(d => d.role === 'admin' || (selectedRepair.shop_id && d.shop_id === selectedRepair.shop_id)).map(d => <option key={d.id} value={d.id}>{d.full_name} {d.role === 'admin' ? '(Admin)' : ''}</option>)}
+                    </select>
                   </div>
                 )}
 

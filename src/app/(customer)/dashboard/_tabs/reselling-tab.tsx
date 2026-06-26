@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuthFetch } from '@/lib/hooks/use-auth-fetch';
+import { useAuth } from '@/lib/auth-context';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ResellingTab({ userId }: { userId: string }) {
+  const { user } = useAuth();
   const [items, setItems] = useState<Ewaste[]>([]);
   const [submitting, setSubmitting] = useState(false);
 

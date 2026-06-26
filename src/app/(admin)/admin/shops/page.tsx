@@ -30,7 +30,7 @@ export default function ShopsPage() {
   const [addDialog, setAddDialog] = useState(false);
   const [inviteDialog, setInviteDialog] = useState<Shop | null>(null);
   const [shopForm, setShopForm] = useState({ name: '', address: '', area: '', phone: '' });
-  const [inviteForm, setInviteForm] = useState({ full_name: '', email: '', phone: '' });
+  const [inviteForm, setInviteForm] = useState({ full_name: '', email: '', phone: '', password: '' });
   const [inviting, setInviting] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -110,13 +110,14 @@ export default function ShopsPage() {
   };
 
   const inviteShopAdmin = async () => {
-    if (!inviteDialog || !inviteForm.full_name || !inviteForm.email) { toast.error('Name and email required'); return; }
+    if (!inviteDialog || !inviteForm.full_name || !inviteForm.email || !inviteForm.password) { toast.error('Name, email, and password required'); return; }
     setInviting(true);
     try {
       const { inviteStaff } = await import('@/lib/actions/admin');
       const result = await inviteStaff({
         email: inviteForm.email,
         fullName: inviteForm.full_name,
+        password: inviteForm.password,
         phone: inviteForm.phone || undefined,
         role: 'shop_admin',
         shopId: inviteDialog.id,
@@ -124,9 +125,9 @@ export default function ShopsPage() {
       
       if (!result.success) throw new Error(result.error);
 
-      toast.success('Shop admin invited successfully via email');
+      toast.success('Shop admin added successfully');
       setInviteDialog(null);
-      setInviteForm({ full_name: '', email: '', phone: '' });
+      setInviteForm({ full_name: '', email: '', phone: '', password: '' });
       fetchData();
     } catch (e: any) {
       toast.error(e.message || 'Failed to add shop admin');
@@ -210,6 +211,7 @@ export default function ShopsPage() {
           <div className="space-y-3">
             <div><Label className="text-[#1A1A1A]/70">Full Name *</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.full_name} onChange={e => setInviteForm(f => ({ ...f, full_name: e.target.value }))} /></div>
             <div><Label className="text-[#1A1A1A]/70">Email *</Label><Input type="email" className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.email} onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))} /></div>
+            <div><Label className="text-[#1A1A1A]/70">Password *</Label><Input type="text" className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" placeholder="Min 6 characters" value={inviteForm.password} onChange={e => setInviteForm(f => ({ ...f, password: e.target.value }))} /></div>
             <div><Label className="text-[#1A1A1A]/70">Phone</Label><Input className="bg-white border-[#E8E4DF] text-[#1A1A1A] mt-1" value={inviteForm.phone} onChange={e => setInviteForm(f => ({ ...f, phone: e.target.value }))} /></div>
           </div>
           <DialogFooter><Button onClick={inviteShopAdmin} disabled={inviting} className="bg-[#FF5C00] text-white hover:bg-[#e05200]">{inviting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UserPlus className="w-4 h-4 mr-1" />}Add</Button></DialogFooter>

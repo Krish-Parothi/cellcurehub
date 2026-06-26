@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -19,32 +19,33 @@ export default function CompleteProfilePage() {
   const [address, setAddress] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // If still loading auth, show loading state
-  if (loading) {
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+
+    if (!needsPhone) {
+      const redirectMap: Record<string, string> = {
+        admin: '/admin',
+        shop_admin: '/shop-admin',
+        technician: '/technician',
+        delivery: '/delivery',
+        customer: '/dashboard',
+      };
+      router.replace(redirectMap[user.role] || '/dashboard');
+    }
+  }, [user, loading, needsPhone, router]);
+
+  // If still loading auth or redirecting, show loading state
+  if (loading || !user || !needsPhone) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F7F5]">
         <div className="animate-pulse text-gray-500">Loading...</div>
       </div>
     );
-  }
-
-  // If not logged in, redirect to login
-  if (!user) {
-    router.replace('/login');
-    return null;
-  }
-
-  // If user already has a phone, send them to their dashboard
-  if (!needsPhone) {
-    const redirectMap: Record<string, string> = {
-      admin: '/admin',
-      shop_admin: '/shop-admin',
-      technician: '/technician',
-      delivery: '/delivery',
-      customer: '/dashboard',
-    };
-    router.replace(redirectMap[user.role] || '/dashboard');
-    return null;
   }
 
   const handleSave = async () => {

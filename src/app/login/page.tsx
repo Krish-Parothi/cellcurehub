@@ -21,7 +21,7 @@ export default function LoginPage() {
     signInWithGoogle,
   } = useAuth();
 
-  const [method, setMethod] = useState<LoginMethod>('phone');
+  const [method, setMethod] = useState<LoginMethod>('email');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -149,6 +149,7 @@ export default function LoginPage() {
           </h2>
 
           {/* Method toggle */}
+          {/*
           <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
             <button
               type="button"
@@ -181,8 +182,10 @@ export default function LoginPage() {
               Email
             </button>
           </div>
+          */}
 
           {/* Phone + OTP form */}
+          {/*
           {method === 'phone' && (
             <motion.div
               key="phone-form"
@@ -257,6 +260,7 @@ export default function LoginPage() {
               )}
             </motion.div>
           )}
+          */}
 
           {/* Email + Password form */}
           {method === 'email' && (

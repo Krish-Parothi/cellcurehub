@@ -27,7 +27,7 @@ export default function AnalyticsTab({ userId }: { userId: string }) {
     realtimeTable: 'invoices' // we mostly care about invoices updates for analytics
   });
 
-  if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-2xl bg-[#1A1A1A]/5" />)}</div>;
+  if (loading) return <div className="space-y-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-2xl bg-[#1A1A1A]/5" />)}</div>;
 
   // Calculations
   const paidInvoices = data.flatMap(r => r.invoices.filter(inv => inv.payment_status === 'paid'));
