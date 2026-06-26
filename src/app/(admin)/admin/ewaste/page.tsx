@@ -52,7 +52,7 @@ export default function AdminEwastePage() {
   const fetchData = useCallback(async () => {
     let query = supabase
       .from('ewaste')
-      .select('*, customer:users!ewaste_customer_id_fkey(full_name, phone), ewaste_category:ewaste_categories(name)')
+      .select('*, customer:users!ewaste_customer_id_fkey(full_name, phone), ewaste_category:ewaste_categories(name), delivery_assignments(delivery_boy_id, delivery_boy:users!delivery_assignments_delivery_boy_id_fkey(full_name))')
       .eq('category', 'ewaste')
       .order('created_at', { ascending: false });
       
@@ -100,14 +100,25 @@ export default function AdminEwastePage() {
     setUpdating(item.id);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const { error: delErr } = await supabase.from('delivery_assignments').insert({
-        ewaste_id: item.id,
-        delivery_boy_id: selectedDeliveryBoy,
-        job_type: 'pickup',
-        status: 'assigned',
-        scheduled_date: today,
-      });
-      if (delErr) throw delErr;
+      const { data: existing } = await supabase.from('delivery_assignments').select('id').eq('ewaste_id', item.id).maybeSingle();
+      
+      if (existing) {
+        const { error: delErr } = await supabase.from('delivery_assignments').update({
+          delivery_boy_id: selectedDeliveryBoy,
+          status: 'assigned',
+          scheduled_date: today,
+        }).eq('id', existing.id);
+        if (delErr) throw delErr;
+      } else {
+        const { error: delErr } = await supabase.from('delivery_assignments').insert({
+          ewaste_id: item.id,
+          delivery_boy_id: selectedDeliveryBoy,
+          job_type: 'pickup',
+          status: 'assigned',
+          scheduled_date: today,
+        });
+        if (delErr) throw delErr;
+      }
 
       const { error: statusErr } = await supabase.from('ewaste').update({ status: 'pickup_assigned' }).eq('id', item.id);
       if (statusErr) throw statusErr;
@@ -201,6 +212,7 @@ export default function AdminEwastePage() {
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Category</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Offer</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium">Status</TableHead>
+                    <TableHead className="text-[#1A1A1A]/50 font-medium">Delivery Boy</TableHead>
                     <TableHead className="text-[#1A1A1A]/50 font-medium text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -234,12 +246,15 @@ export default function AdminEwastePage() {
                           {STATUS_LABELS[sub.status] || sub.status.replace(/_/g, ' ')}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <span className="text-[#1A1A1A]/70 text-sm">{sub.delivery_assignments?.[0]?.delivery_boy?.full_name || 'Unassigned'}</span>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button 
                           size="sm" 
                           variant="ghost" 
                           className="h-8 text-[#1A1A1A]/70 hover:text-[#FF5C00] hover:bg-[#FF5C00]/10"
-                          onClick={() => { setDetailsDialog({ open: true, item: sub }); setOfferAmount(sub.admin_offer?.toString() || ''); }}
+                          onClick={() => { setDetailsDialog({ open: true, item: sub }); setOfferAmount(sub.admin_offer?.toString() || ''); setSelectedDeliveryBoy(sub.delivery_assignments?.[0]?.delivery_boy_id || ''); }}
                         >
                           <Eye className="w-4 h-4 mr-1.5" /> View
                         </Button>
