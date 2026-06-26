@@ -21,7 +21,16 @@ export async function inviteStaff(params: {
   aadharNumber?: string;
 }) {
   try {
-    const { profile } = await getAuthenticatedUser(['admin']);
+    const { profile } = await getAuthenticatedUser(['admin', 'shop_admin']);
+
+    if (profile.role === 'shop_admin') {
+      if (params.shopId !== profile.shop_id) {
+        return { success: false, error: 'You can only add staff to your own shop.' };
+      }
+      if (params.role === 'admin' || params.role === 'shop_admin') {
+        return { success: false, error: 'You do not have permission to add admins.' };
+      }
+    }
 
     logger.info('ADMIN', `Provisioning staff: ${params.email} as ${params.role}`, {
       invitedBy: profile.id,
