@@ -202,7 +202,7 @@ const navLinks = [
   { label: 'Services',     href: '/#services' },
   { label: 'How It Works', href: '/#how-it-works' },
   { label: 'E-Waste',      href: '/#go-green' },
-  { label: 'About',        href: '/about' },
+  { label: 'About',        href: 'https://cellcurehub.in', target: '_blank' },
 ];
 
 function getDashboardHref(role?: string) {
@@ -270,6 +270,7 @@ export function Navbar() {
               <Link
                 key={link.label}
                 href={link.href}
+                target={link.target}
                 className="text-sm font-medium text-[#1A1A1A]/60 hover:text-[#FF5C00] transition-colors duration-200"
               >
                 {link.label}
@@ -342,6 +343,7 @@ export function Navbar() {
                 <Link
                   key={link.label}
                   href={link.href}
+                  target={link.target}
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center justify-between py-3 px-4 rounded-xl text-[#1A1A1A]/70 hover:text-[#FF5C00] hover:bg-[#FF5C00]/5 transition-colors font-medium text-sm"
                 >
@@ -370,13 +372,6 @@ export function Navbar() {
                   </>
                 ) : (
                   <>
-                    <Link
-                      href={COMING_SOON}
-                      onClick={() => setMobileOpen(false)}
-                      className="block w-full text-center py-3 rounded-xl border border-[#E8E4DF] text-[#1A1A1A]/70 hover:border-[#FF5C00]/30 hover:text-[#FF5C00] transition-colors text-sm font-medium"
-                    >
-                      Track Repair
-                    </Link>
                     <Link
                       href="/login"
                       onClick={() => setMobileOpen(false)}

@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     // SECURITY FIX: Client-side signups are always 'customer'
     const role: UserRole = 'customer';
-    
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -216,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear cache so re-login fetches fresh data
     resolvedCacheRef.current = null;
     fetchInFlightRef.current = false;
-    await supabase.auth.signInWithOAuth({ 
+    await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback`

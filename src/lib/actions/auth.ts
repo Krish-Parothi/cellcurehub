@@ -1,6 +1,7 @@
 'use server';
 
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import type { User, UserRole } from '@/lib/types';
 
@@ -27,7 +28,7 @@ export async function getAuthenticatedUser(
   const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !authUser) {
-    logger.warn('AUTH', 'Unauthenticated access attempt', { 
+    logger.warn('AUTH', 'Unauthenticated access attempt', {
       error: authError?.message,
       hint: 'No valid session found in cookies'
     });
@@ -37,18 +38,46 @@ export async function getAuthenticatedUser(
   logger.debug('AUTH', 'Session verified', { userId: authUser.id, email: authUser.email });
 
   // Step 2: Fetch the user profile from the public.users table
-  const { data: profile, error: profileError } = await supabase
+  let { data: profile, error: profileError } = await supabase
     .from('users')
     .select('*')
     .eq('id', authUser.id)
     .single();
 
   if (profileError || !profile) {
-    logger.error('AUTH', 'Profile not found for authenticated user', { 
+    logger.warn('AUTH', 'Profile not found, attempting Just-In-Time provisioning', {
       userId: authUser.id,
-      error: profileError?.message 
+      error: profileError?.message
     });
-    throw new Error('PROFILE_NOT_FOUND: Your user profile could not be loaded. Please contact support.');
+
+    // Create an admin client to bypass RLS and insert the profile
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const role = (authUser.app_metadata?.role as string) || 'customer';
+    const phone = authUser.phone || authUser.app_metadata?.phone || null;
+
+    const { data: newProfile, error: insertError } = await supabaseAdmin
+      .from('users')
+      .upsert({
+        id: authUser.id,
+        full_name: authUser.user_metadata?.full_name || authUser.email || 'User',
+        email: authUser.email || null,
+        phone: phone ? `+91${phone.replace(/^\+91/, '')}` : null,
+        role: role as UserRole,
+        is_active: true,
+      }, { onConflict: 'id' })
+      .select()
+      .single();
+
+    if (insertError || !newProfile) {
+      logger.error('AUTH', 'JIT Provisioning failed', { userId: authUser.id, error: insertError?.message });
+      throw new Error('PROFILE_NOT_FOUND: Your user profile could not be loaded or created. Please contact support.');
+    }
+
+    profile = newProfile;
   }
 
   // Step 3: Check if the user's account is active

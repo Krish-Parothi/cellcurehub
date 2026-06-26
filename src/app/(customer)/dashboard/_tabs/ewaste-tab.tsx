@@ -50,7 +50,7 @@ export default function EwasteTab({ userId }: { userId: string }) {
         .eq('is_active', true)
         .order('sort_order', { ascending: true }),
       supabase.from('users')
-        .select('credits')
+        .select('credits, email')
         .eq('id', userId)
         .single(),
     ]);

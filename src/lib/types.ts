@@ -120,6 +120,7 @@ export interface Ewaste {
   payout_method: string | null;
   address: string | null;
   category: EwasteSubmissionCategory;
+  coordinates?: string | null;
   admin_offer: number | null;
   customer_agreed: boolean | null;
   ewaste_category_id: string | null;
