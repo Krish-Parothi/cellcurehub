@@ -48,6 +48,12 @@ export async function submitRcaReport(input: SubmitRcaInput): Promise<ActionResu
       }
     }
 
+    // Delete old unconfirmed RCAs for this repair to avoid duplicates
+    await supabase.from('rca_reports')
+      .delete()
+      .eq('repair_id', input.repairId)
+      .eq('admin_confirmed', false);
+
     // Insert the RCA report
     const { error: rcaError } = await supabase.from('rca_reports').insert({
       repair_id: input.repairId,

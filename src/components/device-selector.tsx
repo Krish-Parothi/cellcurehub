@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Smartphone, Laptop, Tablet, Search, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { DEVICE_BRANDS } from '@/lib/types';
 import type { Device } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,10 +29,27 @@ export default function DeviceSelector({
   selectedManualModel,
 }: DeviceSelectorProps) {
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
   const [models, setModels] = useState<Device[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [isManual, setIsManual] = useState(false);
   const [manualModel, setManualModel] = useState(selectedManualModel || '');
+
+  // Fetch unique active brands on mount
+  useEffect(() => {
+    supabase
+      .from('devices')
+      .select('brand')
+      .eq('is_active', true)
+      .then(({ data }) => {
+        if (data) {
+          const uniqueBrands = Array.from(new Set(data.map(d => d.brand))).sort();
+          setAvailableBrands(uniqueBrands);
+        }
+        setBrandsLoading(false);
+      });
+  }, []);
 
   // Sync from parent
   useEffect(() => {
@@ -96,37 +112,35 @@ export default function DeviceSelector({
       <div className="space-y-3">
         <Label className="text-[#1A1A1A]/80 text-sm">Select Brand</Label>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-          {DEVICE_BRANDS.map((brand) => {
-            const Icon = getCategoryIcon(brand);
-            const active = selectedBrand === brand;
-            return (
-              <motion.button
-                key={brand}
-                type="button"
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => handleBrandClick(brand)}
-                className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border transition-all duration-200 ${
-                  active
-                    ? 'border-[#FF5C00] bg-[#FF5C00]/10 shadow-sm'
-                    : 'border-[#E8E4DF] bg-[#F7F7F5] hover:border-[#E8E4DF]/80 hover:bg-[#E8E4DF]/20'
-                }`}
-              >
-                <Icon
-                  className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                    active ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/60'
-                  }`}
-                />
-                <span
-                  className={`text-[11px] sm:text-xs font-medium leading-tight text-center ${
-                    active ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/60'
+          {brandsLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-[88px] w-full rounded-xl bg-[#1A1A1A]/5" />
+            ))
+          ) : availableBrands.length === 0 ? (
+            <div className="col-span-full text-center py-4 text-[#1A1A1A]/50 text-sm">No active brands found</div>
+          ) : (
+            availableBrands.map((brand) => {
+              const Icon = getCategoryIcon(brand);
+              const active = selectedBrand === brand;
+              return (
+                <motion.button
+                  key={brand}
+                  type="button"
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handleBrandClick(brand)}
+                  className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border transition-all duration-200 ${
+                    active
+                      ? 'border-[#FF5C00] bg-[#FF5C00]/5 text-[#FF5C00]'
+                      : 'border-[#E8E4DF] bg-[#F7F7F5] hover:border-[#FF5C00]/30 hover:bg-white text-[#1A1A1A]'
                   }`}
                 >
-                  {brand}
-                </span>
-              </motion.button>
-            );
-          })}
+                  <Icon className={`w-6 h-6 ${active ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/40'}`} strokeWidth={active ? 2 : 1.5} />
+                  <span className={`text-xs sm:text-sm font-medium text-center ${active ? 'text-[#FF5C00]' : 'text-[#1A1A1A]/70'}`}>{brand}</span>
+                </motion.button>
+              );
+            })
+          )}
         </div>
       </div>
 

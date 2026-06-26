@@ -48,7 +48,7 @@ export default function StaffPage() {
   // Add Staff
   const [addDialog, setAddDialog] = useState(false);
   const [addingStaff, setAddingStaff] = useState(false);
-  const [staffRole, setStaffRole] = useState<'technician' | 'delivery'>('technician');
+  const [staffRole, setStaffRole] = useState<'technician' | 'delivery' | 'shop_admin'>('technician');
   const [selectedShop, setSelectedShop] = useState('');
   const { register, handleSubmit, reset, formState: { errors } } = useForm<AddStaffForm>({ resolver: zodResolver(addStaffSchema) });
 
@@ -122,7 +122,7 @@ export default function StaffPage() {
 
       if (!result.success) throw new Error(result.error);
 
-      toast.success(`${staffRole === 'technician' ? 'Technician' : 'Delivery staff'} invited. They will receive an email to login.`);
+      toast.success(`${staffRole === 'technician' ? 'Technician' : staffRole === 'shop_admin' ? 'Shop Admin' : 'Delivery staff'} invited. They will receive an email to login.`);
       setAddDialog(false); reset(); setStaffRole('technician'); setSelectedShop(''); fetchData();
     } catch (e: any) {
       toast.error(e.message || 'Failed to add staff');
@@ -370,11 +370,12 @@ export default function StaffPage() {
           <form onSubmit={handleSubmit(onAddStaff)} className="space-y-3">
             <div>
               <Label className="text-[#1A1A1A]/70">Role *</Label>
-              <Select value={staffRole} onValueChange={(v) => setStaffRole(v as 'technician' | 'delivery')}>
+              <Select value={staffRole} onValueChange={(v) => setStaffRole(v as 'technician' | 'delivery' | 'shop_admin')}>
                 <SelectTrigger className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-white border-[#E8E4DF] text-[#1A1A1A]">
                   <SelectItem value="technician">Technician</SelectItem>
                   <SelectItem value="delivery">Delivery Staff</SelectItem>
+                  <SelectItem value="shop_admin">Shop Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -394,7 +395,7 @@ export default function StaffPage() {
             {staffRole === 'technician' && (
               <div><Label className="text-[#1A1A1A]/70">Aadhar Number *</Label><Input {...register('aadhar')} className="bg-white border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00] mt-1" placeholder="12-digit Aadhar" maxLength={12} />{errors.aadhar && <p className="text-red-600 text-xs mt-0.5">{errors.aadhar.message}</p>}</div>
             )}
-            <DialogFooter><Button type="submit" disabled={addingStaff} className="bg-[#FF5C00] text-white hover:bg-[#FF5C00]/90">{addingStaff ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}Add {staffRole === 'technician' ? 'Technician' : 'Delivery Staff'}</Button></DialogFooter>
+            <DialogFooter><Button type="submit" disabled={addingStaff} className="bg-[#FF5C00] text-white hover:bg-[#FF5C00]/90">{addingStaff ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}Add {staffRole === 'technician' ? 'Technician' : staffRole === 'shop_admin' ? 'Shop Admin' : 'Delivery Staff'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

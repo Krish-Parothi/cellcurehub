@@ -18,13 +18,20 @@ export async function enhanceTechnicianNotes(notes: string) {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
     const prompt = `You are an AI assistant for a mobile repair shop. 
-A technician has written some rough diagnostic notes (RCA - Root Cause Analysis) about a customer's device. 
-Your task is to rewrite these notes into a professional, clear, and customer-friendly format. 
-Correct any grammar or spelling mistakes. 
-Do not add any new technical issues that aren't mentioned in the original notes.
-Keep it concise and polite. Do not include any conversational filler like "Here is the rewritten text". Just output the rewritten notes.
+A technician has written some rough diagnostic notes (RCA). 
+Your task is to rewrite these notes strictly into the following format using bullet points, keeping tokens minimal and concise:
 
-Original Technician Notes:
+Problems identified:
+- [point 1]
+- [point 2]
+
+Repairs done:
+- [point 1]
+- [point 2]
+
+Do not add new issues not mentioned. Do not use conversational filler.
+
+Technician notes:
 ${notes}`;
 
     const result = await model.generateContent(prompt);

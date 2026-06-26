@@ -109,13 +109,25 @@ export async function updateStoreOrderStatus(orderId: string, status: StoreOrder
   return { success: true };
 }
 
-export async function markStoreOrderOutForDelivery(orderId: string, phone: string) {
+export async function markStoreOrderOutForDelivery(orderId: string) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
-  const { sendBookingOtp } = await import('./otp');
-  const otpRes = await sendBookingOtp(phone);
+  // Fetch the order to get the customer's email
+  const { data: order, error: orderErr } = await supabase
+    .from('store_orders')
+    .select('id, customer:users!store_orders_customer_id_fkey(email)')
+    .eq('id', orderId)
+    .single();
+
+  if (orderErr || !order) return { success: false, error: 'Order not found' };
+  
+  const customerEmail = (order as any).customer?.email;
+  if (!customerEmail) return { success: false, error: 'Customer email not found' };
+
+  const { sendEmailOtp } = await import('./email-otp');
+  const otpRes = await sendEmailOtp(customerEmail);
   if (!otpRes.success) return otpRes;
 
   const { error } = await supabase
@@ -130,13 +142,25 @@ export async function markStoreOrderOutForDelivery(orderId: string, phone: strin
   return { success: true };
 }
 
-export async function verifyStoreOrderDeliveryOtp(orderId: string, phone: string, code: string) {
+export async function verifyStoreOrderDeliveryOtp(orderId: string, code: string) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
-  const { verifyBookingOtp } = await import('./otp');
-  const otpRes = await verifyBookingOtp(phone, code);
+  // Fetch the order to get the customer's email
+  const { data: order, error: orderErr } = await supabase
+    .from('store_orders')
+    .select('id, customer:users!store_orders_customer_id_fkey(email)')
+    .eq('id', orderId)
+    .single();
+
+  if (orderErr || !order) return { success: false, error: 'Order not found' };
+  
+  const customerEmail = (order as any).customer?.email;
+  if (!customerEmail) return { success: false, error: 'Customer email not found' };
+
+  const { verifyEmailOtp } = await import('./email-otp');
+  const otpRes = await verifyEmailOtp(customerEmail, code);
   if (!otpRes.success) return otpRes;
 
   const { error } = await supabase

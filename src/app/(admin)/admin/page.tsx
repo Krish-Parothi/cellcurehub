@@ -41,7 +41,7 @@ export default function CommandCenter() {
       supabase.from('invoices').select('total').eq('payment_status', 'pending'),
       supabase.from('ewaste').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('rca_reports').select('id', { count: 'exact', head: true }).eq('admin_confirmed', false),
-      supabase.from('repair_timeline').select('*, repair:repairs(id, customer:users!repairs_customer_id_fkey(full_name), device:devices(brand, model_name))').order('created_at', { ascending: false }).limit(20),
+      supabase.from('repair_timeline').select('*, repair:repairs!inner(id, status, customer:users!repairs_customer_id_fkey(full_name), device:devices(brand, model_name))').not('repair.status', 'in', '("delivered","done","cancelled")').order('created_at', { ascending: false }).limit(20),
       supabase.from('repairs').select('*, customer:users!repairs_customer_id_fkey(full_name, phone), device:devices(model_name)').eq('status', 'delivered').eq('follow_up_sent', false),
     ]);
 

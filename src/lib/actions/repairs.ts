@@ -11,6 +11,7 @@ interface BookRepairInput {
   manual_model: string | null;
   imei_number: string | null;
   phone: string;
+  contact_email: string;
   repair_type: string;
   custom_repair_description: string | null;
   issue_description: string;
@@ -77,6 +78,7 @@ export async function bookRepair(input: BookRepairInput): Promise<ActionResult> 
         device_id: input.device_id,
         manual_model: input.manual_model,
         imei_number: input.imei_number,
+        contact_email: input.contact_email,
         repair_type: input.repair_type,
         custom_repair_description: input.custom_repair_description,
         issue_description: input.issue_description,

@@ -102,7 +102,11 @@ export default function RepairsPage() {
       if (err2) {
         console.error('[fetchRepairs] RCA query error:', err2);
       }
-      setPendingRcas(rcas || []);
+      const sortedRcas = (rcas || []).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const uniqueRcas = sortedRcas.filter((rca: any, index: number, self: any[]) => 
+        index === self.findIndex((r) => r.repair_id === rca.repair_id)
+      );
+      setPendingRcas(uniqueRcas);
 
       // Fetch delivery assignments to map delivery boys to repairs
       const repairIds = (data || []).map((r: any) => r.id);
@@ -211,6 +215,7 @@ export default function RepairsPage() {
     });
     toast.success('Technician assigned');
     setAssigning(false);
+    setSelectedRepair({ ...selectedRepair, technician_id: techId, technician: tech });
     fetchRepairs();
   };
 
@@ -367,11 +372,16 @@ export default function RepairsPage() {
 
     toast.success('SLA extended successfully');
     setExtendSlaDialog(false);
+    setSelectedRepair({
+      ...selectedRepair,
+      sla_deadline: newDeadline.toISOString(),
+      sla_extended: true,
+      sla_extension_reason: slaExtensionReason
+    });
     setSlaExtensionReason('');
     setSlaExtensionHours('24');
     setExtendingSla(false);
     fetchRepairs();
-    setSheetOpen(false); // Close sheet to refresh data
   };
 
   const confirmRca = async (rca: any) => {
@@ -380,6 +390,7 @@ export default function RepairsPage() {
     try {
       const { error: updateErr } = await supabase.from('rca_reports').update({ admin_confirmed: true }).eq('id', rca.id);
       if (updateErr) { console.debug('[ADMIN_CONFIRM_RCA_UPDATE_ERROR]', updateErr); toast.error('Failed to confirm RCA: ' + updateErr.message); setRcaProcessing(false); return; }
+      await supabase.from('rca_reports').delete().eq('repair_id', rca.repair_id).eq('admin_confirmed', false).neq('id', rca.id);
       const { error: tlErr } = await supabase.from('repair_timeline').insert({
         repair_id: rca.repair_id, status: 'device_received',
         note: 'RCA confirmed by admin — visible to customer', updated_by: user?.id,
@@ -417,10 +428,13 @@ export default function RepairsPage() {
     if (!adminNotes.trim()) { toast.error('Please add notes'); return; }
     setRcaProcessing(true);
     await supabase.from('rca_reports').update({ admin_notes: adminNotes }).eq('id', rca.id);
-    toast.success('Revision requested');
+    await supabase.from('repairs').update({ status: 'diagnostic' }).eq('id', rca.repair_id);
+    await supabase.from('repair_timeline').insert({ repair_id: rca.repair_id, status: 'diagnostic', note: `Admin requested RCA revision: ${adminNotes}`, updated_by: user?.id });
+    toast.success('Revision requested & sent back to Technician');
     setRcaModal(null);
     setAdminNotes('');
     setRcaProcessing(false);
+    fetchRepairs();
   };
 
   const filtered = useMemo(() => repairs.filter(r => {
@@ -550,7 +564,7 @@ export default function RepairsPage() {
               <div className="space-y-6 pb-12">
                 {/* Info */}
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Customer</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.customer?.full_name}</p><p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.customer?.phone}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Customer</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.customer?.full_name}</p><p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.customer?.phone}</p>{selectedRepair.contact_email && <p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.contact_email}</p>}</div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Device</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.device?.brand} {selectedRepair.device?.model_name}</p></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Status</span><div className="mt-1"><Badge className={statusColor(selectedRepair.status)}>{REPAIR_STATUS_LABELS[selectedRepair.status as RepairStatus]}</Badge></div></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Shop</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</p></div>

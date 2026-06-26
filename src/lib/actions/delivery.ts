@@ -227,7 +227,7 @@ export async function verifyDeliveryOtp(assignmentId: string, otpEntered: string
 /**
  * Send OTP to customer via Twilio Verify for pickup or delivery handover.
  */
-export async function sendDeliveryTwilioOtp(
+export async function sendDeliveryEmailOtp(
   assignmentId: string,
   otpType: 'pickup' | 'delivery'
 ): Promise<ActionResult> {
@@ -237,10 +237,10 @@ export async function sendDeliveryTwilioOtp(
 
     const supabase = await createServerSupabaseClient();
 
-    // Fetch assignment + customer phone
+    // Fetch assignment + customer email
     const { data: assignment, error } = await supabase
       .from('delivery_assignments')
-      .select('id, delivery_boy_id, repair_id, ewaste_id, repair:repairs(customer:users!repairs_customer_id_fkey(phone)), ewaste:ewaste(customer:users!ewaste_customer_id_fkey(phone))')
+      .select('id, delivery_boy_id, repair_id, ewaste_id, repair:repairs(contact_email), ewaste:ewaste(contact_email)')
       .eq('id', assignmentId)
       .single();
 
@@ -252,55 +252,15 @@ export async function sendDeliveryTwilioOtp(
       return { success: false, error: 'This assignment is not assigned to you.' };
     }
 
-    const customerPhone = (assignment as any).repair?.customer?.phone || (assignment as any).ewaste?.customer?.phone;
-    if (!customerPhone) {
-      return { success: false, error: 'Customer phone number not found.' };
+    const customerEmail = (assignment as any).repair?.contact_email || (assignment as any).ewaste?.contact_email;
+    if (!customerEmail) {
+      return { success: false, error: 'Customer email address not found.' };
     }
 
-    // Strip +91 prefix if present, then add it
-    const cleanPhone = customerPhone.replace(/^\+91/, '').replace(/\D/g, '');
-    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
-      return { success: false, error: 'Invalid customer phone number.' };
-    }
+    const { sendEmailOtp } = await import('@/lib/actions/email-otp');
+    return await sendEmailOtp(customerEmail);
 
-    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-    const twilioAuth = process.env.TWILIO_AUTH_TOKEN;
-    const verifySid = process.env.TWILIO_VERIFY_SERVICE_SID;
 
-    if (!twilioSid || !twilioAuth || !verifySid) {
-      logger.error('DELIVERY', 'Twilio Verify credentials missing');
-      return { success: false, error: 'SMS service is not configured on the server.' };
-    }
-
-    const e164Phone = `+91${cleanPhone}`;
-    const twilioUrl = `https://verify.twilio.com/v2/Services/${verifySid}/Verifications`;
-    const twilioData = new URLSearchParams();
-    twilioData.append('To', e164Phone);
-    twilioData.append('Channel', 'sms');
-
-    const response = await fetch(twilioUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${twilioSid}:${twilioAuth}`).toString('base64')}`
-      },
-      body: twilioData.toString(),
-    });
-
-    if (!response.ok) {
-      const respText = await response.text();
-      logger.error('DELIVERY', 'Twilio Verify API error', { response: respText });
-      try {
-        const errJson = JSON.parse(respText);
-        if (errJson.message) {
-          return { success: false, error: errJson.message };
-        }
-      } catch {}
-      return { success: false, error: 'Failed to send OTP via SMS.' };
-    }
-
-    logger.info('DELIVERY', 'OTP sent via Twilio Verify', { assignmentId, otpType, phone: e164Phone });
-    return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     logger.error('DELIVERY', 'sendDeliveryTwilioOtp exception', { error: message });
@@ -311,7 +271,7 @@ export async function sendDeliveryTwilioOtp(
 /**
  * Verify OTP entered by delivery boy via Twilio Verify.
  */
-export async function verifyDeliveryTwilioOtp(
+export async function verifyDeliveryEmailOtp(
   assignmentId: string,
   otpType: 'pickup' | 'delivery',
   code: string
@@ -322,10 +282,10 @@ export async function verifyDeliveryTwilioOtp(
 
     const supabase = await createServerSupabaseClient();
 
-    // Fetch assignment + customer phone
+    // Fetch assignment + customer email
     const { data: assignment, error } = await supabase
       .from('delivery_assignments')
-      .select('id, delivery_boy_id, repair_id, ewaste_id, repair:repairs(customer:users!repairs_customer_id_fkey(phone)), ewaste:ewaste(customer:users!ewaste_customer_id_fkey(phone))')
+      .select('id, delivery_boy_id, repair_id, ewaste_id, repair:repairs(customer:users!repairs_customer_id_fkey(email)), ewaste:ewaste(customer:users!ewaste_customer_id_fkey(email))')
       .eq('id', assignmentId)
       .single();
 
@@ -337,56 +297,15 @@ export async function verifyDeliveryTwilioOtp(
       return { success: false, error: 'This assignment is not assigned to you.' };
     }
 
-    const customerPhone = (assignment as any).repair?.customer?.phone || (assignment as any).ewaste?.customer?.phone;
-    if (!customerPhone) {
-      return { success: false, error: 'Customer phone number not found.' };
+    const customerEmail = (assignment as any).repair?.customer?.email || (assignment as any).ewaste?.customer?.email;
+    if (!customerEmail) {
+      return { success: false, error: 'Customer email address not found.' };
     }
 
-    const cleanPhone = customerPhone.replace(/^\+91/, '').replace(/\D/g, '');
-    const e164Phone = `+91${cleanPhone}`;
+    const { verifyEmailOtp } = await import('@/lib/actions/email-otp');
+    return await verifyEmailOtp(customerEmail, code);
 
-    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-    const twilioAuth = process.env.TWILIO_AUTH_TOKEN;
-    const verifySid = process.env.TWILIO_VERIFY_SERVICE_SID;
 
-    if (!twilioSid || !twilioAuth || !verifySid) {
-      return { success: false, error: 'SMS service not configured.' };
-    }
-
-    const twilioUrl = `https://verify.twilio.com/v2/Services/${verifySid}/VerificationCheck`;
-    const twilioData = new URLSearchParams();
-    twilioData.append('To', e164Phone);
-    twilioData.append('Code', code);
-
-    const response = await fetch(twilioUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${twilioSid}:${twilioAuth}`).toString('base64')}`
-      },
-      body: twilioData.toString(),
-    });
-
-    if (!response.ok) {
-      const respText = await response.text();
-      logger.error('DELIVERY', 'Twilio Verify Check error', { response: respText });
-      try {
-        const errJson = JSON.parse(respText);
-        if (errJson.message) {
-          return { success: false, error: errJson.message };
-        }
-      } catch {}
-      return { success: false, error: 'Failed to verify OTP.' };
-    }
-
-    const result = await response.json();
-
-    if (result.status === 'approved') {
-      logger.info('DELIVERY', 'Delivery Twilio OTP verified', { assignmentId, otpType });
-      return { success: true };
-    } else {
-      return { success: false, error: 'Invalid or expired OTP.' };
-    }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     logger.error('DELIVERY', 'verifyDeliveryTwilioOtp exception', { error: message });

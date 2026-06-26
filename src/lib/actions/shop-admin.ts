@@ -64,7 +64,7 @@ export async function upsertStaff(input: UpsertStaffInput): Promise<ActionResult
     if (!input.email.trim()) {
       return { success: false, error: 'Email is required.' };
     }
-    if (!['technician', 'delivery'].includes(input.role)) {
+    if (!['technician', 'delivery', 'shop_admin'].includes(input.role)) {
       return { success: false, error: 'Invalid staff role.' };
     }
 
@@ -141,8 +141,8 @@ export async function deleteStaff(staffId: string): Promise<ActionResult> {
       return { success: false, error: 'You can only remove staff in your own shop.' };
     }
 
-    // Only allow deleting technicians and delivery staff
-    if (!['technician', 'delivery'].includes(staff.role)) {
+    // Only allow deleting technicians, delivery staff, and shop admins
+    if (!['technician', 'delivery', 'shop_admin'].includes(staff.role)) {
       return { success: false, error: 'Cannot remove users with this role.' };
     }
 
@@ -172,21 +172,18 @@ export async function deleteStaff(staffId: string): Promise<ActionResult> {
       }
     }
 
-    // Delete related records in order
-    await supabase.from('attendance').delete().eq('employee_id', staffId);
-    await supabase.from('salary_config').delete().eq('employee_id', staffId);
-    await supabase.from('technician_details').delete().eq('user_id', staffId);
-    await supabase.from('notifications').delete().eq('recipient_id', staffId);
+    // Instead of deleting the user and their history, revoke their staff privileges
+    const { error: demoteError } = await supabase.from('users').update({
+      role: 'customer',
+      shop_id: null
+    }).eq('id', staffId);
 
-    // Finally delete the user record
-    const { error: deleteError } = await supabase.from('users').delete().eq('id', staffId);
-
-    if (deleteError) {
-      logger.error('SHOP_ADMIN', 'Staff delete failed', { error: deleteError.message });
-      return { success: false, error: `Failed to remove: ${deleteError.message}` };
+    if (demoteError) {
+      logger.error('SHOP_ADMIN', 'Staff role revocation failed', { error: demoteError.message });
+      return { success: false, error: `Failed to revoke access: ${demoteError.message}` };
     }
 
-    logger.info('SHOP_ADMIN', 'Staff deleted permanently', { staffId, name: staff.full_name });
+    logger.info('SHOP_ADMIN', 'Staff access revoked (demoted to customer)', { staffId, name: staff.full_name });
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

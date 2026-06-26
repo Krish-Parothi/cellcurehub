@@ -33,6 +33,7 @@ export default function EwasteTab({ userId }: { userId: string }) {
   const [customDescription, setCustomDescription] = useState('');
   const [conditionDesc, setConditionDesc] = useState('');
   const [address, setAddress] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
   const [photos, setPhotos] = useState<File[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -55,6 +56,9 @@ export default function EwasteTab({ userId }: { userId: string }) {
     setItems((itemsRes.data as any[]) || []);
     setCategories((catsRes.data as EwasteItemCategory[]) || []);
     setTotalCredits(userRes.data?.credits || 0);
+    const saved = localStorage.getItem('cellcurehub_default_address');
+    if (saved) setAddress(saved);
+    if (userRes.data?.email) setContactEmail(userRes.data.email);
   }, [userId]);
 
   const { loading } = useAuthFetch(fetchItems, {
@@ -73,6 +77,7 @@ export default function EwasteTab({ userId }: { userId: string }) {
   const handleSubmit = async () => {
     if (!selectedCategoryId) { toast.error('Please select an e-waste category'); return; }
     if (selectedCategoryId === 'other' && !customDescription.trim()) { toast.error('Please describe your item'); return; }
+    if (!contactEmail.includes('@')) { toast.error('Please provide a valid contact email'); return; }
     if (!address.trim()) { toast.error('Please provide a pickup address'); return; }
     if (photos.length === 0) { toast.error('Please upload at least one photo'); return; }
     setSubmitting(true);
@@ -98,6 +103,7 @@ export default function EwasteTab({ userId }: { userId: string }) {
         customer_id: userId,
         device_description: deviceDesc,
         condition_description: conditionDesc || null,
+        contact_email: contactEmail,
         photos_url: urls.join(',') || null,
         address,
         status: 'pending',
@@ -185,6 +191,11 @@ export default function EwasteTab({ userId }: { userId: string }) {
           <div className="space-y-2">
             <Label className="text-[#1A1A1A]/80 text-sm">Pickup Address *</Label>
             <Textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Full address for pickup..." className="bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00] min-h-[60px]" />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[#1A1A1A]/80 text-sm">Contact Email *</Label>
+            <Input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="Email for updates" className="bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A]" />
           </div>
  
           {/* Photo Upload */}

@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import type { DeliveryAssignment } from '@/lib/types';
 import { CheckCircle, Loader2, Truck, MapPin, Phone, Smartphone, Package, Navigation, Hash } from 'lucide-react';
-import { sendDeliveryTwilioOtp, verifyDeliveryTwilioOtp } from '@/lib/actions/delivery';
+import { sendDeliveryEmailOtp, verifyDeliveryEmailOtp } from '@/lib/actions/delivery';
 
 interface PickupFlowProps {
   assignment: (DeliveryAssignment & { repair?: any; ewaste?: any }) | null;
@@ -63,7 +63,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
   // --- OTP Flow ---
   const sendOtp = async () => {
     setOtpSending(true);
-    const result = await sendDeliveryTwilioOtp(assignment.id, 'pickup');
+    const result = await sendDeliveryEmailOtp(assignment.id, 'pickup');
     if (!result.success) {
       toast.error(result.error || 'Failed to send OTP');
     } else {
@@ -77,7 +77,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
   const verifyOtp = async () => {
     if (attempts >= 3) return;
     setOtpVerifying(true);
-    const result = await verifyDeliveryTwilioOtp(assignment.id, 'pickup', otpInput);
+    const result = await verifyDeliveryEmailOtp(assignment.id, 'pickup', otpInput);
     if (result.success) {
       // Update models
       await supabase.from('delivery_assignments').update({ status: 'picked_up' }).eq('id', assignment.id);
@@ -167,6 +167,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
                   <div className="space-y-1.5 mt-3">
                     <p className="text-sm text-[#1A1A1A] flex items-center gap-2"><MapPin className="w-4 h-4 text-[#1A1A1A]/40" />{isEwaste ? assignment.ewaste?.address : assignment.repair?.address}</p>
                     <p className="text-sm text-[#1A1A1A] flex items-center gap-2"><Phone className="w-4 h-4 text-[#1A1A1A]/40" />{isEwaste ? assignment.ewaste?.customer?.phone : assignment.repair?.customer?.phone}</p>
+                    <p className="text-sm text-[#1A1A1A] flex items-center gap-2"><span className="w-4 text-center">@</span>{isEwaste ? assignment.ewaste?.contact_email : assignment.repair?.contact_email}</p>
                   </div>
                 </div>
               </div>
@@ -183,7 +184,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
                   <p className="text-[#1A1A1A]/60 text-sm mb-6 max-w-sm mx-auto">Send an OTP to the customer's registered mobile number to confirm pickup.</p>
                   <Button onClick={sendOtp} disabled={otpSending} className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white h-11">
                     {otpSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
-                    {otpSending ? 'Sending...' : 'Send OTP to Customer'}
+                    {otpSending ? 'Sending...' : 'Send OTP to Customer Email'}
                   </Button>
                 </div>
               ) : otpVerified ? (

@@ -48,6 +48,7 @@ export default function BookPage() {
   const [issueNotes, setIssueNotes] = useState('');
   const [imei, setImei] = useState('');
   const [phone, setPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
 
@@ -74,6 +75,7 @@ export default function BookPage() {
     const saved = localStorage.getItem('cellcurehub_default_address');
     if (saved) setAddress(saved);
     if (user?.phone) setPhone(user.phone.replace('+91', ''));
+    if (user?.email) setContactEmail(user.email);
   }, [user]);
 
   // Fetch active time slots
@@ -126,7 +128,7 @@ export default function BookPage() {
 
   // Validations
   const step1Valid = selectedDevice !== null || manualModel.trim().length > 0;
-  const step2Valid = repairType && phone.match(/^[6-9]\d{9}$/) && (!imei || imei.length === 15) && (repairType !== 'custom' || customDescription.trim().length > 0);
+  const step2Valid = repairType && phone.match(/^[6-9]\d{9}$/) && contactEmail.includes('@') && (!imei || imei.length === 15) && (repairType !== 'custom' || customDescription.trim().length > 0);
   const step3Valid = pickupType === 'store' || (address.trim().length > 0 && area && timeSlot && preferredDate);
 
   const handleGeolocation = () => {
@@ -149,39 +151,17 @@ export default function BookPage() {
     );
   };
 
-  const handleSendOtp = async () => {
+  const handleSubmitBooking = async () => {
     if (!user) return;
-    setSendingOtp(true);
-    const result = await sendBookingOtp(phone);
-    if (!result.success) {
-      toast.error(result.error);
-    } else {
-      setShowOtp(true);
-      setResendTimer(60);
-      toast.success('Verification code sent');
-    }
-    setSendingOtp(false);
-  };
-
-  const handleVerifyOtpAndSubmit = async () => {
-    if (!user) return;
-    setVerifyingOtp(true);
-    
-    const verifyResult = await verifyBookingOtp(phone, otpCode);
-    if (!verifyResult.success) {
-      toast.error(verifyResult.error);
-      setVerifyingOtp(false);
-      return;
-    }
-
     setSubmitting(true);
     console.debug('[BOOK:SUBMIT] Starting booking...', { userId: user.id, repairType, pickupType });
     try {
       const result = await bookRepair({
         device_id: selectedDevice?.id || null,
-        manual_model: manualModel || null,
+        manual_model: selectedDevice ? null : manualModel,
         imei_number: imei || null,
         phone,
+        contact_email: contactEmail,
         repair_type: repairType,
         custom_repair_description: repairType === 'custom' ? customDescription : null,
         issue_description: issueNotes || `${REPAIR_TYPE_OPTIONS.find(r => r.value === repairType)?.label || repairType} repair`,
@@ -207,7 +187,6 @@ export default function BookPage() {
       toast.error('Failed to create booking. Please try again.');
     } finally {
       setSubmitting(false);
-      setVerifyingOtp(false);
     }
   };
 
@@ -320,17 +299,21 @@ export default function BookPage() {
                       </div>
                     )}
 
-                    {/* Phone Number & IMEI */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Contact Info & IMEI */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label className="text-[#1A1A1A]/80 text-sm">Phone Number *</Label>
                         <Input type="tel" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile number" className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00]" />
                         {phone.length > 0 && !/^[6-9]\d{9}$/.test(phone) && <p className="text-xs text-red-500">Invalid phone number</p>}
                       </div>
                       <div className="space-y-2">
+                        <Label className="text-[#1A1A1A]/80 text-sm">Contact Email *</Label>
+                        <Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="Email for updates" className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00]" />
+                        {contactEmail.length > 0 && !contactEmail.includes('@') && <p className="text-xs text-red-500">Invalid email</p>}
+                      </div>
+                      <div className="space-y-2">
                         <Label className="text-[#1A1A1A]/80 text-sm">IMEI Number (Optional)</Label>
                         <Input type="text" maxLength={15} value={imei} onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI number" className="bg-white border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus-visible:ring-[#FF5C00] font-mono" />
-                        <p className="text-xs text-[#1A1A1A]/40">Dial *#06# on your phone to find IMEI</p>
                         {imei.length > 0 && imei.length !== 15 && <p className="text-xs text-red-500">IMEI must be exactly 15 digits</p>}
                       </div>
                     </div>
@@ -478,8 +461,8 @@ export default function BookPage() {
 
                     <div className="flex justify-between pt-2">
                       <Button variant="outline" onClick={() => setStep(1)} className="border-[#E8E4DF] bg-white hover:bg-[#F7F7F5] text-[#1A1A1A]"><ChevronLeft className="w-4 h-4 mr-1" /> Back</Button>
-                      <Button disabled={!step3Valid || sendingOtp || submitting} onClick={handleSendOtp} className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold px-6">
-                        {sendingOtp ? (<span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Sending OTP...</span>) : (<span className="flex items-center gap-2"><Check className="w-4 h-4" /> Confirm Booking</span>)}
+                      <Button disabled={!step3Valid || submitting} onClick={handleSubmitBooking} className="bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold px-6">
+                        {submitting ? (<span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Booking...</span>) : (<span className="flex items-center gap-2"><Check className="w-4 h-4" /> Confirm Booking</span>)}
                       </Button>
                     </div>
                   </CardContent>
@@ -489,31 +472,7 @@ export default function BookPage() {
           </AnimatePresence>
         </div>
 
-        <AnimatePresence>
-          {showOtp && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white border border-[#E8E4DF] p-6 rounded-2xl w-full max-w-sm shadow-xl">
-                <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">Verify Phone Number</h3>
-                <p className="text-sm text-[#1A1A1A]/60 mb-6">Enter the 6-digit code sent to +91 {phone}</p>
-                
-                <div className="space-y-4">
-                  <Input type="text" maxLength={6} value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} placeholder="000000" className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" />
-                  
-                  <Button disabled={otpCode.length !== 6 || verifyingOtp || submitting} onClick={handleVerifyOtpAndSubmit} className="w-full h-12 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold text-lg">
-                    {verifyingOtp || submitting ? 'Verifying & Booking...' : 'Verify & Book'}
-                  </Button>
-                  
-                  <div className="flex justify-between items-center text-sm">
-                    <button onClick={() => setShowOtp(false)} className="text-[#1A1A1A]/50 hover:text-[#1A1A1A]">Cancel</button>
-                    <button disabled={resendTimer > 0 || sendingOtp} onClick={handleSendOtp} className={`${resendTimer > 0 ? 'text-[#1A1A1A]/30' : 'text-[#FF5C00] hover:text-[#FF5C00]/80'}`}>
-                      {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
       </main>
       <Footer />
     </div>

@@ -2,24 +2,37 @@
 
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 // Use service role key to bypass RLS for email_otps table
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! // Fallback to anon key if service key not configured, but it will fail if RLS is on and service key is missing
+  process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const MAILJET_API_KEY = process.env.MAILJET_API_KEY;
-const MAILJET_SECRET_KEY = process.env.MAILJET_SECRET_KEY;
-const MAILJET_SENDER_EMAIL = process.env.MAILJET_SENDER_EMAIL || 'noreply@cellcurehub.com';
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
+const SMTP_USER = process.env.GMAIL_USER || process.env.SMTP_USER;
+const SMTP_PASS = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+const SMTP_FROM = process.env.SMTP_FROM || 'noreply@cellcurehub.com';
+
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_PORT === 465, // true for 465, false for other ports
+  auth: {
+    user: SMTP_USER,
+    pass: SMTP_PASS,
+  },
+});
 
 /**
- * Generates a 6-digit OTP, stores it in DB, and sends via Mailjet
+ * Generates a 6-digit OTP, stores it in DB, and sends via Nodemailer
  */
 export async function sendEmailOtp(email: string) {
   try {
-    if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
-      console.warn('Mailjet credentials not found in .env, simulating OTP send.');
+    if (!SMTP_USER || !SMTP_PASS) {
+      console.warn('SMTP credentials not found in .env, simulating OTP send.');
       // Fallback for development if keys aren't set
       const devOtp = '123456';
       await storeOtpInDb(email, devOtp);
@@ -31,51 +44,28 @@ export async function sendEmailOtp(email: string) {
     // Store in DB first
     await storeOtpInDb(email, otpCode);
 
-    // Send via Mailjet
-    const authHeader = 'Basic ' + Buffer.from(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`).toString('base64');
-    
-    const response = await fetch('https://api.mailjet.com/v3.1/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader
-      },
-      body: JSON.stringify({
-        Messages: [
-          {
-            From: {
-              Email: MAILJET_SENDER_EMAIL,
-              Name: 'CellCureHub'
-            },
-            To: [
-              {
-                Email: email
-              }
-            ],
-            Subject: 'Your CellCureHub Verification Code',
-            TextPart: `Welcome to CellCureHub! Your verification code is: ${otpCode}. It expires in 10 minutes.`,
-            HTMLPart: `
-              <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px;">
-                <h2 style="color: #FF5C00; text-align: center;">CellCureHub</h2>
-                <p>Hello,</p>
-                <p>Welcome to CellCureHub! Use the verification code below to complete your registration:</p>
-                <div style="background-color: #F7F7F5; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
-                  <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1A1A1A;">${otpCode}</span>
-                </div>
-                <p style="font-size: 12px; color: #666;">This code will expire in 10 minutes.</p>
-              </div>
-            `
-          }
-        ]
-      })
+    // Send via Nodemailer
+    const htmlContent = `
+      <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px;">
+        <h2 style="color: #FF5C00; text-align: center;">CellCureHub</h2>
+        <p>Hello,</p>
+        <p>Welcome to CellCureHub! Use the verification code below:</p>
+        <div style="background-color: #F7F7F5; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+          <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1A1A1A;">${otpCode}</span>
+        </div>
+        <p style="font-size: 12px; color: #666;">This code will expire in 10 minutes.</p>
+      </div>
+    `;
+
+    const info = await transporter.sendMail({
+      from: `"CellCureHub" <${SMTP_FROM}>`,
+      to: email,
+      subject: 'Your CellCureHub Verification Code',
+      text: `Your verification code is: ${otpCode}. It expires in 10 minutes.`,
+      html: htmlContent,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Mailjet API Error:', errorData);
-      return { success: false, error: 'Failed to send verification email' };
-    }
-
+    console.log('Message sent: %s', info.messageId);
     return { success: true };
 
   } catch (err: any) {

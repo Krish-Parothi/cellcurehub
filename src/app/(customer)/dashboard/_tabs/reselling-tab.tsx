@@ -36,6 +36,7 @@ export default function ResellingTab({ userId }: { userId: string }) {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [manualModel, setManualModel] = useState('');
   const [imei, setImei] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
   const [condition, setCondition] = useState('');
   const [conditionDesc, setConditionDesc] = useState('');
   const [address, setAddress] = useState('');
@@ -51,6 +52,13 @@ export default function ResellingTab({ userId }: { userId: string }) {
     realtimeTable: 'ewaste',
     realtimeFilter: `customer_id=eq.${userId}`
   });
+
+  // Auto-fill defaults
+  useEffect(() => {
+    const saved = localStorage.getItem('cellcurehub_default_address');
+    if (saved) setAddress(saved);
+    if (user?.email) setContactEmail(user.email);
+  }, [user]);
 
   const handleDeviceSelect = (device: Device | null, manual?: string) => {
     setSelectedDevice(device);
@@ -68,6 +76,7 @@ export default function ResellingTab({ userId }: { userId: string }) {
   const handleSubmit = async () => {
     if (!condition) { toast.error('Please select device condition'); return; }
     if (!imei.match(/^\d{15}$/)) { toast.error('IMEI must be 15 digits'); return; }
+    if (!contactEmail.includes('@')) { toast.error('Please provide a valid contact email'); return; }
     if (!address.trim()) { toast.error('Please provide a pickup address'); return; }
     setSubmitting(true);
     try {
@@ -93,6 +102,7 @@ export default function ResellingTab({ userId }: { userId: string }) {
         device_description: deviceDesc,
         device_id: selectedDevice?.id || null,
         imei_number: imei,
+        contact_email: contactEmail,
         condition,
         condition_description: conditionDesc || null,
         photos_url: photosUrl || null,
@@ -131,11 +141,19 @@ export default function ResellingTab({ userId }: { userId: string }) {
           Get a great price for your working phone. Submit details and photos, and we'll make you an offer.
         </p>
         <div className="space-y-5">
-          <DeviceSelector onSelect={handleDeviceSelect} showManualOption selectedDevice={selectedDevice} selectedManualModel={manualModel} />
- 
-          <div className="space-y-2">
-            <Label className="text-[#1A1A1A]/80 text-sm">IMEI Number *</Label>
-            <Input type="text" maxLength={15} value={imei} onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI" className="bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] placeholder:text-[#1A1A1A]/30 focus-visible:ring-[#FF5C00] font-mono max-w-sm" />
+          <div className="bg-white border border-[#E8E4DF] rounded-xl p-4 sm:p-6 space-y-4">
+            <h3 className="font-semibold text-[#1A1A1A]">Device Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[#1A1A1A]/80 text-sm">IMEI Number *</Label>
+                <Input type="text" maxLength={15} value={imei} onChange={e => setImei(e.target.value.replace(/\D/g, ''))} placeholder="15-digit IMEI" className="font-mono bg-white border-[#E8E4DF]" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#1A1A1A]/80 text-sm">Contact Email *</Label>
+                <Input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="Email for updates" className="bg-white border-[#E8E4DF]" />
+              </div>
+            </div>
+            <DeviceSelector onSelect={handleDeviceSelect} showManualOption selectedDevice={selectedDevice} selectedManualModel={manualModel} />
           </div>
  
           <div className="space-y-2">

@@ -11,7 +11,6 @@ import { ShoppingCart, Trash2, Plus, Minus, Package, IndianRupee, CheckCircle2, 
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { sendBookingOtp, verifyBookingOtp } from '@/lib/actions/otp';
 import { createStoreOrder } from '@/lib/actions/store-orders';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(n);
@@ -21,11 +20,9 @@ export default function CheckoutTab() {
   const { items, cartCount, cartTotal, updateQty, removeFromCart, clearCart, loading, refetch } = useCart();
   const [placed, setPlaced] = useState(false);
   
-  const [step, setStep] = useState<'cart' | 'details' | 'otp'>('cart');
+  const [step, setStep] = useState<'cart' | 'details'>('cart');
   const [formData, setFormData] = useState({ fullName: '', phone: '', address: '' });
-  const [otpCode, setOtpCode] = useState('');
-  const [sendingOtp, setSendingOtp] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -42,7 +39,7 @@ export default function CheckoutTab() {
     setStep('details');
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.phone.length !== 10) {
       toast.error('Please enter a valid 10-digit phone number');
@@ -53,30 +50,7 @@ export default function CheckoutTab() {
       return;
     }
     
-    setSendingOtp(true);
-    const result = await sendBookingOtp(formData.phone);
-    setSendingOtp(false);
-    
-    if (!result.success) {
-      toast.error(result.error || 'Failed to send OTP');
-      return;
-    }
-    
-    toast.success('OTP sent to your phone');
-    setStep('otp');
-  };
-
-  const handleVerifyAndPlaceOrder = async () => {
-    if (otpCode.length !== 6) return;
-    setVerifyingOtp(true);
-    
-    const verifyResult = await verifyBookingOtp(formData.phone, otpCode);
-    if (!verifyResult.success) {
-      toast.error(verifyResult.error || 'Invalid OTP');
-      setVerifyingOtp(false);
-      return;
-    }
-
+    setPlacingOrder(true);
     const orderResult = await createStoreOrder({
       full_name: formData.fullName,
       phone: `+91${formData.phone}`,
@@ -84,7 +58,7 @@ export default function CheckoutTab() {
       total_amount: cartTotal,
     });
 
-    setVerifyingOtp(false);
+    setPlacingOrder(false);
 
     if (orderResult.success) {
       // Save address for future
@@ -122,12 +96,12 @@ export default function CheckoutTab() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <div className="flex items-center gap-4 mb-6">
         {step !== 'cart' && (
-          <Button variant="ghost" size="sm" onClick={() => setStep(step === 'otp' ? 'details' : 'cart')} className="text-[#1A1A1A]/60">
+          <Button variant="ghost" size="sm" onClick={() => setStep('cart')} className="text-[#1A1A1A]/60">
             ← Back
           </Button>
         )}
         <h1 className="text-2xl font-bold text-[#1A1A1A] hidden lg:block">
-          {step === 'cart' ? 'Your Cart' : step === 'details' ? 'Delivery Details' : 'Verify OTP'}
+          {step === 'cart' ? 'Your Cart' : 'Delivery Details'}
         </h1>
       </div>
 
@@ -192,7 +166,7 @@ export default function CheckoutTab() {
             )}
 
             {step === 'details' && (
-              <form id="details-form" onSubmit={handleSendOtp} className="bg-white border border-[#E8E4DF] rounded-2xl p-6 space-y-4">
+              <form id="details-form" onSubmit={handlePlaceOrder} className="bg-white border border-[#E8E4DF] rounded-2xl p-6 space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-[#1A1A1A]/70">Full Name</Label>
                   <div className="relative">
@@ -217,25 +191,7 @@ export default function CheckoutTab() {
               </form>
             )}
 
-            {step === 'otp' && (
-              <div className="bg-white border border-[#E8E4DF] rounded-2xl p-8 text-center max-w-md mx-auto">
-                <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">Verify Mobile Number</h3>
-                <p className="text-sm text-[#1A1A1A]/60 mb-6">Enter the 6-digit code sent to +91 {formData.phone}</p>
-                <div className="space-y-6">
-                  <Input 
-                    type="text" 
-                    maxLength={6} 
-                    value={otpCode} 
-                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} 
-                    placeholder="000000" 
-                    className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" 
-                  />
-                  <Button disabled={otpCode.length !== 6 || verifyingOtp} onClick={handleVerifyAndPlaceOrder} className="w-full h-12 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold text-lg">
-                    {verifyingOtp ? 'Verifying...' : 'Verify & Place Order'}
-                  </Button>
-                </div>
-              </div>
-            )}
+
 
           </div>
 
@@ -267,8 +223,8 @@ export default function CheckoutTab() {
                 </Button>
               )}
               {step === 'details' && (
-                <Button form="details-form" type="submit" disabled={sendingOtp} className="w-full mt-6 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold h-12 text-base">
-                  {sendingOtp ? 'Sending OTP...' : 'Send OTP & Continue'}
+                <Button form="details-form" type="submit" disabled={placingOrder} className="w-full mt-6 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold h-12 text-base">
+                  {placingOrder ? 'Placing Order...' : 'Place Order'}
                 </Button>
               )}
 

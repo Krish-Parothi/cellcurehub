@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { DIAGNOSTIC_CHECKLIST_ITEMS, QA_CHECKLIST_ITEMS, REPAIR_STATUS_LABELS } from '@/lib/types';
 import type { RcaReport, RepairStatus } from '@/lib/types';
-import { Camera, Mic, Plus, Search, Timer, Smartphone, CheckCircle, AlertTriangle, Package, Loader2, IndianRupee, Sparkles } from 'lucide-react';
+import { Camera, Mic, MicOff, Plus, Search, Timer, Smartphone, CheckCircle, AlertTriangle, Package, Loader2, IndianRupee, Sparkles } from 'lucide-react';
 import { submitRcaReport, markRepairComplete } from '@/lib/actions/technician';
 import { enhanceTechnicianNotes } from '@/lib/actions/ai';
 import { updateRepairStatus } from '@/lib/actions/repairs';
@@ -52,8 +52,10 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
   const [submittingRca, setSubmittingRca] = useState(false);
   const [enhancingAi, setEnhancingAi] = useState(false);
   const rcaForm = useForm({ resolver: zodResolver(rcaSchema), defaultValues: { technician_notes: '' } });
-  const isRecording = useRef(false);
-
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const manualStopRef = useRef(false);
+  const originalNotesRef = useRef('');
   // Section E - QA
   const [qaChecks, setQaChecks] = useState<Record<string, boolean>>({});
 
@@ -68,8 +70,17 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
   const loadRcaReport = async () => {
     if (!repair) return;
     setRcaLoading(true);
-    const { data } = await supabase.from('rca_reports').select('*').eq('repair_id', repair.id).maybeSingle();
+    const { data } = await supabase.from('rca_reports').select('*').eq('repair_id', repair.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
     setRcaReport((data as RcaReport) || null);
+    
+    if (data && repair.status === 'diagnostic') {
+      if (data.technician_notes) {
+        rcaForm.setValue('technician_notes', data.technician_notes);
+      }
+      if (data.diagnostic_checklist) {
+        setDiagnosticChecks(data.diagnostic_checklist);
+      }
+    }
     setRcaLoading(false);
   };
 
@@ -78,23 +89,67 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
 
   // --- RCA Logic ---
   const toggleSpeech = () => {
+    if (isRecording) {
+      manualStopRef.current = true;
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) { toast.error('Speech recognition not supported in this browser'); return; }
     
-    if (isRecording.current) return;
-    
+    manualStopRef.current = false;
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognitionRef.current = recognition;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-IN'; // For Hinglish
     
-    recognition.onstart = () => { isRecording.current = true; toast.success('Listening...'); };
-    recognition.onresult = (event: any) => {
-      const text = event.results[0][0].transcript;
-      const current = rcaForm.getValues('technician_notes');
-      rcaForm.setValue('technician_notes', current ? `${current} ${text}` : text);
+    recognition.onstart = () => { 
+      setIsRecording(true); 
+      originalNotesRef.current = rcaForm.getValues('technician_notes') || '';
+      toast.success('Listening... click stop when done.'); 
     };
-    recognition.onerror = () => { isRecording.current = false; toast.error('Speech recognition failed'); };
-    recognition.onend = () => { isRecording.current = false; };
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        originalNotesRef.current = originalNotesRef.current ? `${originalNotesRef.current} ${finalTranscript}` : finalTranscript;
+      }
+      
+      const displayTranscript = originalNotesRef.current 
+        ? `${originalNotesRef.current} ${interimTranscript}` 
+        : interimTranscript;
+        
+      rcaForm.setValue('technician_notes', displayTranscript.trim());
+    };
+    recognition.onerror = (e: any) => { 
+      if (e.error !== 'no-speech') {
+        setIsRecording(false); 
+        toast.error('Speech recognition failed'); 
+      }
+    };
+    recognition.onend = () => { 
+      if (!manualStopRef.current && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          setIsRecording(false);
+        }
+      } else {
+        setIsRecording(false); 
+      }
+    };
     
     recognition.start();
   };
@@ -219,6 +274,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
                 <span className="text-[#1A1A1A]/40 text-xs block mb-1">Customer</span>
                 <p className="text-[#1A1A1A] font-semibold">{repair.customer?.full_name}</p>
                 <p className="text-[#1A1A1A]/60">{repair.customer?.phone}</p>
+                {repair.contact_email && <p className="text-[#1A1A1A]/60 text-xs mt-1">{repair.contact_email}</p>}
               </div>
               <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg">
                 <span className="text-[#1A1A1A]/40 text-xs block mb-1">Status</span>
@@ -248,7 +304,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2"><Search className="w-4 h-4 text-[#FF5C00]"/> RCA Report</h3>
             
-            {rcaLoading ? <Skeleton className="h-20 bg-[#1A1A1A]/5" /> : rcaReport ? (
+            {rcaLoading ? <Skeleton className="h-20 bg-[#1A1A1A]/5" /> : (rcaReport && repair.status !== 'diagnostic') ? (
               <div className="bg-[#F7F7F5] p-4 rounded-lg border border-[#E8E4DF]">
                 <p className="text-emerald-600 font-semibold text-sm mb-2">{rcaReport.admin_confirmed ? 'RCA Confirmed by Admin' : 'RCA submitted — awaiting admin confirmation'}</p>
                 <p className="text-[#1A1A1A]/60 text-xs mb-2">Technician Notes:</p>
@@ -256,7 +312,14 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
               </div>
             ) : (
               !disableStatusChange && (
-                <form onSubmit={rcaForm.handleSubmit(submitRca)} className="space-y-4">
+                <div className="space-y-4">
+                  {rcaReport?.admin_notes && repair.status === 'diagnostic' && (
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                      <p className="text-red-800 font-bold text-sm mb-1 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> RCA Revision Requested</p>
+                      <p className="text-red-700 text-xs">Admin Note: {rcaReport.admin_notes}</p>
+                    </div>
+                  )}
+                  <form onSubmit={rcaForm.handleSubmit(submitRca)} className="space-y-4">
                   <div className="bg-[#F7F7F5] p-4 rounded-lg border border-[#E8E4DF]">
                     <Label className="text-[#1A1A1A]/80 mb-2 block">Diagnostic Checklist (Min 3)</Label>
                     <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
@@ -288,7 +351,8 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
                           {enhancingAi ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />} AI Enhance
                         </Button>
                         <Button type="button" variant="ghost" size="sm" onClick={toggleSpeech} className="h-6 text-xs text-[#FF5C00] hover:text-[#e05200] hover:bg-[#FF5C00]/10 px-2 font-semibold">
-                          <Mic className="w-3 h-3 mr-1" /> Dictate
+                          {isRecording ? <MicOff className="w-3 h-3 mr-1 animate-pulse text-red-500" /> : <Mic className="w-3 h-3 mr-1" />} 
+                          {isRecording ? 'Stop' : 'Dictate'}
                         </Button>
                       </div>
                     </div>
@@ -299,6 +363,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
                     {submittingRca ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Submit RCA Report
                   </Button>
                 </form>
+                </div>
               )
             )}
           </section>

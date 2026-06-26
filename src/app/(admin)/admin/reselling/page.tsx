@@ -243,6 +243,7 @@ export default function AdminResellingPage() {
                   <p className="text-xs text-[#1A1A1A]/50 font-medium mb-1">Customer</p>
                   <p className="text-[#1A1A1A] font-bold">{detailsDialog.item.customer?.full_name}</p>
                   <p className="text-[#1A1A1A]/70 text-sm">{detailsDialog.item.customer?.phone}</p>
+                  {detailsDialog.item.contact_email && <p className="text-[#1A1A1A]/70 text-sm">{detailsDialog.item.contact_email}</p>}
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-[#E8E4DF]">
                   <p className="text-xs text-[#1A1A1A]/50 font-medium mb-1">Device & IMEI</p>

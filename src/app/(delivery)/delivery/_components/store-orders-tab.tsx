@@ -61,7 +61,7 @@ export default function StoreOrdersTab() {
   });
 
   const handleOutForDelivery = async (order: StoreOrder) => {
-    const result = await markStoreOrderOutForDelivery(order.id, order.phone);
+    const result = await markStoreOrderOutForDelivery(order.id);
     if (result.success) {
       toast.success('Marked as Out for Delivery. OTP sent to customer.');
       setOtpModalOpen(true);
@@ -79,7 +79,7 @@ export default function StoreOrdersTab() {
     }
 
     setIsVerifying(true);
-    const result = await verifyStoreOrderDeliveryOtp(selectedOrder.id, selectedOrder.phone, otpCode);
+    const result = await verifyStoreOrderDeliveryOtp(selectedOrder.id, otpCode);
     setIsVerifying(false);
 
     if (result.success) {
@@ -95,7 +95,7 @@ export default function StoreOrdersTab() {
   const handleResendOtp = async () => {
     if (!selectedOrder) return;
     toast.loading('Resending OTP...');
-    const result = await markStoreOrderOutForDelivery(selectedOrder.id, selectedOrder.phone);
+    const result = await markStoreOrderOutForDelivery(selectedOrder.id);
     toast.dismiss();
     if (result.success) {
       toast.success('OTP resent successfully!');
@@ -220,7 +220,7 @@ export default function StoreOrdersTab() {
               Verify Delivery OTP
             </DialogTitle>
             <DialogDescription className="text-[#1A1A1A]/60 text-base">
-              Ask the customer for the 6-digit OTP sent to their mobile number ({selectedOrder?.phone}).
+              Ask the customer for the 6-digit OTP sent to their email address.
             </DialogDescription>
           </DialogHeader>
 

@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/auth-context';
 import type { DeliveryAssignment, Invoice } from '@/lib/types';
 import { Package, CheckCircle, Loader2, Hash, Phone, MapPin, Smartphone, CreditCard, Banknote, IndianRupee, Truck, Navigation } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { sendDeliveryTwilioOtp, verifyDeliveryTwilioOtp } from '@/lib/actions/delivery';
+import { sendDeliveryEmailOtp, verifyDeliveryEmailOtp } from '@/lib/actions/delivery';
 
 interface DropoffFlowProps {
   assignment: (DeliveryAssignment & { repair: any; invoice: any }) | null;
@@ -35,6 +35,14 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
   const [attempts, setAttempts] = useState(0);
   const [resendTimer, setResendTimer] = useState(0);
 
+  useEffect(() => {
+    if (assignment?.id) {
+      if (sessionStorage.getItem(`otp_sent_${assignment.id}`)) {
+        setOtpSent(true);
+      }
+    }
+  }, [assignment?.id]);
+
   // Payment
   const [cashAmount, setCashAmount] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -48,7 +56,12 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
           setPaymentDone(true);
         }
       } else {
-        setOtpSent(false); setOtpInput(''); setOtpVerified(false);
+        if (assignment?.id && sessionStorage.getItem(`otp_sent_${assignment.id}`)) {
+          setOtpSent(true);
+        } else {
+          setOtpSent(false);
+        }
+        setOtpInput(''); setOtpVerified(false);
         setAttempts(0); setCashAmount(''); setPaymentDone(false); setResendTimer(0);
       }
     }
@@ -73,13 +86,16 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
 
   const sendOtp = async () => {
     setOtpSending(true);
-    const result = await sendDeliveryTwilioOtp(assignment.id, 'delivery');
+    const result = await sendDeliveryEmailOtp(assignment.id, 'delivery');
     if (!result.success) {
       toast.error(result.error || 'Failed to send OTP');
     } else {
       toast.success('OTP sent to customer');
       setOtpSent(true);
-      setResendTimer(60);
+      if (assignment?.id) {
+        sessionStorage.setItem(`otp_sent_${assignment.id}`, 'true');
+      }
+      setResendTimer(30);
     }
     setOtpSending(false);
   };
@@ -87,7 +103,7 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
   const verifyOtp = async () => {
     if (attempts >= 3) return;
     setOtpVerifying(true);
-    const result = await verifyDeliveryTwilioOtp(assignment.id, 'delivery', otpInput);
+    const result = await verifyDeliveryEmailOtp(assignment.id, 'delivery', otpInput);
     if (result.success) {
       await supabase.from('repairs').update({
         status: 'delivered', delivered_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -162,6 +178,7 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
           <a href={`tel:${repair.customer?.phone}`} className="text-[#FF5C00] flex items-center gap-1.5 font-medium hover:underline">
             <Phone className="w-3 h-3" />{repair.customer?.phone}
           </a>
+          {repair.contact_email && <p className="text-[#1A1A1A]/60 flex items-center gap-1.5"><span className="w-3 h-3 flex items-center justify-center font-bold text-xs">@</span>{repair.contact_email}</p>}
           <p className="text-[#1A1A1A]/60 flex items-center gap-1.5"><MapPin className="w-3 h-3 text-[#1A1A1A]/40" />{repair.address}</p>
           <p className="text-[#1A1A1A]/60 flex items-center gap-1.5">
             <Smartphone className="w-3 h-3 text-[#1A1A1A]/40" />
@@ -210,7 +227,7 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
               <Button onClick={sendOtp} disabled={otpSending || otpSent}
                 variant="outline" className="w-full border-blue-500/30 text-blue-600 hover:bg-blue-500/10 font-semibold">
                 {otpSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                {otpSent ? 'OTP Sent ✓' : 'Send OTP to Customer'}
+                {otpSent ? 'OTP Sent ✓' : 'Send OTP to Customer Email'}
               </Button>
 
               {otpSent && attempts < 3 && (

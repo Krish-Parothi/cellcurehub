@@ -8,20 +8,27 @@ import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { useAuth } from '@/lib/auth-context';
 import {
-  LayoutDashboard, Wrench, Users, DollarSign, Smartphone,
-  BarChart3, UserCircle, Store, Menu, X, Truck, Activity, Package
+  LayoutDashboard, Wrench, Users, DollarSign, Smartphone, Ticket,
+  BarChart3, UserCircle, Store, Menu, X, Truck, Activity, Package, Recycle, ShoppingCart, Clock, Tags, History as HistoryIcon
 } from 'lucide-react';
 
 const ADMIN_NAV_ITEMS = [
   { href: '/admin', icon: LayoutDashboard, label: 'Command Center' },
+  { href: '/admin/tickets', icon: Ticket, label: 'Tickets' },
   { href: '/admin/repairs', icon: Wrench, label: 'Repairs' },
+  { href: '/admin/history', icon: HistoryIcon, label: 'History' },
+  { href: '/admin/shop', icon: ShoppingCart, label: 'Store Inventory' },
+  { href: '/admin/store-orders', icon: Package, label: 'Store Orders' },
+  { href: '/admin/ewaste', icon: Recycle, label: 'E-Waste' },
+  { href: '/admin/ewaste-categories', icon: Tags, label: 'E-Waste Categories' },
+  { href: '/admin/reselling', icon: Smartphone, label: 'Phone Reselling' },
   { href: '/admin/staff', icon: Users, label: 'Staff' },
   { href: '/admin/pricing', icon: DollarSign, label: 'Pricing' },
   { href: '/admin/devices', icon: Smartphone, label: 'Devices' },
   { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { href: '/admin/customers', icon: UserCircle, label: 'Customers' },
   { href: '/admin/shops', icon: Store, label: 'Shops' },
-  { href: '/admin/store-orders', icon: Package, label: 'Store Orders' },
+  { href: '/admin/timeslots', icon: Clock, label: 'Time Slots' },
   { href: '/technician', icon: Activity, label: 'Tech Dashboard' },
   { href: '/delivery', icon: Truck, label: 'Delivery Dashboard' },
 ];

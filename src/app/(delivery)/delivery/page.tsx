@@ -62,12 +62,13 @@ export default function DeliveryDashboard() {
         .eq('scheduled_date', today)
         .neq('status', 'delivered')
         .neq('status', 'returned')
+        .neq('status', 'at_store')
         .order('created_at', { ascending: true }),
       supabase
         .from('delivery_assignments')
         .select(ASSIGNMENT_SELECT)
         .eq('delivery_boy_id', authUser.id)
-        .in('status', ['delivered', 'returned'])
+        .in('status', ['delivered', 'returned', 'at_store'])
         .order('scheduled_date', { ascending: false })
         .limit(50),
     ]);
