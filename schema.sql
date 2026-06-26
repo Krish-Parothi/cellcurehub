@@ -54,6 +54,7 @@ CREATE TABLE public.repairs (
   sla_deadline timestamp with time zone,
   sla_extended boolean DEFAULT false,
   sla_extension_reason text,
+  contact_email text,
   CONSTRAINT repairs_pkey PRIMARY KEY (id),
   CONSTRAINT repairs_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.users(id),
   CONSTRAINT repairs_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id),
@@ -71,6 +72,7 @@ CREATE TABLE public.repair_timeline (
   CONSTRAINT repair_timeline_pkey PRIMARY KEY (id),
   CONSTRAINT repair_timeline_repair_id_fkey FOREIGN KEY (repair_id) REFERENCES public.repairs(id),
   CONSTRAINT repair_timeline_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id)
+);
 CREATE TABLE public.invoices (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   repair_id uuid NOT NULL,
@@ -105,6 +107,7 @@ CREATE TABLE public.ewaste (
   address text,
   ewaste_category_id uuid,
   category text DEFAULT 'ewaste'::text CHECK (category = ANY (ARRAY['ewaste'::text, 'resell'::text])),
+  contact_email text,
   CONSTRAINT ewaste_pkey PRIMARY KEY (id),
   CONSTRAINT ewaste_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.users(id),
   CONSTRAINT ewaste_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id),
@@ -309,77 +312,45 @@ CREATE TABLE public.ewaste_categories (
   sort_order integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT ewaste_categories_pkey PRIMARY KEY (id)
-);C R E A T E   T A B L E   p u b l i c . s t o r e _ o r d e r s   (  
-     i d   u u i d   N O T   N U L L   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
-     c u s t o m e r _ i d   u u i d   N O T   N U L L ,  
-     f u l l _ n a m e   t e x t   N O T   N U L L ,  
-     p h o n e   t e x t   N O T   N U L L ,  
-     a d d r e s s   t e x t   N O T   N U L L ,  
-     t o t a l _ a m o u n t   n u m e r i c   N O T   N U L L   D E F A U L T   0 ,  
-     s t a t u s   t e x t   N O T   N U L L   D E F A U L T   ' p e n d i n g ' : : t e x t   C H E C K   ( s t a t u s   =   A N Y   ( A R R A Y [ ' p e n d i n g ' : : t e x t ,   ' d r i v e r _ a s s i g n e d ' : : t e x t ,   ' d e l i v e r e d ' : : t e x t ,   ' c a n c e l l e d ' : : t e x t ] ) ) ,  
-     d e l i v e r y _ b o y _ i d   u u i d ,  
-     c r e a t e d _ a t   t i m e s t a m p   w i t h   t i m e   z o n e   D E F A U L T   n o w ( ) ,  
-     C O N S T R A I N T   s t o r e _ o r d e r s _ p k e y   P R I M A R Y   K E Y   ( i d ) ,  
-     C O N S T R A I N T   s t o r e _ o r d e r s _ c u s t o m e r _ i d _ f k e y   F O R E I G N   K E Y   ( c u s t o m e r _ i d )   R E F E R E N C E S   p u b l i c . u s e r s ( i d ) ,  
-     C O N S T R A I N T   s t o r e _ o r d e r s _ d e l i v e r y _ b o y _ i d _ f k e y   F O R E I G N   K E Y   ( d e l i v e r y _ b o y _ i d )   R E F E R E N C E S   p u b l i c . u s e r s ( i d )  
- ) ;  
-  
- C R E A T E   T A B L E   p u b l i c . s t o r e _ o r d e r _ i t e m s   (  
-     i d   u u i d   N O T   N U L L   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
-     o r d e r _ i d   u u i d   N O T   N U L L ,  
-     s h o p _ i t e m _ i d   u u i d   N O T   N U L L ,  
-     q u a n t i t y   i n t e g e r   N O T   N U L L   D E F A U L T   1 ,  
-     p r i c e _ a t _ p u r c h a s e   n u m e r i c   N O T   N U L L   D E F A U L T   0 ,  
-     C O N S T R A I N T   s t o r e _ o r d e r _ i t e m s _ p k e y   P R I M A R Y   K E Y   ( i d ) ,  
-     C O N S T R A I N T   s t o r e _ o r d e r _ i t e m s _ o r d e r _ i d _ f k e y   F O R E I G N   K E Y   ( o r d e r _ i d )   R E F E R E N C E S   p u b l i c . s t o r e _ o r d e r s ( i d )   O N   D E L E T E   C A S C A D E ,  
-     C O N S T R A I N T   s t o r e _ o r d e r _ i t e m s _ s h o p _ i t e m _ i d _ f k e y   F O R E I G N   K E Y   ( s h o p _ i t e m _ i d )   R E F E R E N C E S   p u b l i c . s h o p _ i t e m s ( i d )  
- ) ;  
-  
- - -   E n a b l e   R L S  
- A L T E R   T A B L E   p u b l i c . s t o r e _ o r d e r s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
- A L T E R   T A B L E   p u b l i c . s t o r e _ o r d e r _ i t e m s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
-  
- - -   P o l i c i e s   f o r   s t o r e _ o r d e r s  
- C R E A T E   P O L I C Y   " A d m i n   c a n   d o   e v e r y t h i n g   o n   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   A L L   T O   a u t h e n t i c a t e d   U S I N G   (  
-     ( S E L E C T   r o l e   F R O M   p u b l i c . u s e r s   W H E R E   i d   =   a u t h . u i d ( ) )   =   ' a d m i n '  
- ) ;  
-  
- C R E A T E   P O L I C Y   " C u s t o m e r s   c a n   v i e w   o w n   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   S E L E C T   T O   a u t h e n t i c a t e d   U S I N G   (  
-     c u s t o m e r _ i d   =   a u t h . u i d ( )  
- ) ;  
-  
- C R E A T E   P O L I C Y   " C u s t o m e r s   c a n   c r e a t e   o w n   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   I N S E R T   T O   a u t h e n t i c a t e d   W I T H   C H E C K   (  
-     c u s t o m e r _ i d   =   a u t h . u i d ( )  
- ) ;  
-  
- C R E A T E   P O L I C Y   " D e l i v e r y   b o y   c a n   v i e w   a s s i g n e d   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   S E L E C T   T O   a u t h e n t i c a t e d   U S I N G   (  
-     d e l i v e r y _ b o y _ i d   =   a u t h . u i d ( )  
- ) ;  
-  
- C R E A T E   P O L I C Y   " D e l i v e r y   b o y   c a n   u p d a t e   a s s i g n e d   s t o r e _ o r d e r s "   O N   p u b l i c . s t o r e _ o r d e r s   F O R   U P D A T E   T O   a u t h e n t i c a t e d   U S I N G   (  
-     d e l i v e r y _ b o y _ i d   =   a u t h . u i d ( )  
- ) ;  
-  
- - -   P o l i c i e s   f o r   s t o r e _ o r d e r _ i t e m s  
- C R E A T E   P O L I C Y   " A d m i n   c a n   d o   e v e r y t h i n g   o n   s t o r e _ o r d e r _ i t e m s "   O N   p u b l i c . s t o r e _ o r d e r _ i t e m s   F O R   A L L   T O   a u t h e n t i c a t e d   U S I N G   (  
-     ( S E L E C T   r o l e   F R O M   p u b l i c . u s e r s   W H E R E   i d   =   a u t h . u i d ( ) )   =   ' a d m i n '  
- ) ;  
-  
- C R E A T E   P O L I C Y   " C u s t o m e r s   c a n   v i e w   o w n   s t o r e _ o r d e r _ i t e m s "   O N   p u b l i c . s t o r e _ o r d e r _ i t e m s   F O R   S E L E C T   T O   a u t h e n t i c a t e d   U S I N G   (  
-     E X I S T S   (  
-         S E L E C T   1   F R O M   p u b l i c . s t o r e _ o r d e r s   W H E R E   s t o r e _ o r d e r s . i d   =   s t o r e _ o r d e r _ i t e m s . o r d e r _ i d   A N D   s t o r e _ o r d e r s . c u s t o m e r _ i d   =   a u t h . u i d ( )  
-     )  
- ) ;  
-  
- C R E A T E   P O L I C Y   " C u s t o m e r s   c a n   c r e a t e   s t o r e _ o r d e r _ i t e m s "   O N   p u b l i c . s t o r e _ o r d e r _ i t e m s   F O R   I N S E R T   T O   a u t h e n t i c a t e d   W I T H   C H E C K   (  
-     E X I S T S   (  
-         S E L E C T   1   F R O M   p u b l i c . s t o r e _ o r d e r s   W H E R E   s t o r e _ o r d e r s . i d   =   s t o r e _ o r d e r _ i t e m s . o r d e r _ i d   A N D   s t o r e _ o r d e r s . c u s t o m e r _ i d   =   a u t h . u i d ( )  
-     )  
- ) ;  
-  
- C R E A T E   P O L I C Y   " D e l i v e r y   b o y   c a n   v i e w   a s s i g n e d   s t o r e _ o r d e r _ i t e m s "   O N   p u b l i c . s t o r e _ o r d e r _ i t e m s   F O R   S E L E C T   T O   a u t h e n t i c a t e d   U S I N G   (  
-     E X I S T S   (  
-         S E L E C T   1   F R O M   p u b l i c . s t o r e _ o r d e r s   W H E R E   s t o r e _ o r d e r s . i d   =   s t o r e _ o r d e r _ i t e m s . o r d e r _ i d   A N D   s t o r e _ o r d e r s . d e l i v e r y _ b o y _ i d   =   a u t h . u i d ( )  
-     )  
- ) ;  
- 
+);
+CREATE TABLE public.store_orders (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  customer_id uuid NOT NULL,
+  full_name text NOT NULL,
+  phone text NOT NULL,
+  address text NOT NULL,
+  total_amount numeric NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'driver_assigned'::text, 'out_for_delivery'::text, 'delivered'::text, 'cancelled'::text])),
+  delivery_boy_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  delivery_otp text,
+  CONSTRAINT store_orders_pkey PRIMARY KEY (id),
+  CONSTRAINT store_orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.users(id),
+  CONSTRAINT store_orders_delivery_boy_id_fkey FOREIGN KEY (delivery_boy_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.store_order_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  order_id uuid NOT NULL,
+  shop_item_id uuid NOT NULL,
+  quantity integer NOT NULL DEFAULT 1,
+  price_at_purchase numeric NOT NULL DEFAULT 0,
+  CONSTRAINT store_order_items_pkey PRIMARY KEY (id),
+  CONSTRAINT store_order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.store_orders(id),
+  CONSTRAINT store_order_items_shop_item_id_fkey FOREIGN KEY (shop_item_id) REFERENCES public.shop_items(id)
+);
+CREATE TABLE public.invites (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email text NOT NULL,
+  role text NOT NULL CHECK (role = ANY (ARRAY['technician'::text, 'delivery_boy'::text, 'shop_admin'::text])),
+  shop_id uuid,
+  invited_by uuid,
+  token uuid NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+  used_at timestamp with time zone,
+  claimed_by uuid,
+  expires_at timestamp with time zone NOT NULL DEFAULT (now() + '48:00:00'::interval),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT invites_pkey PRIMARY KEY (id),
+  CONSTRAINT invites_shop_id_fkey FOREIGN KEY (shop_id) REFERENCES public.shops(id),
+  CONSTRAINT invites_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES public.users(id),
+  CONSTRAINT invites_claimed_by_fkey FOREIGN KEY (claimed_by) REFERENCES auth.users(id)
+);

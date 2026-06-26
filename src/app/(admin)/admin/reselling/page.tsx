@@ -225,7 +225,7 @@ export default function AdminResellingPage() {
 
       {/* Details Dialog */}
       <Dialog open={detailsDialog.open} onOpenChange={o => setDetailsDialog({ open: o, item: o ? detailsDialog.item : null })}>
-        <DialogContent className="bg-[#F7F7F5] border-[#E8E4DF] max-w-2xl shadow-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#F7F7F5] border-[#E8E4DF] max-w-2xl shadow-lg max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-[#1A1A1A] text-xl flex items-center gap-2">
               <Recycle className="w-5 h-5 text-[#FF5C00]" /> Submission Details
@@ -236,7 +236,7 @@ export default function AdminResellingPage() {
           </DialogHeader>
 
           {detailsDialog.item && (
-            <div className="space-y-4 mt-2">
+            <div className="space-y-4 mt-2 overflow-y-auto flex-1 pr-2 pb-2">
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white p-4 rounded-xl border border-[#E8E4DF]">

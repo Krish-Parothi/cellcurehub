@@ -227,7 +227,7 @@ export default function DeliveryDashboard() {
                             </div>
                             <div className="flex flex-col items-end gap-1 shrink-0">
                               <Badge className={`${job.job_type === 'pickup' ? 'bg-[#FF5C00]/10 text-[#FF5C00] border-[#FF5C00]/20' : 'bg-blue-500/10 text-blue-600 border-blue-500/20'}`}>
-                                {job.job_type === 'pickup' ? (job.ewaste ? 'E-WASTE PICKUP' : 'PICKUP') : 'DROP-OFF'}
+                                {job.job_type === 'pickup' ? (job.ewaste ? (job.ewaste.category === 'resell' ? 'RESELL PICKUP' : 'E-WASTE PICKUP') : 'PICKUP') : 'DROP-OFF'}
                               </Badge>
                               <Badge variant="outline" className="border-[#E8E4DF] text-[#1A1A1A]/60 text-[10px] bg-[#F7F7F5]">
                                 {DELIVERY_STATUS_LABELS[job.status as DeliveryStatus]}

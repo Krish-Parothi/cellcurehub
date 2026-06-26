@@ -165,6 +165,15 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.get_delivery_ewaste_ids()
+RETURNS SETOF uuid
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY SELECT ewaste_id FROM public.delivery_assignments WHERE delivery_boy_id = auth.uid() AND ewaste_id IS NOT NULL;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.get_tech_repair_ids()
 RETURNS SETOF uuid
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
@@ -452,6 +461,11 @@ CREATE POLICY "Customer manages own ewaste" ON public.ewaste
   FOR ALL TO authenticated
   USING (get_my_role() = 'customer' AND customer_id = auth.uid())
   WITH CHECK (get_my_role() = 'customer' AND customer_id = auth.uid());
+
+CREATE POLICY "Delivery reads assigned ewaste" ON public.ewaste
+  FOR SELECT TO authenticated
+  USING (get_my_role() = 'delivery' AND id IN (SELECT get_delivery_ewaste_ids()));
+
 
 -- 14. EWASTE_PAYOUT_RATES
 ALTER TABLE public.ewaste_payout_rates ENABLE ROW LEVEL SECURITY;
