@@ -27,6 +27,8 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showEmailOtp, setShowEmailOtp] = useState(false);
+  const [emailOtp, setEmailOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function LoginPage() {
       toast.error(error);
     } else {
       toast.success('Login successful');
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }
   };
 
@@ -83,14 +85,45 @@ export default function LoginPage() {
       toast.error('Password must be at least 6 characters');
       return;
     }
+    
     setLoading(true);
+    const { verifyPasswordAndSendOtp } = await import('@/lib/actions/auth');
+    const result = await verifyPasswordAndSendOtp(email, password);
+    setLoading(false);
+    
+    if (!result.success) {
+      toast.error(result.error);
+    } else {
+      toast.success('OTP sent to your email');
+      setShowEmailOtp(true);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    if (!emailOtp.trim() || emailOtp.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP');
+      return;
+    }
+    
+    setLoading(true);
+    const { verifyEmailOtp } = await import('@/lib/actions/email-otp');
+    const verifyResult = await verifyEmailOtp(email, emailOtp);
+    
+    if (!verifyResult.success) {
+      toast.error(verifyResult.error || 'Invalid OTP');
+      setLoading(false);
+      return;
+    }
+    
+    // OTP verified, now log them in for real
     const { error } = await signInWithPassword(email, password);
     setLoading(false);
+    
     if (error) {
       toast.error(error);
     } else {
       toast.success('Login successful');
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }
   };
 
@@ -283,39 +316,65 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00] pl-10"
+                    disabled={showEmailOtp || loading}
+                    className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00] pl-10 disabled:opacity-50"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-700">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00] pl-10"
-                  />
+              {!showEmailOtp && (
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-gray-700">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                      className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00] pl-10"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {showEmailOtp && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="emailOtp" className="text-gray-700">
+                    Enter OTP sent to your email
+                  </Label>
+                  <Input
+                    id="emailOtp"
+                    type="text"
+                    placeholder="6-digit OTP"
+                    value={emailOtp}
+                    onChange={(e) => setEmailOtp(e.target.value)}
+                    maxLength={6}
+                    disabled={loading}
+                    className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[#FF5C00]"
+                  />
+                </motion.div>
+              )}
 
               <Button
                 type="button"
-                onClick={handleEmailSignIn}
+                onClick={showEmailOtp ? handleVerifyEmailOtp : handleEmailSignIn}
                 disabled={loading}
                 className="w-full bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-medium"
               >
                 {loading ? (
-                  'Signing In...'
+                  showEmailOtp ? 'Verifying...' : 'Checking Credentials...'
                 ) : (
                   <span className="flex items-center justify-center gap-2">
-                    Sign In <ArrowRight className="w-4 h-4" />
+                    {showEmailOtp ? 'Verify & Sign In' : 'Sign In'} <ArrowRight className="w-4 h-4" />
                   </span>
                 )}
               </Button>

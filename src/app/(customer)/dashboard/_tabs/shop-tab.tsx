@@ -71,7 +71,7 @@ export default function ShopTab() {
           <p className="text-[#1A1A1A]/50 text-sm">Check back later for newly added refurbished devices and accessories.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {items.map((item, idx) => (
             <motion.div 
               key={item.id} 
@@ -80,12 +80,12 @@ export default function ShopTab() {
               transition={{ delay: idx * 0.05 }}
               className="bg-white border border-[#E8E4DF] rounded-2xl overflow-hidden hover:border-[#FF5C00]/30 hover:shadow-[0_8px_30px_rgba(255,92,0,0.06)] transition-all group"
             >
-              <div className="h-48 w-full bg-[#F7F7F5] relative overflow-hidden flex items-center justify-center border-b border-[#E8E4DF]">
+              <div className="h-40 w-full bg-[#F7F7F5] relative overflow-hidden flex items-center justify-center border-b border-[#E8E4DF]">
                 {item.image_url ? (
                   <img 
                     src={item.image_url} 
                     alt={item.name} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-contain p-8 mix-blend-multiply group-hover:scale-110 transition-transform duration-500 drop-shadow-sm"
                   />
                 ) : (
                   <ImageIcon className="w-8 h-8 text-[#1A1A1A]/20" />
@@ -96,7 +96,7 @@ export default function ShopTab() {
                   </div>
                 )}
               </div>
-              <div className="p-5">
+              <div className="p-4">
                 <h3 className="text-[#1A1A1A] font-bold text-lg mb-1 truncate">{item.name}</h3>
                 <div className="flex items-end justify-between mt-3">
                   <div>

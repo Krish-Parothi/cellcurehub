@@ -27,7 +27,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 export default function SignupPage() {
   const router = useRouter();
   const { signUpWithPassword, signInWithGoogle } = useAuth();
-  
+
   const [googleLoading, setGoogleLoading] = useState(false);
 
   // OTP State
@@ -50,22 +50,22 @@ export default function SignupPage() {
     setSendingOtp(true);
     const result = await sendEmailOtp(data.email);
     setSendingOtp(false);
-    
+
     if (!result.success) {
       toast.error(result.error || 'Failed to send verification email');
       return;
     }
-    
+
     toast.success('Verification code sent to your email');
     setShowOtp(true);
   };
 
   const handleVerifyOtpAndCreateAccount = async () => {
     if (!formData || otpCode.length !== 6) return;
-    
+
     setVerifyingOtp(true);
     const verifyResult = await verifyEmailOtp(formData.email, otpCode);
-    
+
     if (!verifyResult.success) {
       toast.error(verifyResult.error || 'Invalid OTP');
       setVerifyingOtp(false);
@@ -73,11 +73,11 @@ export default function SignupPage() {
     }
 
     // OTP is valid, create account
-    
+
     const { error } = await signUpWithPassword(formData.email, formData.password, formData.fullName, formData.phone);
     if (error) {
       toast.error(error);
-      
+
       setVerifyingOtp(false);
       return;
     }
@@ -85,7 +85,7 @@ export default function SignupPage() {
     localStorage.setItem('cellcurehub_default_address', formData.address);
     toast.success('Account created successfully!');
     router.push('/dashboard');
-    
+
     setVerifyingOtp(false);
   };
 
@@ -213,25 +213,25 @@ export default function SignupPage() {
           <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white border border-[#E8E4DF] p-6 rounded-2xl w-full max-w-sm shadow-xl">
             <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">Verify Email Address</h3>
             <p className="text-sm text-[#1A1A1A]/60 mb-6">Enter the 6-digit code sent to {formData.email}</p>
-            
+
             <div className="space-y-4">
-              <Input 
-                type="text" 
-                maxLength={6} 
-                value={otpCode} 
-                onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} 
-                placeholder="000000" 
-                className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]" 
+              <Input
+                type="text"
+                maxLength={6}
+                value={otpCode}
+                onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-[#F7F7F5] border-[#E8E4DF] text-[#1A1A1A] focus-visible:ring-[#FF5C00]"
               />
-              
-              <Button 
-                disabled={otpCode.length !== 6 || verifyingOtp} 
-                onClick={handleVerifyOtpAndCreateAccount} 
+
+              <Button
+                disabled={otpCode.length !== 6 || verifyingOtp}
+                onClick={handleVerifyOtpAndCreateAccount}
                 className="w-full h-12 bg-[#FF5C00] hover:bg-[#FF5C00]/90 text-white font-semibold text-lg"
               >
                 {verifyingOtp ? 'Verifying...' : 'Verify & Create Account'}
               </Button>
-              
+
               <div className="flex justify-between items-center text-sm">
                 <button onClick={() => setShowOtp(false)} className="text-[#1A1A1A]/50 hover:text-[#1A1A1A]">Cancel</button>
               </div>

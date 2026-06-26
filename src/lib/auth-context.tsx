@@ -163,27 +163,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fullName: string,
     phone: string
   ) => {
-    // SECURITY FIX: Client-side signups are always 'customer'
-    const role: UserRole = 'customer';
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, role },
-      },
-    });
-    if (error) return { error: error.message };
-    if (data.user) {
-      await supabase.from('users').insert({
-        id: data.user.id,
-        full_name: fullName,
-        email,
-        phone: `+91${phone.replace(/^\+91/, '')}`,
-        role,
-        phone_verified: false,
-      });
+    const { createVerifiedUser } = await import('@/lib/actions/auth');
+    const result = await createVerifiedUser(email, password, fullName, phone);
+    
+    if (!result.success) {
+      return { error: result.error || 'Failed to create user' };
     }
+    
     return { error: null };
   };
 

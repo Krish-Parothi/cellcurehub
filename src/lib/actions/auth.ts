@@ -107,3 +107,98 @@ export async function getAuthenticatedUser(
     profile: profile as User,
   };
 }
+
+export async function createVerifiedUser(
+  email: string,
+  password: string,
+  fullName: string,
+  phone: string
+) {
+  try {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const formattedPhone = phone ? `+91${phone.replace(/^\+91/, '')}` : null;
+
+    // 1. Create the user in auth.users with email_confirm = true
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      phone_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        phone: formattedPhone,
+        role: 'customer'
+      }
+    });
+
+    if (authError) {
+      return { success: false, error: authError.message };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: 'Failed to create user' };
+    }
+
+    // 2. Insert into public.users
+    const { error: dbError } = await supabaseAdmin.from('users').insert({
+      id: authData.user.id,
+      email,
+      full_name: fullName,
+      phone: formattedPhone,
+      role: 'customer',
+      is_active: true,
+      phone_verified: false
+    });
+
+    if (dbError) {
+      // Even if db insert fails, JIT will catch it later, but we should log it
+      logger.error('AUTH', 'Failed to insert public user during signup', { error: dbError.message });
+    }
+
+    return { success: true, data: authData.user };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function verifyPasswordAndSendOtp(email: string, password: string) {
+  try {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    // We cannot easily verify a password using admin api directly without a session.
+    // Instead we can use signInWithPassword with a throwaway standard client.
+    const tempClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false } }
+    );
+    
+    const { data, error } = await tempClient.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error || !data.user) {
+      return { success: false, error: error?.message || 'Invalid credentials' };
+    }
+    
+    // Credentials are valid. Now send the OTP.
+    const { sendEmailOtp } = await import('@/lib/actions/email-otp');
+    const otpResult = await sendEmailOtp(email);
+    
+    if (!otpResult.success) {
+      return { success: false, error: otpResult.error };
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

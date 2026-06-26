@@ -14,7 +14,7 @@ const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
 const SMTP_USER = process.env.GMAIL_USER || process.env.SMTP_USER;
 const SMTP_PASS = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
-const SMTP_FROM = process.env.SMTP_FROM || 'noreply@cellcurehub.com';
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || 'noreply@cellcurehub.com';
 
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
@@ -40,29 +40,36 @@ export async function sendEmailOtp(email: string) {
     }
 
     const otpCode = crypto.randomInt(100000, 999999).toString();
-    
+
     // Store in DB first
     await storeOtpInDb(email, otpCode);
 
     // Send via Nodemailer
     const htmlContent = `
-      <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px;">
-        <h2 style="color: #FF5C00; text-align: center;">CellCureHub</h2>
-        <p>Hello,</p>
-        <p>Welcome to CellCureHub! Use the verification code below:</p>
-        <div style="background-color: #F7F7F5; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
-          <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1A1A1A;">${otpCode}</span>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px; color: #333;">
+        <h2 style="color: #FF5C00; text-align: center; margin-bottom: 20px;">CellCureHub</h2>
+        <p style="font-size: 16px;">Hello,</p>
+        <p style="font-size: 16px; line-height: 1.5;">You are receiving this email because a request was made to verify your email address on CellCureHub. Please use the verification code below to securely access your account:</p>
+        <div style="background-color: #F7F7F5; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1A1A1A;">${otpCode}</span>
         </div>
-        <p style="font-size: 12px; color: #666;">This code will expire in 10 minutes.</p>
+        <p style="font-size: 14px; color: #666; text-align: center;">This security code will expire in 10 minutes.</p>
+        <hr style="border: none; border-top: 1px solid #eaeaec; margin: 30px 0;" />
+        <p style="font-size: 12px; color: #999; text-align: center;">If you didn't request this code, you can safely ignore this email. Someone else might have typed your email address by mistake.</p>
+        <p style="font-size: 12px; color: #999; text-align: center;">&copy; ${new Date().getFullYear()} CellCureHub. All rights reserved.</p>
       </div>
     `;
 
     const info = await transporter.sendMail({
-      from: `"CellCureHub" <${SMTP_FROM}>`,
+      from: `"CellCureHub Security" <${SMTP_FROM}>`,
+      replyTo: SMTP_FROM,
       to: email,
       subject: 'Your CellCureHub Verification Code',
-      text: `Your verification code is: ${otpCode}. It expires in 10 minutes.`,
+      text: `Hello,\n\nYour CellCureHub verification code is: ${otpCode}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, you can safely ignore this email.`,
       html: htmlContent,
+      headers: {
+        'X-Entity-Ref-ID': crypto.randomBytes(16).toString('hex'), // Helps with threading and uniqueness
+      }
     });
 
     console.log('Message sent: %s', info.messageId);
