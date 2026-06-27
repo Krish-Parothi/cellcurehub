@@ -238,7 +238,7 @@ export default function DeliveryDashboard() {
                             <p className="flex items-start gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span className="line-clamp-2">{job.repair?.address || job.ewaste?.address || 'No address'}</span></p>
                             <p className="flex items-center gap-1.5">
                               <Smartphone className="w-3.5 h-3.5" />
-                              {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : (job.repair?.manual_model || job.ewaste?.device_description || 'Unknown Device')}
+                              {job.repair?.manual_model || (job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : (job.ewaste?.device_description || 'Unknown Device'))}
                               {job.repair?.repair_type && <span className="text-[#1A1A1A]/40 ml-1">• {job.repair.repair_type.replace(/_/g, ' ')}</span>}
                             </p>
                           </div>
@@ -314,7 +314,7 @@ export default function DeliveryDashboard() {
                           </Badge>
                         </div>
                         <p className="text-[#1A1A1A]/60 text-xs font-medium">
-                          {job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : (job.repair?.manual_model || job.ewaste?.device_description || 'Unknown Device')}
+                          {job.repair?.manual_model || (job.repair?.device ? `${job.repair.device.brand} ${job.repair.device.model_name}` : (job.ewaste?.device_description || 'Unknown Device'))}
                           <span className="mx-1 text-[#1A1A1A]/30">•</span>
                           {job.job_type === 'pickup' ? 'Pickup' : 'Drop-off'}
                         </p>

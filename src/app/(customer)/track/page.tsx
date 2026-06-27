@@ -163,7 +163,7 @@ export default function TrackPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><p className="text-xs text-gray-600">Device</p><p className="text-gray-900 font-medium">{repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model || 'N/A'}</p></div>
+                    <div><p className="text-xs text-gray-600">Device</p><p className="text-gray-900 font-medium">{repair.manual_model || (repair.device ? `${repair.device.brand} ${repair.device.model_name}` : 'N/A')}</p></div>
                     <div><p className="text-xs text-gray-600">Repair Type</p><p className="text-gray-700 capitalize">{repair.repair_type?.replace(/_/g, ' ') || 'N/A'}</p></div>
                     <div><p className="text-xs text-gray-600">Estimated Cost</p><p className="text-[#FF5C00] font-semibold">{repair.estimated_cost ? `₹${repair.estimated_cost.toLocaleString('en-IN')}` : 'Pending'}</p></div>
                     <div><p className="text-xs text-gray-600">Booked On</p><p className="text-gray-700">{formatDate(repair.created_at)}</p></div>

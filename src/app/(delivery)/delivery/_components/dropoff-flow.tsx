@@ -168,7 +168,7 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
             <Package className="w-5 h-5 text-blue-600" /> Drop-off Flow
           </SheetTitle>
           <SheetDescription className="text-[#1A1A1A]/60">
-            {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
+            {repair.manual_model || (repair.device ? `${repair.device.brand} ${repair.device.model_name}` : 'Unknown')}
           </SheetDescription>
         </SheetHeader>
 
@@ -182,7 +182,7 @@ export default function DropoffFlow({ assignment, open, onOpenChange, onComplete
           <p className="text-[#1A1A1A]/60 flex items-center gap-1.5"><MapPin className="w-3 h-3 text-[#1A1A1A]/40" />{repair.address}</p>
           <p className="text-[#1A1A1A]/60 flex items-center gap-1.5">
             <Smartphone className="w-3 h-3 text-[#1A1A1A]/40" />
-            {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
+            {repair.manual_model || (repair.device ? `${repair.device.brand} ${repair.device.model_name}` : 'Unknown')}
             {repair.repair_type && <span className="text-[#1A1A1A]/40 ml-1">• {repair.repair_type.replace(/_/g, ' ')}</span>}
           </p>
           {invoice && (

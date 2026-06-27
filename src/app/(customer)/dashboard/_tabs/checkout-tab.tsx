@@ -21,13 +21,14 @@ export default function CheckoutTab() {
   const [placed, setPlaced] = useState(false);
   
   const [step, setStep] = useState<'cart' | 'details'>('cart');
-  const [formData, setFormData] = useState({ fullName: '', phone: '', address: '' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', phone: '', address: '' });
   const [placingOrder, setPlacingOrder] = useState(false);
 
   useEffect(() => {
     if (user) {
       setFormData({
         fullName: user.full_name || '',
+        email: user.email || '',
         phone: user.phone ? user.phone.replace(/^\+91/, '') : '',
         address: localStorage.getItem('cellcurehub_default_address') || '',
       });
@@ -53,6 +54,7 @@ export default function CheckoutTab() {
     setPlacingOrder(true);
     const orderResult = await createStoreOrder({
       full_name: formData.fullName,
+      email: formData.email,
       phone: `+91${formData.phone}`,
       address: formData.address,
       total_amount: cartTotal,
@@ -172,6 +174,12 @@ export default function CheckoutTab() {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#1A1A1A]/40" />
                     <Input required value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} className="pl-10 border-[#E8E4DF] focus-visible:ring-[#FF5C00]" placeholder="John Doe" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[#1A1A1A]/70">Email Address</Label>
+                  <div className="relative">
+                    <Input required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="border-[#E8E4DF] focus-visible:ring-[#FF5C00]" placeholder="name@example.com" />
                   </div>
                 </div>
                 <div className="space-y-1.5">

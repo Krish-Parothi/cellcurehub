@@ -402,9 +402,10 @@ export default function RepairsPage() {
       const { error: updateErr } = await supabase.from('rca_reports').update({ admin_confirmed: true }).eq('id', rca.id);
       if (updateErr) { console.debug('[ADMIN_CONFIRM_RCA_UPDATE_ERROR]', updateErr); toast.error('Failed to confirm RCA: ' + updateErr.message); setRcaProcessing(false); return; }
       await supabase.from('rca_reports').delete().eq('repair_id', rca.repair_id).eq('admin_confirmed', false).neq('id', rca.id);
+      
       const { error: tlErr } = await supabase.from('repair_timeline').insert({
-        repair_id: rca.repair_id, status: 'device_received',
-        note: 'RCA confirmed by admin — visible to customer', updated_by: user?.id,
+        repair_id: rca.repair_id, status: 'pending_approval',
+        note: 'RCA confirmed by admin — awaiting technician to mark completed', updated_by: user?.id,
       });
       if (tlErr) console.debug('[ADMIN_CONFIRM_RCA_TIMELINE_ERROR]', tlErr);
       toast.success('RCA confirmed');
@@ -513,7 +514,7 @@ export default function RepairsPage() {
                     <TableRow key={r.id} className={`border-[#E8E4DF]/40 hover:bg-[#F7F7F5] transition-colors ${isSlaExpired ? 'bg-red-50/50' : ''}`}>
                       <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(r.id)}</TableCell>
                       <TableCell className="text-[#1A1A1A] font-medium">{r.customer?.full_name}</TableCell>
-                      <TableCell className="text-[#1A1A1A]/70">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</TableCell>
+                      <TableCell className="text-[#1A1A1A]/70">{r.manual_model || (r.device ? `${r.device.brand} ${r.device.model_name}` : 'Unknown')}</TableCell>
                       <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
                       <TableCell className="text-[#1A1A1A]/70 text-sm">{r.technician?.full_name || <span className="text-amber-600 font-semibold">Unassigned</span>}</TableCell>
                       <TableCell className="text-[#1A1A1A]/70 text-sm">{deliveryMap[r.id] ? <div className="flex flex-col"><span>{deliveryMap[r.id].name}</span><span className="text-[10px] text-[#1A1A1A]/50 uppercase font-semibold">{deliveryMap[r.id].status.replace('_', ' ')}</span></div> : <span className="text-amber-600 font-semibold text-xs">Unassigned</span>}</TableCell>
@@ -553,7 +554,7 @@ export default function RepairsPage() {
                 <TableRow key={rca.id} className="border-[#E8E4DF]/40 hover:bg-[#F7F7F5]">
                   <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(rca.repair_id)}</TableCell>
                   <TableCell className="text-[#1A1A1A] font-medium">{rca.repair?.customer?.full_name}</TableCell>
-                  <TableCell className="text-[#1A1A1A]/70">{rca.repair?.device ? `${rca.repair.device.brand} ${rca.repair.device.model_name}` : rca.repair?.manual_model || 'Unknown'}</TableCell>
+                  <TableCell className="text-[#1A1A1A]/70">{rca.repair?.manual_model || (rca.repair?.device ? `${rca.repair.device.brand} ${rca.repair.device.model_name}` : 'Unknown')}</TableCell>
                   <TableCell className="text-[#1A1A1A]/70">{rca.repair?.technician?.full_name}</TableCell>
                   <TableCell><Button size="sm" onClick={() => { setRcaModal(rca); setAdminNotes(''); }} className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 text-xs font-semibold"><Eye className="w-3.5 h-3.5 mr-1" />Review</Button></TableCell>
                 </TableRow>
@@ -575,11 +576,17 @@ export default function RepairsPage() {
               <div className="space-y-6 pb-12">
                 {/* Info */}
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Customer</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.customer?.full_name}</p><p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.customer?.phone}</p>{selectedRepair.contact_email && <p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.contact_email}</p>}</div>
-                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Device</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.device ? `${selectedRepair.device.brand} ${selectedRepair.device.model_name}` : selectedRepair.manual_model || 'Unknown'}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Customer</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.customer?.full_name}</p><p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.customer?.phone}</p></div>
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Device</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.manual_model || (selectedRepair.device ? `${selectedRepair.device.brand} ${selectedRepair.device.model_name}` : 'Unknown')}</p></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Status</span><div className="mt-1"><Badge className={statusColor(selectedRepair.status)}>{REPAIR_STATUS_LABELS[selectedRepair.status as RepairStatus]}</Badge></div></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Shop</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.shop?.name || <span className="text-amber-600 font-medium">Unassigned</span>}</p></div>
                   <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2"><span className="text-[#1A1A1A]/40 text-xs block">Technician</span><p className="text-[#1A1A1A] font-semibold">{selectedRepair.technician?.full_name || 'Unassigned'}</p></div>
+                  {selectedRepair.contact_email && (
+                    <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2">
+                      <span className="text-[#1A1A1A]/40 text-xs block">Customer Email</span>
+                      <p className="text-[#1A1A1A] font-semibold select-all">{selectedRepair.contact_email}</p>
+                    </div>
+                  )}
                   {selectedRepair.address && (
                     <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2">
                       <span className="text-[#1A1A1A]/40 text-xs block">Address ({selectedRepair.pickup_type === 'store' ? 'Store Drop-off' : 'Home Pickup'})</span>

@@ -214,6 +214,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
       }
 
       toast.success('RCA Report submitted');
+      onStatusUpdate(repair.id, 'pending_approval');
       loadRcaReport();
       fetchRepairs();
     } catch (e) { 
@@ -224,12 +225,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
 
   // --- QA Logic ---
   const handleMarkDone = async () => {
-    if (!repair || !rcaReport) return;
-    
-    const requiredQa = QA_CHECKLIST_ITEMS.filter(i => !(i as any).appleOnly || repair.device?.brand === 'Apple');
-    const allChecked = requiredQa.every(i => qaChecks[i.key]);
-    
-    if (!allChecked) { toast.error('All QA items must be checked'); return; }
+    if (!repair) return;
     
     console.debug('[TECH:MARK_DONE]', { repairId: repair.id });
     const result = await markRepairComplete(repair.id);
@@ -252,7 +248,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
 
   const nextStatus = repair.status === 'booked' || repair.status === 'pickup_scheduled' ? 'device_received'
                    : repair.status === 'device_received' || repair.status === 'dropped_at_store' ? 'diagnostic'
-                   : repair.status === 'diagnostic' || repair.status === 'wocr' || repair.status === 'pending_approval' ? 'repair_in_progress' 
+                   : repair.status === 'diagnostic' || repair.status === 'wocr' ? 'repair_in_progress' 
                    : repair.status === 'repair_in_progress' ? 'qa_testing' : null;
 
   return (
@@ -261,7 +257,7 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
         <SheetHeader className="mb-6">
           <SheetTitle className="text-[#1A1A1A] flex items-center gap-2">
             <Smartphone className="w-5 h-5 text-[#FF5C00]" />
-            {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
+            {repair.manual_model || (repair.device ? `${repair.device.brand} ${repair.device.model_name}` : 'Unknown')}
           </SheetTitle>
           <SheetDescription className="text-[#1A1A1A]/60">Repair #{repair.id.split('-')[0]}</SheetDescription>
         </SheetHeader>
@@ -306,26 +302,59 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
 
           <Separator className="bg-[#E8E4DF]" />
 
-          {/* SECTION D: RCA Report */}
+          {/* SECTION D: QA Testing */}
+          {repair.status === 'qa_testing' && (
+            <>
+              <Separator className="bg-[#E8E4DF]" />
+              <section className="space-y-4">
+                <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#FF5C00]"/> QA Checklist</h3>
+                <div className="bg-[#F7F7F5] p-4 rounded-lg border border-[#E8E4DF] space-y-2">
+                  {QA_CHECKLIST_ITEMS.filter(i => !(i as any).appleOnly || repair.device?.brand === 'Apple').map(item => (
+                    <label key={item.key} className="flex items-center gap-2 text-xs text-[#1A1A1A]/70 cursor-pointer">
+                      <input type="checkbox" checked={!!qaChecks[item.key]} onChange={e => setQaChecks(p => ({ ...p, [item.key]: e.target.checked }))} className="rounded bg-white border-[#E8E4DF] text-[#FF5C00] focus:ring-[#FF5C00]" />
+                      {item.label}
+                    </label>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+
+          {/* SECTION E: RCA Report */}
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2"><Search className="w-4 h-4 text-[#FF5C00]"/> RCA Report</h3>
             
-            {rcaLoading ? <Skeleton className="h-20 bg-[#1A1A1A]/5" /> : (rcaReport && repair.status !== 'diagnostic') ? (
-              <div className="bg-[#F7F7F5] p-4 rounded-lg border border-[#E8E4DF]">
-                <p className="text-emerald-600 font-semibold text-sm mb-2">{rcaReport.admin_confirmed ? 'RCA Confirmed by Admin' : 'RCA submitted — awaiting admin confirmation'}</p>
-                <p className="text-[#1A1A1A]/60 text-xs mb-2">Technician Notes:</p>
-                <p className="text-[#1A1A1A] text-sm font-medium">{rcaReport.technician_notes}</p>
+            {rcaLoading ? <Skeleton className="h-20 bg-[#1A1A1A]/5" /> : (rcaReport && repair.status !== 'qa_testing') ? (
+              <div className="bg-[#F7F7F5] p-4 rounded-lg border border-[#E8E4DF] space-y-4">
+                <div>
+                  <p className="text-emerald-600 font-semibold text-sm mb-2">{rcaReport.admin_confirmed ? 'RCA Confirmed by Admin' : 'RCA submitted — awaiting admin confirmation'}</p>
+                  <p className="text-[#1A1A1A]/60 text-xs mb-2">Technician Notes:</p>
+                  <p className="text-[#1A1A1A] text-sm font-medium">{rcaReport.technician_notes}</p>
+                </div>
+                {rcaReport.admin_confirmed && repair.status === 'pending_approval' && (
+                  <Button onClick={handleMarkDone} className="w-full bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold">
+                    <CheckCircle className="w-4 h-4 mr-2" /> Mark as Completed
+                  </Button>
+                )}
               </div>
             ) : (
-              !disableStatusChange && (
+              !disableStatusChange && repair.status === 'qa_testing' && (
                 <div className="space-y-4">
-                  {rcaReport?.admin_notes && repair.status === 'diagnostic' && (
+                  {rcaReport?.admin_notes && (
                     <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                       <p className="text-red-800 font-bold text-sm mb-1 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> RCA Revision Requested</p>
                       <p className="text-red-700 text-xs">Admin Note: {rcaReport.admin_notes}</p>
                     </div>
                   )}
-                  <form onSubmit={rcaForm.handleSubmit(submitRca)} className="space-y-4">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const requiredQa = QA_CHECKLIST_ITEMS.filter(i => !(i as any).appleOnly || repair.device?.brand === 'Apple');
+                    if (!requiredQa.every(i => qaChecks[i.key])) {
+                      toast.error('Complete all QA checks before submitting RCA');
+                      return;
+                    }
+                    rcaForm.handleSubmit(submitRca)(e);
+                  }} className="space-y-4">
                   <div className="bg-[#F7F7F5] p-4 rounded-lg border border-[#E8E4DF]">
                     <Label className="text-[#1A1A1A]/80 mb-2 block">Diagnostic Checklist (Min 3)</Label>
                     <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
@@ -373,28 +402,6 @@ export default function JobDetailSheet({ repair, open, onOpenChange, onStatusUpd
               )
             )}
           </section>
-
-          {/* SECTION E: QA Testing */}
-          {repair.status === 'qa_testing' && (
-            <>
-              <Separator className="bg-[#E8E4DF]" />
-              <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-[#1A1A1A]/80 flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#FF5C00]"/> QA Checklist</h3>
-                <div className="bg-[#F7F7F5] p-4 rounded-lg border border-[#E8E4DF] space-y-2">
-                  {QA_CHECKLIST_ITEMS.filter(i => !(i as any).appleOnly || repair.device?.brand === 'Apple').map(item => (
-                    <label key={item.key} className="flex items-center gap-2 text-xs text-[#1A1A1A]/70 cursor-pointer">
-                      <input type="checkbox" checked={!!qaChecks[item.key]} onChange={e => setQaChecks(p => ({ ...p, [item.key]: e.target.checked }))} className="rounded bg-white border-[#E8E4DF] text-[#FF5C00] focus:ring-[#FF5C00]" />
-                      {item.label}
-                    </label>
-                  ))}
-                </div>
-                <Button onClick={handleMarkDone} disabled={!rcaReport} className="w-full bg-[#FF5C00] hover:bg-[#e05200] text-white font-semibold">
-                  <CheckCircle className="w-4 h-4 mr-2" /> Mark as Done
-                </Button>
-                {!rcaReport && <p className="text-xs text-amber-600 font-semibold text-center mt-1">RCA Report must be submitted first</p>}
-              </section>
-            </>
-          )}
 
           {/* Status Transitions */}
           {nextStatus && repair.status !== 'qa_testing' && !disableStatusChange && (

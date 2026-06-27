@@ -181,7 +181,7 @@ export default function TechnicianDashboard() {
                         <div className="absolute top-0 left-0 w-1 h-full" style={{ background: col.color }} />
                         <div className="flex items-start justify-between mb-2">
                           <span className="text-sm font-semibold text-[#1A1A1A] truncate pr-2">
-                            {repair.device ? `${repair.device.brand} ${repair.device.model_name}` : repair.manual_model}
+                            {repair.manual_model || (repair.device ? `${repair.device.brand} ${repair.device.model_name}` : 'Unknown')}
                           </span>
                           {repair.repair_type === 'custom' && <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] absolute right-2 top-2">Custom Repair</Badge>}
                         </div>

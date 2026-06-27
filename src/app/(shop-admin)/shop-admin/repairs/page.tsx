@@ -241,7 +241,8 @@ export default function ShopRepairsPage() {
     try {
       const { error: updateErr } = await supabase.from('rca_reports').update({ admin_confirmed: true }).eq('id', rca.id);
       if (updateErr) { console.debug('[SHOP_CONFIRM_RCA_ERROR]', updateErr); toast.error('Failed: ' + updateErr.message); setRcaProcessing(false); return; }
-      const { error: tlErr } = await supabase.from('repair_timeline').insert({ repair_id: rca.repair_id, status: 'device_received', note: 'RCA confirmed by shop admin — visible to customer', updated_by: user?.id });
+      
+      const { error: tlErr } = await supabase.from('repair_timeline').insert({ repair_id: rca.repair_id, status: 'pending_approval', note: 'RCA confirmed by shop admin — awaiting technician to mark completed', updated_by: user?.id });
       if (tlErr) console.debug('[SHOP_CONFIRM_RCA_TL_ERROR]', tlErr);
       toast.success('RCA confirmed'); setRcaModal(null); fetchRepairs();
     } catch (e) { console.debug('[SHOP_CONFIRM_RCA_EXCEPTION]', e); toast.error('Failed'); }
@@ -252,7 +253,10 @@ export default function ShopRepairsPage() {
     if (!adminNotes.trim()) { toast.error('Please add notes'); return; }
     setRcaProcessing(true);
     await supabase.from('rca_reports').update({ admin_notes: adminNotes }).eq('id', rca.id);
+    await supabase.from('repairs').update({ status: 'qa_testing' }).eq('id', rca.repair_id);
+    await supabase.from('repair_timeline').insert({ repair_id: rca.repair_id, status: 'qa_testing', note: `Shop admin requested RCA revision: ${adminNotes}`, updated_by: user?.id });
     toast.success('Revision requested'); setRcaModal(null); setAdminNotes(''); setRcaProcessing(false);
+    fetchRepairs();
   };
 
   const filtered = repairs.filter(r => {
@@ -287,8 +291,13 @@ export default function ShopRepairsPage() {
           <TableBody>{filtered.slice(0, 50).map(r => (
             <TableRow key={r.id} className="border-[#E8E4DF]/60 hover:bg-[#F7F7F5]">
               <TableCell className="font-mono text-[#FF5C00] text-xs font-semibold">{shortId(r.id)}</TableCell>
-              <TableCell className="text-[#1A1A1A]">{r.customer?.full_name || '—'}</TableCell>
-              <TableCell className="text-[#1A1A1A]/70 text-sm">{r.device?.model_name || r.manual_model || '—'}</TableCell>
+              <TableCell className="text-[#1A1A1A]">
+                <div className="flex flex-col">
+                  <span className="font-medium">{r.customer?.full_name || '—'}</span>
+                  {r.contact_email && <span className="text-[11px] text-[#1A1A1A]/50 select-all">{r.contact_email}</span>}
+                </div>
+              </TableCell>
+              <TableCell className="text-[#1A1A1A]/70 text-sm">{r.manual_model || (r.device ? `${r.device.brand} ${r.device.model_name}` : '—')}</TableCell>
               <TableCell><Badge className={statusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>
               <TableCell className="text-[#1A1A1A]/70 text-sm">{r.technician?.full_name || <span className="text-amber-600 font-semibold text-xs">Unassigned</span>}</TableCell>
               <TableCell className="text-[#1A1A1A]/70 text-sm">{deliveryMap[r.id] ? <div className="flex flex-col"><span>{deliveryMap[r.id].name}</span><span className="text-[10px] text-[#1A1A1A]/50 uppercase font-semibold">{deliveryMap[r.id].status.replace('_', ' ')}</span></div> : <span className="text-amber-600 font-semibold text-xs">Unassigned</span>}</TableCell>
@@ -324,9 +333,15 @@ export default function ShopRepairsPage() {
             <div className="space-y-6 pb-12">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Customer</span><p className="text-[#1A1A1A] font-medium">{selectedRepair.customer?.full_name}</p><p className="text-[#1A1A1A]/60 text-xs">{selectedRepair.customer?.phone}</p></div>
-                <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Device</span><p className="text-[#1A1A1A] font-medium">{selectedRepair.device?.brand} {selectedRepair.device?.model_name}</p></div>
+                <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Device</span><p className="text-[#1A1A1A] font-medium">{selectedRepair.manual_model || (selectedRepair.device ? `${selectedRepair.device.brand} ${selectedRepair.device.model_name}` : 'Unknown')}</p></div>
                 <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Status</span><Badge className={statusColor(selectedRepair.status)}>{REPAIR_STATUS_LABELS[selectedRepair.status as RepairStatus]}</Badge></div>
                 <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg"><span className="text-[#1A1A1A]/40 text-xs block">Technician</span><p className="text-[#1A1A1A] font-medium">{selectedRepair.technician?.full_name || 'Unassigned'}</p></div>
+                {selectedRepair.contact_email && (
+                  <div className="bg-[#F7F7F5] border border-[#E8E4DF] p-3 rounded-lg col-span-2">
+                    <span className="text-[#1A1A1A]/40 text-xs block">Customer Email</span>
+                    <p className="text-[#1A1A1A] font-medium select-all">{selectedRepair.contact_email}</p>
+                  </div>
+                )}
               </div>
               <Separator className="bg-[#E8E4DF]" />
               {/* Status Change */}

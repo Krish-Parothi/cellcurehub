@@ -6,6 +6,7 @@ import type { StoreOrderStatus, StoreOrder } from '@/lib/types';
 
 export async function createStoreOrder(data: {
   full_name: string;
+  email: string;
   phone: string;
   address: string;
   total_amount: number;
@@ -30,6 +31,7 @@ export async function createStoreOrder(data: {
     .insert({
       customer_id: user.id,
       full_name: data.full_name,
+      contact_email: data.email,
       phone: data.phone,
       address: data.address,
       total_amount: data.total_amount,
@@ -57,14 +59,6 @@ export async function createStoreOrder(data: {
   // Clear cart
   await supabase.from('cart_items').delete().eq('customer_id', user.id);
 
-  // Update stock
-  for (const item of cartItems) {
-    if (item.shop_item) {
-      const newStock = Math.max(0, item.shop_item.stock_qty - item.quantity);
-      await supabase.from('shop_items').update({ stock_qty: newStock }).eq('id', item.shop_item_id);
-    }
-  }
-
   revalidatePath('/dashboard');
   return { success: true, orderId: order.id };
 }
@@ -72,18 +66,25 @@ export async function createStoreOrder(data: {
 export async function assignDeliveryBoyToStoreOrder(orderId: string, deliveryBoyId: string) {
   const supabase = await createServerSupabaseClient();
   
-  // Verify Admin
+  // Verify Admin or Shop Admin
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
   const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'admin') return { success: false, error: 'Unauthorized' };
+  if (!profile || !['admin', 'shop_admin'].includes(profile.role)) return { success: false, error: 'Unauthorized' };
+
+  // Get current order status
+  const { data: order } = await supabase.from('store_orders').select('status').eq('id', orderId).single();
+  if (!order) return { success: false, error: 'Order not found' };
+
+  // Only change status to driver_assigned if it's still pending
+  const updatePayload: Record<string, string> = { delivery_boy_id: deliveryBoyId };
+  if (order.status === 'pending') {
+    updatePayload.status = 'driver_assigned';
+  }
 
   const { error } = await supabase
     .from('store_orders')
-    .update({ 
-      delivery_boy_id: deliveryBoyId,
-      status: 'driver_assigned'
-    })
+    .update(updatePayload)
     .eq('id', orderId);
 
   if (error) return { success: false, error: error.message };
@@ -96,6 +97,30 @@ export async function updateStoreOrderStatus(orderId: string, status: StoreOrder
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
+
+  // Fetch current status before updating
+  const { data: order } = await supabase
+    .from('store_orders')
+    .select('status')
+    .eq('id', orderId)
+    .single();
+
+  if (status === 'cancelled' && order && order.status === 'out_for_delivery') {
+    // If it was already out for delivery, add the stock back
+    const { data: orderItems } = await supabase
+      .from('store_order_items')
+      .select('*, shop_item:shop_items(stock_qty)')
+      .eq('order_id', orderId);
+
+    if (orderItems) {
+      for (const item of orderItems) {
+        if (item.shop_item) {
+          const newStock = item.shop_item.stock_qty + item.quantity;
+          await supabase.from('shop_items').update({ stock_qty: newStock }).eq('id', item.shop_item_id);
+        }
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('store_orders')
@@ -136,6 +161,21 @@ export async function markStoreOrderOutForDelivery(orderId: string) {
     .eq('id', orderId);
 
   if (error) return { success: false, error: error.message };
+
+  // Deduct stock quantity when out for delivery
+  const { data: orderItems } = await supabase
+    .from('store_order_items')
+    .select('*, shop_item:shop_items(stock_qty)')
+    .eq('order_id', orderId);
+
+  if (orderItems) {
+    for (const item of orderItems) {
+      if (item.shop_item) {
+        const newStock = Math.max(0, item.shop_item.stock_qty - item.quantity);
+        await supabase.from('shop_items').update({ stock_qty: newStock }).eq('id', item.shop_item_id);
+      }
+    }
+  }
 
   revalidatePath('/delivery/store-orders');
   revalidatePath('/admin/store-orders');

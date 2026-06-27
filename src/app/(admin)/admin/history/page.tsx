@@ -233,7 +233,7 @@ export default function AdminHistoryPage() {
                             </TableCell>
                             <TableCell className="font-medium text-[#1A1A1A]">{r.customer?.full_name}</TableCell>
                             <TableCell>
-                              <p className="text-[#1A1A1A] font-medium">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</p>
+                              <p className="text-[#1A1A1A] font-medium">{r.manual_model || (r.device ? `${r.device.brand} ${r.device.model_name}` : 'Unknown')}</p>
                               <p className="text-[#1A1A1A]/60 text-xs truncate max-w-xs">{r.repair_type?.replace(/_/g, ' ') || r.issue_description}</p>
                             </TableCell>
                             <TableCell><Badge className={repairStatusColor(r.status)}>{REPAIR_STATUS_LABELS[r.status as RepairStatus]}</Badge></TableCell>

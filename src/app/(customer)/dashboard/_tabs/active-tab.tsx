@@ -88,7 +88,7 @@ export default function ActiveTab({ userId }: { userId: string }) {
 
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
                 <div>
-                  <h3 className="text-[#1A1A1A] font-semibold text-lg">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</h3>
+                  <h3 className="text-[#1A1A1A] font-semibold text-lg">{r.manual_model || (r.device ? `${r.device.brand} ${r.device.model_name}` : 'Unknown')}</h3>
                   <p className="text-[#1A1A1A]/60 text-sm mt-0.5">{r.repair_type?.replace(/_/g, ' ') || r.issue_description}</p>
                 </div>
                 <Badge className="bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20 shrink-0 self-start">{REPAIR_STATUS_LABELS[r.status]}</Badge>

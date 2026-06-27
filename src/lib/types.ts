@@ -381,6 +381,7 @@ export interface StoreOrder {
   id: string;
   customer_id: string;
   full_name: string;
+  contact_email?: string | null;
   phone: string;
   address: string;
   total_amount: number;

@@ -101,7 +101,7 @@ export default function HistoryTab({ userId }: { userId: string }) {
               <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }} className="bg-white border border-[#E8E4DF] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                   <div>
-                    <h3 className="text-[#1A1A1A] font-semibold text-lg">{r.device ? `${r.device.brand} ${r.device.model_name}` : r.manual_model || 'Unknown'}</h3>
+                    <h3 className="text-[#1A1A1A] font-semibold text-lg">{r.manual_model || (r.device ? `${r.device.brand} ${r.device.model_name}` : 'Unknown')}</h3>
                     <p className="text-[#1A1A1A]/60 text-sm mt-0.5">{r.repair_type?.replace(/_/g, ' ') || r.issue_description}</p>
                   </div>
                   <Badge className="bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20 shrink-0"><CheckCircle className="w-3 h-3 mr-1" />Delivered</Badge>

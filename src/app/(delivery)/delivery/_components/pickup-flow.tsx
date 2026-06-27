@@ -162,7 +162,7 @@ export default function PickupFlow({ assignment, open, onOpenChange, onComplete 
                   <h3 className="font-semibold text-[#1A1A1A] text-lg">
                     {isEwaste
                       ? assignment.ewaste?.device_description
-                      : (assignment.repair?.device ? `${assignment.repair.device.brand} ${assignment.repair.device.model_name}` : assignment.repair?.manual_model)}
+                      : (assignment.repair?.manual_model || (assignment.repair?.device ? `${assignment.repair.device.brand} ${assignment.repair.device.model_name}` : 'Unknown'))}
                   </h3>
                   <div className="space-y-1.5 mt-3">
                     <p className="text-sm text-[#1A1A1A] flex items-center gap-2"><MapPin className="w-4 h-4 text-[#1A1A1A]/40" />{isEwaste ? assignment.ewaste?.address : assignment.repair?.address}</p>

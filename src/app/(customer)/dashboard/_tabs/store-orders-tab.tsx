@@ -207,7 +207,7 @@ export default function StoreOrdersTab({ userId }: { userId: string }) {
                 <div className="w-full xl:w-72 bg-[#F7F7F5] rounded-xl p-5 flex flex-col justify-between">
                   <div>
                     <p className="text-xs font-semibold text-[#1A1A1A]/40 uppercase tracking-wider mb-3">Items ({order.items?.length || 0})</p>
-                    <div className="space-y-3 mb-4 max-h-[180px] overflow-y-auto pr-2">
+                    <div className="space-y-3 mb-4 max-h-[180px] overflow-y-auto pr-2" data-lenis-prevent="true">
                       {order.items?.map(item => (
                         <div key={item.id} className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-white border border-[#E8E4DF] flex items-center justify-center overflow-hidden flex-shrink-0">

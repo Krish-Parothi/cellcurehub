@@ -148,6 +148,11 @@ export default function StoreOrdersTab() {
                         <a href={`tel:${order.phone}`} className="text-sm text-blue-600 hover:underline flex items-center gap-2">
                           <Phone className="w-4 h-4" /> {order.phone}
                         </a>
+                        {order.contact_email && (
+                          <p className="text-xs text-[#1A1A1A]/60 flex items-center gap-2">
+                            <span>📧</span> {order.contact_email}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-[#1A1A1A]/40 uppercase tracking-wider">Delivery Address</p>

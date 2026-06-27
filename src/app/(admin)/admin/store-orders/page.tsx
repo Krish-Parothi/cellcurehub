@@ -141,6 +141,11 @@ export default function AdminStoreOrdersPage() {
                         <p className="text-sm text-[#1A1A1A] flex items-center gap-2">
                           <Phone className="w-4 h-4 text-[#1A1A1A]/40" /> {order.phone}
                         </p>
+                        {order.contact_email && (
+                          <p className="text-xs text-[#1A1A1A]/60 flex items-center gap-2 select-all truncate max-w-[200px]" title={order.contact_email}>
+                            <span>📧</span> {order.contact_email}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-[#1A1A1A]/40 uppercase tracking-wider">Delivery Address</p>
@@ -177,8 +182,22 @@ export default function AdminStoreOrdersPage() {
                   <div className="w-full md:w-72 bg-[#F7F7F5] p-6 flex flex-col justify-center gap-6">
                     <div>
                       <p className="text-xs font-semibold text-[#1A1A1A]/40 uppercase tracking-wider mb-2">Driver Assignment</p>
-                      {order.status === 'pending' ? (
-                        <Select onValueChange={(val) => handleAssignDriver(order.id, val)}>
+                      {order.status === 'delivered' || order.status === 'cancelled' ? (
+                        order.delivery_boy ? (
+                          <div className="flex items-center gap-3 bg-white border border-[#E8E4DF] p-3 rounded-xl">
+                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                              <Truck className="w-5 h-5 text-blue-500" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-[#1A1A1A]">{order.delivery_boy.full_name}</p>
+                              <p className="text-xs text-[#1A1A1A]/60">{order.delivery_boy.phone}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[#1A1A1A]/50">No driver assigned</p>
+                        )
+                      ) : (
+                        <Select value={order.delivery_boy_id || ''} onValueChange={(val) => handleAssignDriver(order.id, val)}>
                           <SelectTrigger className="bg-white border-[#E8E4DF]">
                             <SelectValue placeholder="Assign Delivery Boy" />
                           </SelectTrigger>
@@ -188,16 +207,6 @@ export default function AdminStoreOrdersPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                      ) : (
-                        <div className="flex items-center gap-3 bg-white border border-[#E8E4DF] p-3 rounded-xl">
-                          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                            <Truck className="w-5 h-5 text-blue-500" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-[#1A1A1A]">{order.delivery_boy?.full_name}</p>
-                            <p className="text-xs text-[#1A1A1A]/60">{order.delivery_boy?.phone}</p>
-                          </div>
-                        </div>
                       )}
                     </div>
 

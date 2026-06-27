@@ -105,7 +105,7 @@ export default function ShopTab() {
                       {item.stock_qty > 0 ? `${item.stock_qty} in stock` : 'Sold out'}
                     </p>
                   </div>
-                  {item.stock_qty > 0 && (
+                  {item.stock_qty > 0 ? (
                     <Button
                       size="sm"
                       onClick={() => handleAddToCart(item.id)}
@@ -123,6 +123,14 @@ export default function ShopTab() {
                       ) : (
                         <><ShoppingCart className="w-4 h-4 mr-1" />Add to Cart</>
                       )}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled
+                      className="bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed text-xs font-semibold"
+                    >
+                      Out of Stock
                     </Button>
                   )}
                 </div>

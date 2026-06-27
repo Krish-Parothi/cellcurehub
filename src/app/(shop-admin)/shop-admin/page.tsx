@@ -115,7 +115,7 @@ export default function ShopAdminDashboard() {
         <CardHeader className="pb-3 border-b border-[#E8E4DF]"><CardTitle className="text-[#1A1A1A] text-sm flex items-center gap-2"><Activity className="w-4 h-4 text-[#FF5C00]" /> Live Activity Feed</CardTitle></CardHeader>
         <CardContent className="p-0">
           {loading ? <div className="p-4 space-y-2">{[0,1,2].map(i => <Skeleton key={i} className="h-10 w-full bg-[#1A1A1A]/5" />)}</div> : (
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-80 overflow-y-auto" data-lenis-prevent="true">
               {timeline.map((t: any) => (
                 <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b border-[#E8E4DF]/60 hover:bg-[#F7F7F5] text-sm">
                   <Badge className={`shrink-0 text-[10px] ${statusColor(t.status)}`}>{REPAIR_STATUS_LABELS[t.status as RepairStatus] || t.status}</Badge>
